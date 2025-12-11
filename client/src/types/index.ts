@@ -1,0 +1,82 @@
+export interface JobData {
+  title: string;
+  company: string;
+  location: string;
+  salary_range: string;
+  requirements: string[];
+  responsibilities: string[];
+  skills: string[];
+  experience_level: string;
+  job_type: string;
+  benefits: string[];
+}
+
+export interface SectionScore {
+  score: number;
+  issues: string[];
+}
+
+export interface AnalysisResults {
+  overallScore: number;
+  atsCompatibility: number;
+  keywordMatch: number;
+  formatting: number;
+  jobData: JobData;
+  sections: {
+    contact: SectionScore;
+    summary: SectionScore;
+    experience: SectionScore;
+    skills: SectionScore;
+    education: SectionScore;
+  };
+  missingKeywords: string[];
+  matchedKeywords: string[]; // added
+  suggestedKeywords: string[];
+  improvements: string[];
+  jobMatch: {
+    title: string;
+    company: string;
+    location: string;
+    matchPercentage: number;
+    salaryRange: string;
+  };
+  salaryInsights: {
+    estimatedSalary: string;
+    marketAverage: string;
+    topPercentile: string;
+    yourEstimate: string;
+    factors: string[];
+  };
+  interviewPrep: {
+    likelyQuestions: string[];
+    technicalTopics: string[];
+    preparationTips: string[];
+  };
+  linkedinOptimization: {
+    headlineScore: number;
+    summaryScore: number;
+    skillsScore: number;
+    suggestions: string[];
+  };
+}
+
+export interface Application {
+  id: number;
+  company: string;
+  position: string;
+  appliedDate: string;
+  status: string;
+  score: number;
+  salary: string;
+  location: string;
+  nextStep: string;
+  daysAgo: number;
+}
+
+export interface OptimizedResume {
+  jobTitle: string;
+  company: string;
+  optimizedDate: string;
+  score: number;
+  keywords: string[];
+}
