@@ -1,14 +1,28 @@
 import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import AuthPage from './components/auth/AuthPage';
+import LoadingScreen from './components/auth/LoadingScreen';
+import ATSAnalyzerPro from './pages/AtsAnalyzer';
+
+function AppContent() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (!isAuthenticated) {
+    return <AuthPage />;
+  }
+
+  return <ATSAnalyzerPro />;
+}
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-      </header>
-    </div>
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
