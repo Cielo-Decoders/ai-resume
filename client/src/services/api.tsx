@@ -213,6 +213,8 @@ USER'S ORIGINAL RESUME (PRESERVE THIS STRUCTURE AND CONTENT):
 ${originalResumeText}
 ---END OF RESUME---
 
+// TODO: Include user feedback on job skills to add to resume (rather than automatically adding all missing keywords)
+
 OPTIMIZATION TASKS:
 1. Naturally add these missing keywords: ${missingKeywords.slice(0, 10).join(', ')}
 2. Strengthen achievement statements by adding metrics or quantifiable results where appropriate
