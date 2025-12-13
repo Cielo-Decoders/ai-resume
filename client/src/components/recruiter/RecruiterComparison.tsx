@@ -1,5 +1,6 @@
 import React from 'react';
 import { BarChart3, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { Improvement } from '../../types/index';
 
 interface RecruiterComparisonProps {
   oldScore: number;
@@ -8,7 +9,7 @@ interface RecruiterComparisonProps {
   analysisResults?: {
     missingKeywords: string[];
     matchedKeywords: string[];
-    improvements: string[];
+    improvements: (string | Improvement)[];
     sections: {
       contact: { issues: string[] };
       summary: { issues: string[] };
@@ -18,6 +19,14 @@ interface RecruiterComparisonProps {
     };
   };
 }
+
+// Helper function to extract text from improvement
+const getImprovementText = (improvement: string | Improvement): string => {
+  if (typeof improvement === 'string') {
+    return improvement;
+  }
+  return improvement.improved || improvement.description || improvement.original || '';
+};
 
 const RecruiterComparison: React.FC<RecruiterComparisonProps> = ({
   oldScore,
@@ -111,7 +120,7 @@ const RecruiterComparison: React.FC<RecruiterComparisonProps> = ({
             <div className="p-4 bg-white rounded border border-indigo-200">
               <p className="font-semibold text-gray-800 mb-2">Metrics Highlighted:</p>
               <p className="text-sm text-gray-600">
-                {(aiImprovements.find(s => s.toLowerCase().includes('quantify'))
+                {(aiImprovements.find(s => getImprovementText(s).toLowerCase().includes('quantify'))
                   ? 'Added quantifiable achievements aligned with role impact'
                   : 'Added quantifiable achievements (40% cost reduction, 99.9% uptime, 1M+ users)')}
               </p>

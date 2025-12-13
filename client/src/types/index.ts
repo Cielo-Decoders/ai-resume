@@ -16,6 +16,17 @@ export interface SectionScore {
   issues: string[];
 }
 
+export interface Improvement {
+  id?: string;
+  category?: string;
+  original?: string;
+  improved?: string;
+  section?: string;
+  priority?: string;
+  description?: string;
+  selected?: boolean;
+}
+
 export interface AnalysisResults {
   overallScore: number;
   atsCompatibility: number;
@@ -32,7 +43,7 @@ export interface AnalysisResults {
   missingKeywords: string[];
   matchedKeywords: string[]; // added
   suggestedKeywords: string[];
-  improvements: string[];
+  improvements: (string | Improvement)[];
   jobMatch: {
     title: string;
     company: string;

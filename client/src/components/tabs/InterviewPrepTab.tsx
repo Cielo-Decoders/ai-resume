@@ -22,7 +22,7 @@ const InterviewPrepTab: React.FC<InterviewPrepTabProps> = ({ analysisResults }) 
             Likely Interview Questions
           </h3>
           <div className="space-y-3">
-            {analysisResults.interviewPrep.likelyQuestions.map((question: string, idx: number) => (
+            {(analysisResults.interviewPrep?.likelyQuestions || []).map((question: string, idx: number) => (
               <div key={idx} className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <p className="text-gray-700 font-medium">
                   {idx + 1}. {question}
@@ -39,7 +39,7 @@ const InterviewPrepTab: React.FC<InterviewPrepTabProps> = ({ analysisResults }) 
             Key Technical Topics to Review
           </h3>
           <div className="flex flex-wrap gap-2">
-            {analysisResults.interviewPrep.technicalTopics.map((topic: string, idx: number) => (
+            {(analysisResults.interviewPrep?.technicalTopics || []).map((topic: string, idx: number) => (
               <span
                 key={idx}
                 className="px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold"
@@ -57,7 +57,7 @@ const InterviewPrepTab: React.FC<InterviewPrepTabProps> = ({ analysisResults }) 
             Preparation Strategy
           </h3>
           <div className="space-y-3">
-            {analysisResults.interviewPrep.preparationTips.map((tip: string, idx: number) => (
+            {(analysisResults.interviewPrep?.preparationTips || []).map((tip: string, idx: number) => (
               <div
                 key={idx}
                 className="flex items-start gap-3 p-4 bg-green-50 rounded-lg border border-green-200"

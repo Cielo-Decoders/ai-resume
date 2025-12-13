@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AnalysisResults, JobData } from '../types/index';
+import { AnalysisResults, JobData, Improvement } from '../types/index';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
@@ -151,7 +151,7 @@ export const optimizeResumeWithAI = async (
   resumeFile: File,
   jobData: JobData,
   missingKeywords: string[],
-  improvements: string[]
+  improvements: (string | Improvement)[]
 ): Promise<{ optimizedText: string; optimizedPdf: Blob }> => {
   try {
     console.log('🔄 Starting resume optimization...');
