@@ -17,7 +17,7 @@ import ApplicationConfirmationModal from '../components/appInfo/AppConfirmationM
 import UserMenu from '../components/user/UserMenu';
 import UserSettings from '../components/user/UserSettings';
 import QualificationTag  from '../components/resume/QualificationTag';
-import { AnalysisResults, Application, OptimizedResume, JobData } from '../types/index';
+import { AnalysisResults, Application, OptimizedResume, JobData, Improvement } from '../types/index';
 import { scrapeJobDescription, extractJobDataFromText, optimizeResumeWithAI, analyzeResumeWithAI } from '../services/api';
 
 
@@ -445,7 +445,11 @@ export default function ATSAnalyzer() {
                         className="flex items-start gap-3 p-3 bg-indigo-50 rounded-lg"
                       >
                         <CheckCircle className="w-5 h-5 text-indigo-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-700">{improvement}</span>
+                        <span className="text-gray-700">
+                          {typeof improvement === 'string'
+                            ? improvement
+                            : (improvement.improved || improvement.description || improvement.original || 'Improvement')}
+                        </span>
                       </li>
                     ))}
                   </ul>
