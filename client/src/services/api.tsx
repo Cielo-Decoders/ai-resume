@@ -47,7 +47,7 @@ export const analyzeResumeWithAI = async (
     if (error.response?.data?.error) {
       throw new Error(error.response.data.error);
     }
-
+ 
     if (error.code === 'ECONNABORTED') {
       throw new Error('Analysis took too long. Please try with a smaller PDF file.');
     }
