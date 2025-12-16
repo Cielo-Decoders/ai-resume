@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Upload, Zap, CheckCircle } from 'lucide-react';
 import TabNavigation from '../components/tabs/TabNavigation';
 import ResumeUpload from '../components/resume/ResumeUpload';
-import {Application, JobData } from '../types/index';
-import {extractJobDataFromText } from '../services/api';
+import {Application, JobData, AnalysisResults } from '../types/index';
+import {extractJobDataFromText, extractTextFromResume} from '../services/api';
 import JobDescriptionInput from '../components/jobs/JobDescriptionInput';
 
 export default function ATSAnalyzer() {
@@ -15,6 +15,7 @@ export default function ATSAnalyzer() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [baseResume, setBaseResume] = useState<File | null>(null);
   const [scrapingStatus, setScrapingStatus] = useState('');
+  const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -29,45 +30,69 @@ export default function ATSAnalyzer() {
   };
 
   const analyzeResume = async () => {
-  if (inputMode === 'paste' && !jobDescription) {
-    alert('Please paste the job description');
-    return;
-  }
-  
-  setIsAnalyzing(true);
-  
-  try {
-    let jobData: JobData;
-    
-    if (inputMode === 'paste') {
-      setScrapingStatus('Extracting job details with AI...');
-      try {
-        jobData = await extractJobDataFromText(jobDescription);
-        console.log('Job data extracted:', jobData);
-        
-        // Clear status and stop loading after successful extraction
-        setScrapingStatus('');
-        setIsAnalyzing(false);
-        
-        // TODO: Process the extracted data and update UI
-        console.log('Analysis completed successfully');
-        
-      } catch (error) {
-        console.error('AI extraction failed:', error);
-        alert('Failed to extract job data. Please try again.');
-        setScrapingStatus('');
-        setIsAnalyzing(false);
-        return;
-      }
+    if (inputMode === 'paste' && !jobDescription) {
+      alert('Please paste the job description');
+      return;
     }
-    
-  } catch (error) {
-    console.error('Job description retrieval failed:', error);
-    alert('Failed to retrieve job description. Please try again.');
-    setScrapingStatus('');
-    setIsAnalyzing(false);
-  }
-};
+
+    if (!resumeFile) {
+      alert('Please upload a resume PDF file');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setAnalysisResults(null);
+
+    try {
+      // Step 1: Extract job data from description
+      if (inputMode === 'paste') {
+        setScrapingStatus('Extracting job details with AI...');
+        try {
+          const jobData = await extractJobDataFromText(jobDescription);
+          console.log('✅ Job data extracted:', jobData);
+          setScrapingStatus('');
+        } catch (error) {
+          console.error('❌ AI extraction failed:', error);
+          alert(`Failed to extract job data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          setScrapingStatus('');
+          setIsAnalyzing(false);
+          return;
+        }
+      }
+
+      // Step 2: Extract resume and analyze
+      setScrapingStatus('Analyzing resume...');
+      try {
+        console.log('🚀 Starting resume analysis...');
+        const aiResults = await extractTextFromResume(resumeFile);
+        console.log('✅ Resume analysis complete:', aiResults);
+
+        setAnalysisResults(aiResults);
+        setScrapingStatus('');
+        setIsAnalyzing(false);
+
+        // Optionally auto-switch to results tab
+        console.log('Analysis finished successfully!');
+      } catch (error) {
+        console.error('❌ Resume analysis failed:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+        if (errorMessage.includes('PDF') || errorMessage.includes('extract')) {
+          alert(`⚠️ PDF Extraction Error\n\n${errorMessage}\n\nPlease ensure:\n1. Your resume is a text-based PDF (not a scanned image)\n2. The PDF file is not corrupted\n3. The file has readable text content`);
+        } else {
+          alert(`Analysis failed: ${errorMessage}`);
+        }
+
+        setScrapingStatus('');
+        setIsAnalyzing(false);
+      }
+    } catch (error) {
+      console.error('Unexpected error during analysis:', error);
+      alert('An unexpected error occurred. Please try again.');
+      setScrapingStatus('');
+      setIsAnalyzing(false);
+    }
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
