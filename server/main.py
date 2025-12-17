@@ -21,14 +21,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-async def root():
-    return {"message": "ATS Resume Analyzer API"}
-
-@app.get("/api/health")
-async def health():
-    return {"status": "healthy"}
-
 @app.post("/api/extract-text")
 async def extract_text(resume: UploadFile = File(...)):
     """
@@ -44,7 +36,7 @@ async def extract_text(resume: UploadFile = File(...)):
         if not resume_content:
             raise HTTPException(status_code=400, detail="Empty file")
 
-        logger.info(f"📄 Extracting text from: {resume.filename}")
+        logger.info(f"Extracting text from: {resume.filename}")
 
         # Call the text extraction service
         extracted_data = await extract_text_from_pdf(resume_content)
@@ -52,12 +44,12 @@ async def extract_text(resume: UploadFile = File(...)):
         return {
             "success": True,
             "textLength": len(extracted_data["text"]),
-            "text": extracted_data["text"][:2000],  # Return first 2000 chars
+            "text": extracted_data["text"][:2000],
             "fullTextLength": len(extracted_data["text"])
         }
 
     except Exception as e:
-        logger.error(f"❌ Text extraction error: {str(e)}")
+        logger.error(f"Text extraction error: {str(e)}")
         traceback.print_exc()
         raise HTTPException(
             status_code=500,

@@ -20,7 +20,7 @@ const api = axios.create({
 
  ): Promise<AnalysisResults> => {
    try {
-     console.log('🚀 Sending resume to backend for analysis...');
+     console.log('Sending resume to backend for analysis...');
 
      const formData = new FormData();
      formData.append('resume', resumeFile);
@@ -35,13 +35,11 @@ const api = axios.create({
      if (!response.data) {
        throw new Error('No response from server');
      }
-
-     console.log('✅ Backend analysis complete!');
-     console.log('📊 Analysis results:', response.data);
+     console.log('Analysis results:', response.data);
 
      return response.data;
    } catch (error: any) {
-     console.error('❌ Backend analysis failed:', error);
+     console.error('Backend analysis failed:', error);
 
      if (error.response?.data?.error) {
        throw new Error(error.response.data.error);
@@ -54,8 +52,6 @@ const api = axios.create({
      throw new Error(error.message || 'Failed to analyze resume. Please try again.');
    }
  };
-
-
 /**
  * Extract job data from pasted text using AI
  */

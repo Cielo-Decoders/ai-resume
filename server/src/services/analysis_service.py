@@ -22,7 +22,7 @@ async def extract_text_from_pdf(pdf_buffer: bytes) -> Dict[str, str]:
     try:
        
         # Try PyPDF2 first
-        print("📄 Attempting PyPDF2 extraction...")
+        print("Attempting PyPDF2 extraction...")
         from io import BytesIO
         pdf_file = BytesIO(pdf_buffer)
         pdf_reader = PyPDF2.PdfReader(pdf_file)
