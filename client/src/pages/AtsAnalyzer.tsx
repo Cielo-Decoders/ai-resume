@@ -61,20 +61,20 @@ export default function ATSAnalyzer() {
       }
     }
     try {
-        console.log('🚀 Starting resume analysis with actual PDF content...');
+        console.log('Starting resume analysis with actual PDF content...');
         const aiResults = await extractTextFromResume(resumeFile!);
-        console.log('✅ AI analysis complete with real data:', aiResults);
+        console.log('AI analysis complete with real data:', aiResults);
 
         setScrapingStatus('');
         setIsAnalyzing(false);
         }catch (error: any) {
-        console.error('❌ AI analysis failed:', error);
+        console.error('AI analysis failed:', error);
 
         // Check if it's a PDF extraction error
         if (error.message && (error.message.includes('PDF') || error.message.includes('extract'))) {
           setScrapingStatus('');
           setIsAnalyzing(false);
-          alert(`⚠️ PDF Extraction Error\n\n${error.message}\n\nPlease ensure:\n1. Your resume is a text-based PDF (not a scanned image)\n2. The PDF file is not corrupted\n3. The file has readable text content\n\nTip: Try opening your PDF and copying some text. If you can't copy text, it's likely an image-based PDF that requires OCR.`);
+          alert(`PDF Extraction Error\n\n${error.message}\n\nPlease ensure:\n1. Your resume is a text-based PDF (not a scanned image)\n2. The PDF file is not corrupted\n3. The file has readable text content\n\nTip: Try opening your PDF and copying some text. If you can't copy text, it's likely an image-based PDF that requires OCR.`);
           return;
         }
         setScrapingStatus('');
