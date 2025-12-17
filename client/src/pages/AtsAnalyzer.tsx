@@ -3,7 +3,7 @@ import { Upload, Zap, CheckCircle } from 'lucide-react';
 import TabNavigation from '../components/tabs/TabNavigation';
 import ResumeUpload from '../components/resume/ResumeUpload';
 import {Application, JobData } from '../types/index';
-import {extractJobDataFromText } from '../services/api';
+import {extractJobDataFromText, extractTextFromResume} from '../services/api';
 import JobDescriptionInput from '../components/jobs/JobDescriptionInput';
 
 export default function ATSAnalyzer() {
@@ -33,25 +33,25 @@ export default function ATSAnalyzer() {
     alert('Please paste the job description');
     return;
   }
-  
+
   setIsAnalyzing(true);
-  
+
   try {
     let jobData: JobData;
-    
+
     if (inputMode === 'paste') {
       setScrapingStatus('Extracting job details with AI...');
       try {
         jobData = await extractJobDataFromText(jobDescription);
         console.log('Job data extracted:', jobData);
-        
+
         // Clear status and stop loading after successful extraction
         setScrapingStatus('');
         setIsAnalyzing(false);
-        
+
         // TODO: Process the extracted data and update UI
         console.log('Analysis completed successfully');
-        
+
       } catch (error) {
         console.error('AI extraction failed:', error);
         alert('Failed to extract job data. Please try again.');
@@ -60,7 +60,26 @@ export default function ATSAnalyzer() {
         return;
       }
     }
-    
+    try {
+        console.log('🚀 Starting resume analysis with actual PDF content...');
+        const aiResults = await extractTextFromResume(resumeFile!);
+        console.log('✅ AI analysis complete with real data:', aiResults);
+
+        setScrapingStatus('');
+        setIsAnalyzing(false);
+        }catch (error: any) {
+        console.error('❌ AI analysis failed:', error);
+
+        // Check if it's a PDF extraction error
+        if (error.message && (error.message.includes('PDF') || error.message.includes('extract'))) {
+          setScrapingStatus('');
+          setIsAnalyzing(false);
+          alert(`⚠️ PDF Extraction Error\n\n${error.message}\n\nPlease ensure:\n1. Your resume is a text-based PDF (not a scanned image)\n2. The PDF file is not corrupted\n3. The file has readable text content\n\nTip: Try opening your PDF and copying some text. If you can't copy text, it's likely an image-based PDF that requires OCR.`);
+          return;
+        }
+        setScrapingStatus('');
+        setIsAnalyzing(false);
+      }
   } catch (error) {
     console.error('Job description retrieval failed:', error);
     alert('Failed to retrieve job description. Please try again.');
@@ -149,7 +168,7 @@ export default function ATSAnalyzer() {
                     Analyze
                   </>
                 )}
-              </button>              
+              </button>
             </div>
           </div>
         )}
@@ -157,3 +176,4 @@ export default function ATSAnalyzer() {
     </div>
   );
 }
+

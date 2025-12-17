@@ -1,7 +1,7 @@
 import axios from 'axios';
-import {JobData } from '../types/index';
+import {JobData, AnalysisResults } from '../types/index';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -15,6 +15,45 @@ const api = axios.create({
  * Analyze resume by sending PDF to backend for extraction
  * Backend uses pdfreader to extract text and save to temp file
  */
+ export const extractTextFromResume = async (
+   resumeFile: File
+
+ ): Promise<AnalysisResults> => {
+   try {
+     console.log('🚀 Sending resume to backend for analysis...');
+
+     const formData = new FormData();
+     formData.append('resume', resumeFile);
+
+     const response = await axios.post(`http://127.0.0.1:8000/api/extract-text`, formData, {
+       headers: {
+         'Content-Type': 'multipart/form-data',
+       },
+       timeout: 60000, // 1 minute timeout for large files
+     });
+
+     if (!response.data) {
+       throw new Error('No response from server');
+     }
+
+     console.log('✅ Backend analysis complete!');
+     console.log('📊 Analysis results:', response.data);
+
+     return response.data;
+   } catch (error: any) {
+     console.error('❌ Backend analysis failed:', error);
+
+     if (error.response?.data?.error) {
+       throw new Error(error.response.data.error);
+     }
+
+     if (error.code === 'ECONNABORTED') {
+       throw new Error('Analysis took too long. Please try with a smaller PDF file.');
+     }
+
+     throw new Error(error.message || 'Failed to analyze resume. Please try again.');
+   }
+ };
 
 
 /**
@@ -112,3 +151,4 @@ export const extractJobDataFromText = async (jobDescription: string): Promise<Jo
 export default {
   extractJobDataFromText,
 };
+

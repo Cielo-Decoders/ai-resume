@@ -72,6 +72,6 @@ if __name__ == "__main__":
     load_dotenv()
 
     # Use environment variable PORT if available, otherwise default to 5001
-    port = int(os.getenv("PORT", 5001))
+    port = int(os.getenv("PORT", 8000))
     host = os.getenv("HOST", "127.0.0.1")
     uvicorn.run("main:app", host=host, port=port, reload=True)
