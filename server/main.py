@@ -1,60 +1,67 @@
+"""
+FastAPI application entry point for ATS Resume Analyzer API.
+
+This module initializes the FastAPI application with proper configuration,
+middleware, and route registration following industry best practices.
+"""
 import os
 import logging
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from src.services.analysis_service import extract_text_from_pdf
-import traceback
 
-# Initialize logging
-logging.basicConfig(level=logging.INFO)
+from src.config import settings
+from src.route.index import register_routes
+
+# Configure logging
+logging.basicConfig(
+    level=getattr(logging, settings.log_level),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="ATS Resume Analyzer API")
 
-# CORS Middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.post("/api/extract-text")
-async def extract_text(resume: UploadFile = File(...)):
+def create_app() -> FastAPI:
     """
-    Extract text from PDF for debugging/testing
+    Create and configure the FastAPI application.
+    
+    Returns:
+        FastAPI: Configured FastAPI application instance
     """
-    try:
-        # Validate file type
-        if not resume.filename.endswith(".pdf"):
-            raise HTTPException(status_code=400, detail="Only PDF files are supported")
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        """Handle application startup and shutdown using lifespan context."""
+        logger.info("ATS Resume Analyzer API starting up...")
+        yield
+        logger.info("ATS Resume Analyzer API shutting down...")
 
-        resume_content = await resume.read()
+    # Initialize FastAPI app with metadata
+    app = FastAPI(
+        title=settings.app_name,
+        description="API for analyzing resumes and extracting text content",
+        version=settings.app_version,
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
+        lifespan=lifespan
+    )
+    
+    # Configure CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.allowed_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["*"],
+    )
+    
+    # Register all routes
+    register_routes(app)
+    
+    return app
 
-        if not resume_content:
-            raise HTTPException(status_code=400, detail="Empty file")
 
-        logger.info(f"Extracting text from: {resume.filename}")
-
-        # Call the text extraction service
-        extracted_data = await extract_text_from_pdf(resume_content)
-
-        return {
-            "success": True,
-            "textLength": len(extracted_data["text"]),
-            "text": extracted_data["text"][:2000],
-            "fullTextLength": len(extracted_data["text"])
-        }
-
-    except Exception as e:
-        logger.error(f"Text extraction error: {str(e)}")
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Text extraction failed: {str(e)}"
-        )
+# Create the app instance
+app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
@@ -62,8 +69,15 @@ if __name__ == "__main__":
 
     # Load environment variables from .env file
     load_dotenv()
-
-    # Use environment variable PORT if available, otherwise default to 5001
-    port = int(os.getenv("PORT", 8000))
-    host = os.getenv("HOST", "127.0.0.1")
-    uvicorn.run("main:app", host=host, port=port, reload=True)
+    
+    logger.info(f"Starting server on {settings.host}:{settings.port}")
+    logger.info(f"Debug mode: {settings.debug}")
+    
+    # Run the application
+    uvicorn.run(
+        "main:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.debug,
+        log_level=settings.log_level.lower()
+    )

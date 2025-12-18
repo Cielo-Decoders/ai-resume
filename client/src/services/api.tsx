@@ -58,9 +58,15 @@ const api = axios.create({
 export const extractJobDataFromText = async (jobDescription: string): Promise<JobData> => {
     try {
         console.log('Extracting job data from text using AI...');
+        console.log('API Key exists:', !!process.env.REACT_APP_OPENAI_API_KEY);
+        console.log('API Key prefix:', process.env.REACT_APP_OPENAI_API_KEY?.substring(0, 10));
+
+        if (!process.env.REACT_APP_OPENAI_API_KEY) {
+            throw new Error('OpenAI API key not configured. Please set REACT_APP_OPENAI_API_KEY in your .env file.');
+        }
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 seconds timeout
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds timeout
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
@@ -69,7 +75,7 @@ export const extractJobDataFromText = async (jobDescription: string): Promise<Jo
                 'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`
             },
             body: JSON.stringify({
-                model: 'gpt-4',
+                model: 'gpt-3.5-turbo',  // Changed from gpt-4 to gpt-3.5-turbo for better availability
                 messages: [
                     {
                         role: 'system',
@@ -102,23 +108,66 @@ export const extractJobDataFromText = async (jobDescription: string): Promise<Jo
 
         clearTimeout(timeoutId);
 
+        clearTimeout(timeoutId);
+
+        console.log('OpenAI API Response status:', response.status);
+        
         if (!response.ok) {
-            const errorData = await response.json();
-            console.error('OpenAI API error:', errorData);
-            throw new Error(`OpenAI API error: ${response.status}`);
+            const errorText = await response.text();
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch {
+                errorData = { error: { message: errorText } };
+            }
+            
+            console.error('OpenAI API error:', response.status, errorData);
+            
+            if (response.status === 401) {
+                throw new Error('Invalid OpenAI API key. Please check your API key.');
+            } else if (response.status === 429) {
+                throw new Error('OpenAI rate limit exceeded. Please try again later.');
+            } else if (response.status === 404) {
+                throw new Error('OpenAI model not found. Please check the model name.');
+            } else {
+                throw new Error(`OpenAI API error (${response.status}): ${errorData.error?.message || 'Unknown error'}`);
+            }
         }
 
         const data = await response.json();
+        console.log('OpenAI API Response:', data);
+        
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+            throw new Error('Invalid response structure from OpenAI API');
+        }
+        
         const jsonString = data.choices[0].message.content.trim();
+        console.log('Raw AI response:', jsonString);
 
         // Parse the JSON response
-        const jobData = JSON.parse(jsonString);
+        let jobData;
+        try {
+            jobData = JSON.parse(jsonString);
+        } catch (parseError) {
+            console.error('Failed to parse AI response:', jsonString);
+            throw new Error('AI response is not valid JSON');
+        }
 
         console.log('Successfully extracted job data:', jobData);
 
         return jobData;
     } catch (error: any) {
         console.error('Job data extraction failed:', error);
+        
+        // Don't mask specific error messages
+        if (error.message.includes('OpenAI') || 
+            error.message.includes('API key') || 
+            error.message.includes('rate limit') || 
+            error.message.includes('not valid JSON') || 
+            error.message.includes('not configured')) {
+            throw error;
+        }
+        
         throw new Error('Failed to extract job data. Please check your OpenAI API key.');
     }
 };
