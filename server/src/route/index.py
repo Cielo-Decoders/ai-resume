@@ -3,6 +3,7 @@ Route configuration module for organizing API endpoints.
 """
 from fastapi import APIRouter, File, UploadFile
 from ..dependencies import AnalyzeControllerDep
+from ..controllers.AnalyzeController import KeywordAnalysisRequest
 
 # Create router for analyze-related endpoints
 analyze_router = APIRouter(prefix="/api", tags=["analyze"])
@@ -38,6 +39,24 @@ async def health_check_endpoint(controller: AnalyzeControllerDep = None):
         JSON response with service health status
     """
     return await controller.get_health_status()
+
+
+@analyze_router.post("/analyze-keywords")
+async def analyze_keywords_endpoint(
+    request: KeywordAnalysisRequest,
+    controller: AnalyzeControllerDep = None
+):
+    """
+    Analyze resume text against job data to find missing keywords.
+    
+    Args:
+        request (KeywordAnalysisRequest): Contains resume_text and job_data
+        controller (AnalyzeController): Injected controller instance
+        
+    Returns:
+        JSON response with keyword analysis results
+    """
+    return await controller.analyze_keywords(request)
 
 
 def register_routes(app):

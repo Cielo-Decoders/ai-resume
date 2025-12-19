@@ -4,9 +4,16 @@ AnalyzeController module for handling resume analysis endpoints.
 import logging
 from typing import Dict, Any
 from fastapi import HTTPException, UploadFile, File
+from pydantic import BaseModel
 
 from ..config import settings
-from ..services.analysis_service import extract_text_from_pdf
+from ..services.analysis_service import extract_text_from_pdf, analyze_resume_against_job
+
+
+class KeywordAnalysisRequest(BaseModel):
+    """Request model for keyword analysis."""
+    resume_text: str
+    job_data: Dict[str, Any]
 
 
 class AnalyzeController:
@@ -102,3 +109,53 @@ class AnalyzeController:
             "service": "analyze_controller",
             "message": "Resume analysis service is operational"
         }
+
+    async def analyze_keywords(self, request: KeywordAnalysisRequest) -> Dict[str, Any]:
+        """
+        Analyze resume text against job data to find missing keywords.
+        
+        Args:
+            request (KeywordAnalysisRequest): Contains resume_text and job_data
+            
+        Returns:
+            Dict[str, Any]: Analysis results with missing/matching keywords
+            
+        Raises:
+            HTTPException: If validation fails or analysis errors occur
+        """
+        try:
+            # Validate inputs
+            if not request.resume_text or len(request.resume_text.strip()) < 10:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Resume text is required and must contain meaningful content"
+                )
+            
+            if not request.job_data:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Job data is required"
+                )
+
+            self.logger.info("Starting keyword analysis...")
+            
+            # Call the analysis service (now async with AI filtering)
+            analysis_result = await analyze_resume_against_job(
+                request.resume_text,
+                request.job_data
+            )
+            
+            self.logger.info(
+                f"Keyword analysis complete. Match score: {analysis_result['matchScore']}%"
+            )
+            
+            return analysis_result
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            self.logger.error(f"Keyword analysis error: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Keyword analysis failed: {str(e)}"
+            )
