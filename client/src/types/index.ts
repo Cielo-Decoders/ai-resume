@@ -28,6 +28,11 @@ export interface Improvement {
 }
 
 export interface AnalysisResults {
+  success?: boolean;
+  filename?: string;
+  text?: string;
+  textLength?: number;
+  fullTextLength?: number;
   overallScore: number;
   atsCompatibility: number;
   keywordMatch: number;
@@ -90,4 +95,24 @@ export interface OptimizedResume {
   optimizedDate: string;
   score: number;
   keywords: string[];
+}
+
+export interface ActionableKeyword {
+  keyword: string;
+  category: string;
+  priority: 'high' | 'medium' | 'low';
+  selected?: boolean;
+}
+
+export interface KeywordAnalysisResult {
+  success: boolean;
+  matchScore: number;
+  missingKeywords: string[];
+  matchingKeywords: string[];
+  missingPhrases: string[];
+  matchingPhrases: string[];
+  totalJobKeywords: number;
+  suggestions: string[];
+  actionableKeywords: ActionableKeyword[];
+  filteredOutReasons?: string[];
 }

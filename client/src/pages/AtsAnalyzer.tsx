@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Upload, Zap, CheckCircle } from 'lucide-react';
 import TabNavigation from '../components/tabs/TabNavigation';
 import ResumeUpload from '../components/resume/ResumeUpload';
-import {Application, JobData } from '../types/index';
-import {extractJobDataFromText, extractTextFromResume} from '../services/api';
+import KeywordAnalysis from '../components/resume/KeywordAnalysis';
+import {Application, JobData, KeywordAnalysisResult } from '../types/index';
+import {extractJobDataFromText, extractTextFromResume, analyzeKeywords} from '../services/api';
 import JobDescriptionInput from '../components/jobs/JobDescriptionInput';
 
 export default function ATSAnalyzer() {
@@ -15,6 +16,8 @@ export default function ATSAnalyzer() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [baseResume, setBaseResume] = useState<File | null>(null);
   const [scrapingStatus, setScrapingStatus] = useState('');
+  const [keywordResults, setKeywordResults] = useState<KeywordAnalysisResult | null>(null);
+  const [analysisComplete, setAnalysisComplete] = useState(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -34,24 +37,25 @@ export default function ATSAnalyzer() {
     return;
   }
 
+  if (!resumeFile) {
+    alert('Please upload your resume');
+    return;
+  }
+
   setIsAnalyzing(true);
+  setKeywordResults(null);
+  setAnalysisComplete(false);
 
   try {
     let jobData: JobData;
+    let resumeText: string = '';
 
+    // Step 1: Extract job data from description
     if (inputMode === 'paste') {
       setScrapingStatus('Extracting job details with AI...');
       try {
         jobData = await extractJobDataFromText(jobDescription);
         console.log('Job data extracted:', jobData);
-
-        // Clear status and stop loading after successful extraction
-        setScrapingStatus('');
-        setIsAnalyzing(false);
-
-        // TODO: Process the extracted data and update UI
-        console.log('Analysis completed successfully');
-
       } catch (error) {
         console.error('AI extraction failed:', error);
         alert('Failed to extract job data. Please try again.');
@@ -59,27 +63,53 @@ export default function ATSAnalyzer() {
         setIsAnalyzing(false);
         return;
       }
+    } else {
+      setScrapingStatus('');
+      setIsAnalyzing(false);
+      return;
     }
+
+    // Step 2: Extract text from resume PDF
     try {
-        console.log('Starting resume analysis with actual PDF content...');
-        const aiResults = await extractTextFromResume(resumeFile!);
-        console.log('AI analysis complete with real data:', aiResults);
+      setScrapingStatus('Extracting text from your resume...');
+      console.log('Starting resume analysis with actual PDF content...');
+      const aiResults = await extractTextFromResume(resumeFile!);
+      console.log('AI analysis complete with real data:', aiResults);
+      resumeText = aiResults.text || '';
 
-        setScrapingStatus('');
-        setIsAnalyzing(false);
-        }catch (error: any) {
-        console.error('AI analysis failed:', error);
-
-        // Check if it's a PDF extraction error
-        if (error.message && (error.message.includes('PDF') || error.message.includes('extract'))) {
-          setScrapingStatus('');
-          setIsAnalyzing(false);
-          alert(`PDF Extraction Error\n\n${error.message}\n\nPlease ensure:\n1. Your resume is a text-based PDF (not a scanned image)\n2. The PDF file is not corrupted\n3. The file has readable text content\n\nTip: Try opening your PDF and copying some text. If you can't copy text, it's likely an image-based PDF that requires OCR.`);
-          return;
-        }
-        setScrapingStatus('');
-        setIsAnalyzing(false);
+      if (!resumeText || resumeText.length < 50) {
+        throw new Error('Could not extract meaningful text from the resume');
       }
+    } catch (error: any) {
+      console.error('AI analysis failed:', error);
+
+      if (error.message && (error.message.includes('PDF') || error.message.includes('extract'))) {
+        setScrapingStatus('');
+        setIsAnalyzing(false);
+        alert(`PDF Extraction Error\n\n${error.message}\n\nPlease ensure:\n1. Your resume is a text-based PDF (not a scanned image)\n2. The PDF file is not corrupted\n3. The file has readable text content\n\nTip: Try opening your PDF and copying some text. If you can't copy text, it's likely an image-based PDF that requires OCR.`);
+        return;
+      }
+      setScrapingStatus('');
+      setIsAnalyzing(false);
+      alert(`Resume extraction failed: ${error.message}`);
+      return;
+    }
+
+    // Step 3: Analyze keywords - compare resume against job description
+    try {
+      setScrapingStatus('Analyzing keywords and matching skills...');
+      const keywordAnalysis = await analyzeKeywords(resumeText, jobData);
+      console.log('Keyword analysis complete:', keywordAnalysis);
+      setKeywordResults(keywordAnalysis);
+      setAnalysisComplete(true);
+    } catch (error: any) {
+      console.error('Keyword analysis failed:', error);
+      alert(`Keyword analysis failed: ${error.message}`);
+    }
+
+    setScrapingStatus('');
+    setIsAnalyzing(false);
+
   } catch (error) {
     console.error('Job description retrieval failed:', error);
     alert('Failed to retrieve job description. Please try again.');
@@ -170,6 +200,55 @@ export default function ATSAnalyzer() {
                 )}
               </button>
             </div>
+
+            {/* Keyword Analysis Results */}
+            {analysisComplete && keywordResults && (
+              <div className="space-y-6">
+                {/* Match Score Card */}
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800">Keyword Match Score</h3>
+                      <p className="text-gray-500">How well your resume matches the job description</p>
+                    </div>
+                    <div className={`text-4xl font-bold ${
+                      keywordResults.matchScore >= 70 ? 'text-green-600' :
+                      keywordResults.matchScore >= 50 ? 'text-yellow-600' : 'text-red-600'
+                    }`}>
+                      {keywordResults.matchScore}%
+                    </div>
+                  </div>
+                  {keywordResults.suggestions.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <h4 className="font-semibold text-gray-700 mb-2">Suggestions:</h4>
+                      <ul className="space-y-1">
+                        {keywordResults.suggestions.map((suggestion, idx) => (
+                          <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
+                            <span className="text-indigo-500">•</span>
+                            {suggestion}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Missing and Matching Keywords */}
+                <KeywordAnalysis
+                  missingKeywords={keywordResults.missingPhrases.length > 0 
+                    ? keywordResults.missingPhrases 
+                    : keywordResults.missingKeywords.slice(0, 15)}
+                  suggestedKeywords={keywordResults.matchingPhrases.length > 0 
+                    ? keywordResults.matchingPhrases 
+                    : keywordResults.matchingKeywords.slice(0, 15)}
+                  actionableKeywords={keywordResults.actionableKeywords || []}
+                  onKeywordsSelected={(selected) => {
+                    console.log('Selected keywords for optimization:', selected);
+                    // TODO: Use selected keywords for resume optimization
+                  }}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

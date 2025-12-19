@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {JobData, AnalysisResults } from '../types/index';
+import {JobData, AnalysisResults, KeywordAnalysisResult } from '../types/index';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -190,10 +190,52 @@ export const extractJobDataFromText = async (jobDescription: string): Promise<Jo
  */
 
 /**
+ * Analyze resume keywords against job description
+ */
+export const analyzeKeywords = async (
+  resumeText: string,
+  jobData: JobData
+): Promise<KeywordAnalysisResult> => {
+  try {
+    console.log('Analyzing keywords...');
+
+    const response = await axios.post(
+      `http://127.0.0.1:8000/api/analyze-keywords`,
+      {
+        resume_text: resumeText,
+        job_data: jobData
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000, // 30 second timeout
+      }
+    );
+
+    if (!response.data) {
+      throw new Error('No response from server');
+    }
+
+    console.log('Keyword analysis results:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('Keyword analysis failed:', error);
+
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+
+    throw new Error(error.message || 'Failed to analyze keywords. Please try again.');
+  }
+};
+
+/**
  * Export functions for use in components
  */
 
 export default {
   extractJobDataFromText,
+  analyzeKeywords,
 };
 
