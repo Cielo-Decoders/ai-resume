@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Upload, Zap, CheckCircle } from 'lucide-react';
+import { Upload, Zap, CheckCircle, Download, Sparkles } from 'lucide-react';
 import TabNavigation from '../components/tabs/TabNavigation';
 import ResumeUpload from '../components/resume/ResumeUpload';
 import KeywordAnalysis from '../components/resume/KeywordAnalysis';
 import {Application, JobData, KeywordAnalysisResult } from '../types/index';
-import {extractJobDataFromText, extractTextFromResume, analyzeKeywords} from '../services/api';
+import {extractJobDataFromText, extractTextFromResume, analyzeKeywords, optimizeResume} from '../services/api';
 import JobDescriptionInput from '../components/jobs/JobDescriptionInput';
 
 export default function ATSAnalyzer() {
@@ -18,6 +18,10 @@ export default function ATSAnalyzer() {
   const [scrapingStatus, setScrapingStatus] = useState('');
   const [keywordResults, setKeywordResults] = useState<KeywordAnalysisResult | null>(null);
   const [analysisComplete, setAnalysisComplete] = useState(false);
+  const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [jobData, setJobData] = useState<JobData | null>(null);
+  const [resumeText, setResumeText] = useState<string>('');
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -28,6 +32,47 @@ export default function ATSAnalyzer() {
       }
     } else {
       alert('Please upload a PDF file');
+    }
+  };
+
+  const handleOptimizeResume = async () => {
+    if (!resumeFile || selectedKeywords.length === 0) {
+      alert('Please select at least one keyword to optimize your resume');
+      return;
+    }
+
+    if (!jobData) {
+      alert('Job data is missing. Please analyze your resume first.');
+      return;
+    }
+
+    setIsOptimizing(true);
+    try {
+      console.log('Starting resume optimization with keywords:', selectedKeywords);
+
+      const optimizedBlob = await optimizeResume(
+        resumeFile,
+        selectedKeywords,
+        jobData,
+        resumeText
+      );
+
+      // Download the optimized resume
+      const url = window.URL.createObjectURL(optimizedBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `optimized_${resumeFile.name}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      alert('✅ Resume optimized successfully! Check your downloads.');
+    } catch (error: any) {
+      console.error('Optimization failed:', error);
+      alert(`Optimization failed: ${error.message}`);
+    } finally {
+      setIsOptimizing(false);
     }
   };
 
@@ -56,6 +101,7 @@ export default function ATSAnalyzer() {
       try {
         jobData = await extractJobDataFromText(jobDescription);
         console.log('Job data extracted:', jobData);
+        setJobData(jobData); // Set job data for optimization
       } catch (error) {
         console.error('AI extraction failed:', error);
         alert('Failed to extract job data. Please try again.');
@@ -76,6 +122,7 @@ export default function ATSAnalyzer() {
       const aiResults = await extractTextFromResume(resumeFile!);
       console.log('AI analysis complete with real data:', aiResults);
       resumeText = aiResults.text || '';
+      setResumeText(resumeText); // Set resume text for optimization
 
       if (!resumeText || resumeText.length < 50) {
         throw new Error('Could not extract meaningful text from the resume');
@@ -244,9 +291,62 @@ export default function ATSAnalyzer() {
                   actionableKeywords={keywordResults.actionableKeywords || []}
                   onKeywordsSelected={(selected) => {
                     console.log('Selected keywords for optimization:', selected);
-                    // TODO: Use selected keywords for resume optimization
+                    // Extract keyword text from ActionableKeyword objects or use string directly
+                    const keywordStrings = selected.map(item =>
+                      typeof item === 'string' ? item : item.keyword
+                    );
+                    setSelectedKeywords(keywordStrings);
                   }}
                 />
+              </div>
+            )}
+
+            {/* Optimize Section */}
+            {analysisComplete && keywordResults && (
+              <div className="bg-white rounded-xl shadow-lg p-8">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                  <Sparkles className="w-6 h-6 text-indigo-600" />
+                  Optimize Your Resume
+                </h2>
+                <p className="text-gray-600 mb-4">
+                  Enhance your resume by incorporating suggested keywords and phrases.
+                </p>
+                <div className="space-y-4">
+                  {/* Selected Keywords List */}
+                  {selectedKeywords.length > 0 && (
+                    <div className="p-4 bg-indigo-50 rounded-lg">
+                      <h3 className="font-semibold text-gray-800 mb-2">Selected Keywords:</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedKeywords.map((keyword, idx) => (
+                          <span key={idx} className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full">
+                            {keyword}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Optimization Actions */}
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <button
+                      onClick={handleOptimizeResume}
+                      disabled={isOptimizing}
+                      className="w-full sm:w-auto bg-gradient-to-r from-green-400 to-green-500 text-white py-3 rounded-lg font-semibold hover:from-green-500 hover:to-green-600 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg"
+                    >
+                      {isOptimizing ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          Optimizing...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-5 h-5" />
+                          Download Optimized Resume
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -255,4 +355,3 @@ export default function ATSAnalyzer() {
     </div>
   );
 }
-

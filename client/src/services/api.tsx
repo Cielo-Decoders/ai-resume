@@ -176,15 +176,90 @@ export const extractJobDataFromText = async (jobDescription: string): Promise<Jo
 /**
  * Optimize resume with AI
  */
+export const optimizeResume = async (
+  resumeFile: File,
+  selectedKeywords: string[],
+  jobData: JobData,
+  resumeText: string
+): Promise<Blob> => {
+  try {
+    console.log('🚀 Optimizing resume with selected keywords...');
 
+    const formData = new FormData();
+    formData.append('resume', resumeFile);
+    formData.append('selected_keywords', JSON.stringify(selectedKeywords));
+    formData.append('job_data', JSON.stringify(jobData));
+    formData.append('resume_text', resumeText);
 
-//TODO:
-/**
- * Generate optimized PDF from text content
- */
+    const response = await axios.post(
+      `http://127.0.0.1:8000/api/optimize/resume`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        responseType: 'blob', // Important: receive file as blob
+        timeout: 120000, // 2 minute timeout for AI processing
+      }
+    );
 
+    console.log('✅ Resume optimization complete!');
+    return response.data;
+  } catch (error: any) {
+    console.error('Resume optimization failed:', error);
 
-//TODO:
+    if (error.response?.data) {
+      const reader = new FileReader();
+      const errorPromise = new Promise<string>((resolve) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsText(error.response.data);
+      });
+      const errorText = await errorPromise;
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(errorData.detail || 'Optimization failed');
+      } catch {
+        throw new Error(errorText || 'Failed to optimize resume');
+      }
+    }
+
+    throw new Error(error.message || 'Failed to optimize resume. Please try again.');
+  }
+};
+
+export const getOptimizationPreview = async (
+  resumeFile: File,
+  selectedKeywords: string[],
+  jobData: JobData,
+  resumeText: string
+): Promise<any> => {
+  try {
+    console.log('Getting optimization preview...');
+
+    const formData = new FormData();
+    formData.append('resume', resumeFile);
+    formData.append('selected_keywords', JSON.stringify(selectedKeywords));
+    formData.append('job_data', JSON.stringify(jobData));
+    formData.append('resume_text', resumeText);
+
+    const response = await axios.post(
+      `http://127.0.0.1:8000/api/optimize/preview`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 30000,
+      }
+    );
+
+    return response.data;
+  } catch (error: any) {
+    console.error('Preview generation failed:', error);
+    throw new Error(error.response?.data?.detail || 'Failed to generate preview');
+  }
+};
+
 /**
  * Generate interview questions based on job data
  */
@@ -238,4 +313,3 @@ export default {
   extractJobDataFromText,
   analyzeKeywords,
 };
-

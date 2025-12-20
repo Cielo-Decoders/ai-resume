@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import Depends
 
 from .controllers.AnalyzeController import AnalyzeController
+from .controllers.OptimizationController import OptimizationController
 from .services.analysis_service import extract_text_from_pdf
 
 
@@ -21,6 +22,17 @@ class Dependencies:
         """
         return AnalyzeController()
 
+    @staticmethod
+    def get_optimization_controller() -> OptimizationController:
+        """
+        Get OptimizationController instance.
+
+        Returns:
+            OptimizationController: Controller instance
+        """
+        return OptimizationController()
+
 
 # Type aliases for dependency injection
 AnalyzeControllerDep = Annotated[AnalyzeController, Depends(Dependencies.get_analyze_controller)]
+OptimizationControllerDep = Annotated[OptimizationController, Depends(Dependencies.get_optimization_controller)]
