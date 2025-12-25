@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {JobData, AnalysisResults, KeywordAnalysisResult } from '../types/index';
+import {JobData, AnalysisResults, KeywordAnalysisResult, ActionableKeyword, OptimizationResult } from '../types/index';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -176,6 +176,56 @@ export const extractJobDataFromText = async (jobDescription: string): Promise<Jo
 /**
  * Optimize resume with AI
  */
+export const optimizeResume = async (
+  originalResumeText: string,
+  jobDescription: string,
+  selectedKeywords: ActionableKeyword[],
+  jobTitle: string = ''
+): Promise<OptimizationResult> => {
+  try {
+    console.log('Optimizing resume with selected keywords...');
+    console.log('Keywords count:', selectedKeywords.length);
+
+    const response = await axios.post(
+      `http://127.0.0.1:8000/api/optimize-resume`,
+      {
+        original_resume_text: originalResumeText,
+        job_description: jobDescription,
+        selected_keywords: selectedKeywords.map(k => ({
+          keyword: k.keyword,
+          category: k.category,
+          priority: k.priority
+        })),
+        job_title: jobTitle
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 120000, // 2 minute timeout for AI generation
+      }
+    );
+
+    if (!response.data) {
+      throw new Error('No response from server');
+    }
+
+    console.log('Resume optimization results:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('Resume optimization failed:', error);
+
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Optimization took too long. Please try again with fewer keywords.');
+    }
+
+    throw new Error(error.message || 'Failed to optimize resume. Please try again.');
+  }
+};
 
 
 //TODO:
@@ -237,5 +287,6 @@ export const analyzeKeywords = async (
 export default {
   extractJobDataFromText,
   analyzeKeywords,
+  optimizeResume,
 };
 

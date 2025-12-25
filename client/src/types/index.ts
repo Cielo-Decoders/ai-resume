@@ -116,3 +116,41 @@ export interface KeywordAnalysisResult {
   actionableKeywords: ActionableKeyword[];
   filteredOutReasons?: string[];
 }
+
+export interface ResumeChange {
+  section: string;
+  description: string;
+  keywordsAdded: string[];
+}
+
+export interface ResumeSection {
+  type: 'header' | 'contact' | 'summary' | 'experience' | 'education' | 'skills' | 'certifications' | 'projects' | 'other';
+  title: string;
+  content: string;
+  items?: string[];
+}
+
+export interface ResumeFormatting {
+  fontFamily: string;
+  fontSize: number;
+  headerStyle: string;
+  bulletStyle: string;
+  lineSpacing: number;
+  margins: {
+    top: number;
+    bottom: number;
+    left: number;
+    right: number;
+  };
+}
+
+export interface OptimizationResult {
+  success: boolean;
+  message: string;
+  optimizedResume: string;
+  resumeSections?: ResumeSection[];
+  changes: ResumeChange[];
+  atsScore: number;
+  tips?: string[];
+  formatting?: ResumeFormatting;
+}

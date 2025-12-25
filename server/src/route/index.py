@@ -3,7 +3,7 @@ Route configuration module for organizing API endpoints.
 """
 from fastapi import APIRouter, File, UploadFile
 from ..dependencies import AnalyzeControllerDep
-from ..controllers.AnalyzeController import KeywordAnalysisRequest
+from ..controllers.AnalyzeController import KeywordAnalysisRequest, ResumeOptimizationRequest
 
 # Create router for analyze-related endpoints
 analyze_router = APIRouter(prefix="/api", tags=["analyze"])
@@ -57,6 +57,28 @@ async def analyze_keywords_endpoint(
         JSON response with keyword analysis results
     """
     return await controller.analyze_keywords(request)
+
+
+@analyze_router.post("/optimize-resume")
+async def optimize_resume_endpoint(
+    request: ResumeOptimizationRequest,
+    controller: AnalyzeControllerDep = None
+):
+    """
+    Generate an optimized resume based on selected keywords.
+    
+    Takes the user's original resume, job description, and selected keywords
+    to create an ATS-optimized version that incorporates the chosen keywords.
+    
+    Args:
+        request (ResumeOptimizationRequest): Contains original_resume_text,
+            job_description, selected_keywords, and optional job_title
+        controller (AnalyzeController): Injected controller instance
+        
+    Returns:
+        JSON response with optimized resume and optimization details
+    """
+    return await controller.optimize_resume(request)
 
 
 def register_routes(app):
