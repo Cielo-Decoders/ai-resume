@@ -5,13 +5,47 @@ This module initializes the FastAPI application with proper configuration,
 middleware, and route registration following industry best practices.
 """
 import os
+import sys
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
+
+
+# Add the server directory to the path so src can be imported
+sys.path.insert(0, str(Path(__file__).parent))
+
+
+# Load environment variables from .env file at module import time
+# Look for .env in the server directory
+from dotenv import load_dotenv
+env_path = Path(__file__).parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+    print(f"✓ Loaded environment variables from {env_path}")
+else:
+    print(f"⚠ .env file not found at {env_path}")
+
+
+# Also check for .env in parent directory
+parent_env = Path(__file__).parent.parent / ".env"
+if parent_env.exists() and not env_path.exists():
+    load_dotenv(parent_env)
+    print(f"✓ Loaded environment variables from {parent_env}")
+
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
 from src.route.index import register_routes
+
+
+# Verify API key is loaded
+if settings.openai_api_key:
+    print(f"✓ OpenAI API key configured (first 20 chars): {settings.openai_api_key[:20]}...")
+else:
+    print("⚠ WARNING: OpenAI API key not configured!")
+
 
 # Configure logging
 logging.basicConfig(

@@ -22,6 +22,7 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
   const [copied, setCopied] = useState(false);
   const [showChanges, setShowChanges] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'text'>('pdf');
 
   // Use formatting from result or default
   const formatting = result.formatting || DEFAULT_FORMATTING;
@@ -51,8 +52,7 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
     const marginTop = formatting.margins?.top || 12.7;
     const marginBottom = formatting.margins?.bottom || 12.7;
     const contentWidth = pageWidth - marginLeft - marginRight;
-    let yPosition = marginTop;
-    
+    let yPosition = marginTop + 8; // Added 8mm to push name down from top edge
     // Font size settings (matching user's resume)
     const nameFontSize = 18;
     const contactFontSize = 10;
@@ -251,7 +251,7 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
         const textWidth = doc.getTextWidth(trimmedLine);
         const xPosition = (pageWidth - textWidth) / 2;
         doc.text(trimmedLine, xPosition, yPosition);
-        yPosition += lineHeight * 1.8;
+        yPosition += lineHeight * 2.5; // Increased from 1.8 to 2.5 for more space after name
         lineIndex++;
         return;
       }
@@ -422,6 +422,18 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
     doc.save(`optimized_resume_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
+  const handleDownloadText = () => {
+    const blob = new Blob([result.optimizedResume], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `optimized_resume_${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600 bg-green-100';
     if (score >= 60) return 'text-yellow-600 bg-yellow-100';
@@ -545,6 +557,14 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
           >
             <Download className="w-5 h-5" />
             Download PDF
+          </button>
+
+          <button
+            onClick={handleDownloadText}
+            className="flex items-center gap-2 px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+          >
+            <Download className="w-5 h-5" />
+            Download Text
           </button>
         </div>
       </div>

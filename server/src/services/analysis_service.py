@@ -15,6 +15,55 @@ from openai import OpenAI
 from ..config.settings import settings
 
 
+SYSTEM_INSTRUCTIONS = """
+You are an AI resume optimizer.
+
+You MUST preserve all original resume content exactly as written.
+You are performing a structure-preserving transformation.
+
+GLOBAL RULES:
+- Do NOT delete, rewrite, summarize, or paraphrase content.
+- Do NOT combine or split bullet points.
+- Preserve the exact number of bullet points per section.
+- Preserve section order and hierarchy.
+- Preserve all dates, titles, company names, and locations.
+
+KEYWORD RULES:
+- Keywords may ONLY be added, never replaced.
+- Add keywords only if they fit naturally.
+- If a keyword does not fit, leave the bullet unchanged.
+
+FORMATTING RULES:
+- Convert the resume into the STANDARD RESUME TEMPLATE.
+- Use consistent spacing and a single bullet character (•).
+- Do NOT add or remove sections.
+- Preserve all content even if formatting must be adjusted.
+
+Failure to follow these rules produces an invalid result.
+"""
+
+STANDARD_TEMPLATE = """
+STANDARD RESUME TEMPLATE:
+
+[NAME]
+[City, State] | [Email] | [Phone] | [LinkedIn]
+
+SUMMARY
+
+EXPERIENCE
+<Job Title> — <Company> | <Location>
+<Dates>
+• Bullet point
+
+EDUCATION
+<Degree> — <Institution>
+<Dates>
+
+SKILLS
+• Skill
+"""
+
+
 async def extract_text_from_pdf(pdf_buffer: bytes) -> Dict[str, Any]:
     """
     Extract text from PDF using PyPDF2 with OCR fallback.
@@ -650,7 +699,9 @@ async def generate_optimized_resume(
         if detected_sections:
             sections_context = f"\n\nDETECTED SECTIONS IN ORIGINAL RESUME:\n{', '.join([s['name'] for s in detected_sections])}"
         
-        prompt = f"""You are an expert ATS (Applicant Tracking System) resume optimizer. Your task is to create an optimized version of a resume that incorporates specific keywords while STRICTLY PRESERVING the original resume's EXACT structure and formatting.
+        prompt = f"""{SYSTEM_INSTRUCTIONS}
+
+{STANDARD_TEMPLATE}
 
 TARGET POSITION: {job_title or "Not specified"}
 
@@ -668,46 +719,6 @@ SELECTED KEYWORDS TO INCORPORATE:
 {keywords_text}
 {sections_context}
 
-CRITICAL FORMATTING REQUIREMENTS - YOU MUST FOLLOW THESE EXACTLY:
-
-1. FIRST LINE: Full name only (e.g., "Kyle Drummonds")
-
-2. SECOND LINE: Contact info on ONE line, separated by | characters
-   Example: "phone | email | github.com/username | linkedin.com/in/username"
-
-3. SECTION HEADERS: Use ALL CAPS, exactly as in original (e.g., "EDUCATION", "TECHNICAL SKILLS", "WORK EXPERIENCE", "PROJECTS")
-
-4. For TECHNICAL SKILLS section, format as:
-   "Category Name:" followed by skills on same line
-   Example: "Programming Languages: Python, Java, JavaScript"
-
-5. For WORK EXPERIENCE / EXPERIENCE entries, format EXACTLY as:
-    Line 1: "Company Name                                                    City, State"
-    Line 2: "Job Title                                                       Month Year – Month Year"
-    Then bullet points starting with • character
-
-6. For EDUCATION entries, format as:
-   Line 1: "School Name                                                     City, State"
-   Line 2: "Degree Name                                                     Month Year"
-   Additional details on subsequent lines
-
-7. BULLET POINTS: Always use the • character (standard filled circle), NOT -, *, or other symbols
-    Each bullet must start with "• " followed by the content
-
-8. For entries with LOCATION and DATE on same line, use multiple spaces to separate left and right content
-
-9. PRESERVE the exact section order from the original resume
-10. DO NOT add any sections that don't exist in the original
-11. DO NOT remove any sections from the original
-12. DO NOT change section header names
-13. DO NOT DROP ANY LINES: Reproduce every line and bullet from the original resume in the same order; only edit wording to add keywords. Lines that are not changed must be copied verbatim.
-
-CONTENT REQUIREMENTS:
-1. Naturally incorporate the selected keywords into existing bullet points and descriptions
-2. Only modify content the candidate could reasonably claim based on their existing experience
-3. Do NOT fabricate new positions, companies, degrees, or achievements
-4. Integrate keywords into relevant existing sections only
-5. Ensure the resume reads naturally and professionally
 
 Return your response in the following JSON format (no markdown, no code blocks):
 {{
@@ -844,5 +855,3 @@ def save_optimized_resume_to_file(text: str) -> Optional[str]:
     except Exception as e:
         print(f"Error saving optimized resume: {str(e)}")
         return None
-
-
