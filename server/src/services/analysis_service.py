@@ -3,11 +3,10 @@ import re
 import json
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Any
-import asyncio
+from typing import Dict, List, Optional, Any
+from io import BytesIO
 
 import PyPDF2
-from PIL import Image
 from pdf2image import convert_from_bytes
 import pytesseract
 from openai import OpenAI
@@ -15,104 +14,156 @@ from openai import OpenAI
 from ..config.settings import settings
 
 
-SYSTEM_INSTRUCTIONS = """
-You are an AI resume optimizer.
+# =========================================================
+# ---------------- SYSTEM INSTRUCTIONS --------------------
+# =========================================================
 
-You MUST preserve all original resume content exactly as written.
-You are performing a structure-preserving transformation.
+SYSTEM_INSTRUCTIONS = """You are an expert ATS resume optimizer and enhancer.
 
-GLOBAL RULES:
-- Do NOT delete, rewrite, summarize, or paraphrase content.
-- Do NOT combine or split bullet points.
-- Preserve the exact number of bullet points per section.
-- Preserve section order and hierarchy.
-- Preserve all dates, titles, company names, and locations.
+MISSION: 
+Take the user's original resume and optimize it for the target job by:
+1. Preserving all genuine user information (name, contact, experience, education, skills)
+2. Enhancing existing content to naturally integrate selected keywords
+3. Improving bullet points and descriptions to be more ATS-friendly
+4. Maintaining the user's actual work history and achievements
+5. Adding relevant skills and technologies where appropriate
 
-KEYWORD RULES:
-- Keywords may ONLY be added, never replaced.
-- Add keywords only if they fit naturally.
-- If a keyword does not fit, leave the bullet unchanged.
+KEY REQUIREMENTS:
+✅ Use ONLY the user's real information from their original resume
+✅ Enhance existing job experiences and bullet points (don't create fake ones)
+✅ Integrate keywords naturally into existing content
+✅ Improve formatting and ATS compatibility
+✅ Preserve the user's genuine education and work timeline
+✅ Add missing relevant skills that align with the job description
 
-FORMATTING RULES:
-- Convert the resume into the STANDARD RESUME TEMPLATE.
-- Use consistent spacing and a single bullet character (•).
-- Do NOT add or remove sections.
-- Preserve all content even if formatting must be adjusted.
+HOW TO INTEGRATE KEYWORDS:
+✓ Enhance existing bullet points to include keywords naturally
+✓ Add keywords to skills sections where they fit the user's background
+✓ Improve job descriptions to incorporate relevant technologies and methodologies
+✓ Optimize the professional summary to include key terms
 
-Failure to follow these rules produces an invalid result.
-"""
+FORBIDDEN ACTIONS:
+❌ Do NOT create fake job experiences
+❌ Do NOT invent companies, dates, or achievements
+❌ Do NOT add false educational credentials
+❌ Do NOT fabricate project details
 
-STANDARD_TEMPLATE = """
-STANDARD RESUME TEMPLATE:
+CRITICAL FORMATTING REQUIREMENTS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ DO NOT USE MARKDOWN FORMATTING (NO ** for bold, NO # for headers)
+⚠️ Use PLAIN TEXT ONLY with proper spacing and capitalization
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[NAME]
-[City, State] | [Email] | [Phone] | [LinkedIn]
+REQUIRED RESUME STRUCTURE:
 
-SUMMARY
-
-EXPERIENCE
-<Job Title> — <Company> | <Location>
-<Dates>
-• Bullet point
+[Full Name]
+[Phone] | [Email] | [LinkedIn] | [GitHub]
 
 EDUCATION
-<Degree> — <Institution>
-<Dates>
+[School Name], [City, State]
+[Degree and Major], Expected: [Date]
+• [Achievement/Scholarship]
+• Relevant Courses: [List courses]
 
-SKILLS
-• Skill
+TECHNICAL SKILLS
+Languages: [List]
+Technologies: [List]
+Tools: [List]
+
+EXPERIENCE
+[Job Title], [Start Date] – [End Date]
+[Company Name], [City, State]
+• [Achievement/responsibility with metrics]
+• [Achievement/responsibility with metrics]
+• [Achievement/responsibility with metrics]
+
+[Job Title], [Start Date] – [End Date]
+[Company Name], [City, State]
+• [Achievement/responsibility with metrics]
+• [Achievement/responsibility with metrics]
+
+PROJECTS (if applicable)
+• [Project description with technologies used]
+• [Project description with technologies used]
+
+CERTIFICATIONS (if applicable)
+• [Certification name and issuer]
+
+PROFESSIONAL AFFILIATIONS (if applicable)
+• [Affiliation]
+
+
+FORMATTING RULES:
+1. Section headers (EDUCATION, TECHNICAL SKILLS, EXPERIENCE, etc.) must be in ALL CAPS
+2. NO markdown symbols (**, ##, etc.) - use plain text only
+3. Job titles and company names on separate lines
+4. Use bullet points (•) for lists and achievements
+5. Include dates in format: Month YYYY – Month YYYY
+6. Keep consistent spacing between sections
+7. Use proper comma placement for locations (City, State)"""
+
+
+OPTIMIZATION_EXAMPLES = """
+EXAMPLE 1 - Software Developer Resume:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Developed web application features using React, implementing API integration for seamless data flow across client projects
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXAMPLE 2 - Marketing Role:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Managed social media accounts using data-driven content strategy and analytics to increase follower engagement by tracking key performance metrics
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXAMPLE 3 - Project Manager:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Coordinated cross-functional teams using Scrum framework and stakeholder management practices to deliver projects on time and within budget
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
+
+# =========================================================
+# ---------------- PDF EXTRACTION -------------------------
+# =========================================================
 
 async def extract_text_from_pdf(pdf_buffer: bytes) -> Dict[str, Any]:
     """
-    Extract text from PDF using PyPDF2 with OCR fallback.
-    Also extracts formatting metadata to preserve resume structure.
-    Saves extracted text to temporary file and project base file.
+    Extract text from PDF with fallback to OCR if needed.
+    Returns both extracted text and formatting information.
     """
     extracted_text = ""
     formatting_info = {
         "sections": [],
-        "fontFamily": "Times New Roman",  # Default
-        "fontSize": 12,  # Default
-        "hasDetectedFormatting": False
+        "hasDetectedFormatting": False,
+        "bulletCount": 0
     }
 
     try:
-       
-        # Try PyPDF2 first
-        print("Attempting PyPDF2 extraction...")
-        from io import BytesIO
-        pdf_file = BytesIO(pdf_buffer)
-        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        reader = PyPDF2.PdfReader(BytesIO(pdf_buffer))
 
-        for page_num, page in enumerate(pdf_reader.pages, 1):
-            text = page.extract_text()
-            if text:
-                extracted_text += text + "\n\n"
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                extracted_text += page_text + "\n"
 
-        print(f"PyPDF2 extraction complete: {len(extracted_text)} characters")
-        print(f"Total pages processed: {len(pdf_reader.pages)}")
-        
-        # Normalize bullet points that may have been garbled during extraction
+        # Normalize bullet points for consistency
         extracted_text = normalize_bullet_points(extracted_text)
-        
-        # Detect sections from the extracted text
+
+        # Detect resume structure
         formatting_info["sections"] = detect_resume_sections(extracted_text)
-        formatting_info["hasDetectedFormatting"] = len(formatting_info["sections"]) > 0
+        formatting_info["hasDetectedFormatting"] = bool(formatting_info["sections"])
+        formatting_info["bulletCount"] = count_bullet_points(extracted_text)
 
-        # If text is too short, try OCR
+        # Fallback to OCR if extraction failed
         if len(extracted_text.strip()) < 50:
-            print("Text too short, attempting OCR fallback...")
+            print("Primary extraction yielded minimal text. Attempting OCR...")
             ocr_text = await extract_text_with_ocr(pdf_buffer)
-
             if len(ocr_text) > len(extracted_text):
                 extracted_text = ocr_text
-                print(f"OCR provided better results: {len(extracted_text)} characters")
-                # Re-detect sections from OCR text
                 formatting_info["sections"] = detect_resume_sections(extracted_text)
+                formatting_info["bulletCount"] = count_bullet_points(extracted_text)
 
-        # Save to files
+        # Save for debugging and reference
         save_extracted_text_to_file(extracted_text)
         save_extracted_text_to_project_base(extracted_text)
 
@@ -122,736 +173,778 @@ async def extract_text_from_pdf(pdf_buffer: bytes) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        print(f"PyPDF2 extraction failed: {str(e)}")
+        print(f"PDF extraction error: {e}. Falling back to OCR...")
+        ocr_text = await extract_text_with_ocr(pdf_buffer)
+        formatting_info["bulletCount"] = count_bullet_points(ocr_text)
+        save_extracted_text_to_project_base(ocr_text)
+        return {
+            "text": ocr_text,
+            "formatting": formatting_info
+        }
 
-        # Fallback to OCR
-        try:
-            print("Falling back to OCR...")
-            ocr_text = await extract_text_with_ocr(pdf_buffer)
-            save_extracted_text_to_file(ocr_text)
-            save_extracted_text_to_project_base(ocr_text)
-            formatting_info["sections"] = detect_resume_sections(ocr_text)
-            return {
-                "text": ocr_text,
-                "formatting": formatting_info
-            }
-        except Exception as ocr_error:
-            print(f"OCR fallback also failed: {str(ocr_error)}")
-            error_msg = "Could not extract text from PDF. The file may be image-based, corrupted, or use unsupported formatting."
-            save_extracted_text_to_project_base(error_msg)
-            return {
-                "text": "",
-                "formatting": formatting_info
-            }
 
+async def extract_text_with_ocr(pdf_buffer: bytes) -> str:
+    """
+    Use OCR to extract text from PDF images.
+    Processes up to 5 pages with high DPI for accuracy.
+    """
+    images = convert_from_bytes(pdf_buffer, dpi=300)
+    text = ""
+
+    for i, image in enumerate(images[:5]):
+        print(f"OCR processing page {i+1}...")
+        text += pytesseract.image_to_string(image, config='--psm 6') + "\n"
+
+    return normalize_bullet_points(text)
+
+
+# =========================================================
+# ---------------- TEXT NORMALIZATION ---------------------
+# =========================================================
+
+def normalize_bullet_points(text: str) -> str:
+    """
+    Standardize all bullet point styles to '•' for consistency.
+    """
+    bullet_patterns = [
+        r'^(\s*)[-–—*▪▫■□◆◇➤➔✓✔>]\s+',
+        r'^(\s*)\u2022\s+',
+        r'^(\s*)·\s+',
+        r'^(\s*)[o]\s+(?=[A-Z])',
+    ]
+
+    lines = text.split("\n")
+    output = []
+
+    for line in lines:
+        modified = False
+        for pattern in bullet_patterns:
+            match = re.match(pattern, line)
+            if match:
+                # Replace with standard bullet
+                line = f"{match.group(1)}• {line[match.end():].strip()}"
+                modified = True
+                break
+        output.append(line)
+
+    return "\n".join(output)
+
+
+def count_bullet_points(text: str) -> int:
+    """
+    Count the number of bullet points in the text.
+    """
+    return len(re.findall(r'^\s*•\s+', text, re.MULTILINE))
+
+
+def clean_encoding_artifacts(text: str) -> str:
+    """
+    Remove problematic encoding artifacts like %Ï that cause formatting issues
+    while preserving proper line breaks and structure.
+    """
+    # Ensure text is a string
+    if isinstance(text, dict):
+        text = str(text)
+    elif not isinstance(text, str):
+        text = str(text) if text else ""
+
+    if not text:
+        return text
+
+    # Remove ALL variations of the problematic characters
+    text = re.sub(r'%[ÏïĪīÎîØø]', '', text)
+    text = re.sub(r'[ÏïĪīÎîØø]', '', text)
+    text = re.sub(r'%\s*[ÏïĪīÎîØø]', '', text)
+    text = re.sub(r'[ÏïĪīÎîØø]\s*%', '', text)
+
+    # Fix common encoding issues
+    text = text.replace('â€¢', '•')  # Fix bullet points
+    text = text.replace('â€"', '–')  # Fix em dashes
+    text = text.replace('â€™', "'")  # Fix apostrophes
+    text = text.replace('â€œ', '"')  # Fix quotes
+    text = text.replace('â€', '"')   # Fix quotes
+
+    # Clean up multiple spaces but preserve line structure
+    text = re.sub(r'[ \t]+', ' ', text)  # Multiple spaces/tabs to single space
+    text = re.sub(r' *\n+ *', '\n', text)  # Clean line breaks but keep them
+
+    # Fix bullet point issues - ensure proper bullet formatting
+    text = re.sub(r'^\s*[•●]\s*%[ÏïĪīÎîØø]?\s*', '• ', text, flags=re.MULTILINE)
+    text = re.sub(r'^\s*%[ÏïĪīÎîØø]\s*', '• ', text, flags=re.MULTILINE)
+
+    # Fix split section headers
+    text = re.sub(r'PROFESSIONAL\s+EXPERIENCE[S]?', 'PROFESSIONAL EXPERIENCES', text)
+    text = re.sub(r'TECHNICAL\s+PROJECTS', 'TECHNICAL PROJECTS', text)
+
+    # Ensure proper section formatting - add line breaks before section headers
+    section_headers = ['EDUCATION', 'SKILLS', 'PROFESSIONAL EXPERIENCES', 'EXPERIENCE',
+                      'TECHNICAL PROJECTS', 'PROJECTS', 'LEADERSHIP', 'CERTIFICATIONS']
+
+    for header in section_headers:
+        text = re.sub(f'([^\n]){header}', f'\\1\n\n{header}', text)
+
+    # Ensure bullet points start on new lines and are properly formatted
+    text = re.sub(r'([^\n])•', r'\1\n•', text)
+    text = re.sub(r'([^\n])●', r'\1\n●', text)
+
+    return text.strip()
+
+
+# =========================================================
+# ---------------- SECTION DETECTION ---------------------
+# =========================================================
 
 def detect_resume_sections(text: str) -> List[Dict[str, Any]]:
     """
-    Detect common resume sections from extracted text.
-    Returns a list of section objects with name, start position, and type.
+    Identify major resume sections and their positions.
     """
     sections = []
-    
-    # Common resume section headers (case-insensitive patterns)
-    section_patterns = [
-        (r'^(CONTACT\s*(?:INFORMATION)?|PERSONAL\s*(?:INFORMATION|DETAILS)?)\s*$', 'contact'),
-        (r'^(SUMMARY|PROFESSIONAL\s*SUMMARY|EXECUTIVE\s*SUMMARY|PROFILE|OBJECTIVE|CAREER\s*OBJECTIVE)\s*$', 'summary'),
-        (r'^(EXPERIENCE|WORK\s*EXPERIENCE|PROFESSIONAL\s*EXPERIENCE|EMPLOYMENT\s*(?:HISTORY)?|WORK\s*HISTORY)\s*$', 'experience'),
-        (r'^(EDUCATION|ACADEMIC\s*(?:BACKGROUND|QUALIFICATIONS)?|EDUCATIONAL\s*BACKGROUND)\s*$', 'education'),
-        (r'^(SKILLS|TECHNICAL\s*SKILLS|CORE\s*COMPETENCIES|KEY\s*SKILLS|COMPETENCIES|AREAS\s*OF\s*EXPERTISE)\s*$', 'skills'),
-        (r'^(CERTIFICATIONS?|LICENSES?\s*(?:AND|&)?\s*CERTIFICATIONS?|PROFESSIONAL\s*CERTIFICATIONS?)\s*$', 'certifications'),
-        (r'^(PROJECTS|KEY\s*PROJECTS|NOTABLE\s*PROJECTS|SELECTED\s*PROJECTS)\s*$', 'projects'),
-        (r'^(AWARDS?|HONORS?|ACHIEVEMENTS?|ACCOMPLISHMENTS?|AWARDS?\s*(?:AND|&)?\s*HONORS?)\s*$', 'awards'),
-        (r'^(PUBLICATIONS?|RESEARCH|PRESENTATIONS?)\s*$', 'publications'),
-        (r'^(VOLUNTEER|VOLUNTEER\s*(?:EXPERIENCE|WORK)|COMMUNITY\s*(?:SERVICE|INVOLVEMENT))\s*$', 'volunteer'),
-        (r'^(LANGUAGES?|LANGUAGE\s*SKILLS?)\s*$', 'languages'),
-        (r'^(INTERESTS?|HOBBIES?|PERSONAL\s*INTERESTS?)\s*$', 'interests'),
-        (r'^(REFERENCES?|PROFESSIONAL\s*REFERENCES?)\s*$', 'references'),
+
+    # Common section headers with variations
+    patterns = [
+        (r'^(SUMMARY|PROFESSIONAL SUMMARY|PROFILE|OBJECTIVE|CAREER OBJECTIVE)$', 'summary'),
+        (r'^(EXPERIENCE|WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|EMPLOYMENT HISTORY|WORK HISTORY)$', 'experience'),
+        (r'^(EDUCATION|ACADEMIC BACKGROUND)$', 'education'),
+        (r'^(SKILLS|TECHNICAL SKILLS|CORE COMPETENCIES|EXPERTISE)$', 'skills'),
+        (r'^(CERTIFICATIONS|CERTIFICATES|LICENSES)$', 'certifications'),
+        (r'^(PROJECTS|KEY PROJECTS)$', 'projects'),
     ]
-    
-    lines = text.split('\n')
-    
+
+    lines = text.split("\n")
+
     for i, line in enumerate(lines):
-        line_stripped = line.strip()
-        if not line_stripped:
-            continue
-            
-        for pattern, section_type in section_patterns:
-            if re.match(pattern, line_stripped, re.IGNORECASE):
+        stripped = line.strip().upper()
+        for pattern, section_type in patterns:
+            if re.match(pattern, stripped):
                 sections.append({
-                    "name": line_stripped,
+                    "name": line.strip(),  # Keep original casing
                     "type": section_type,
-                    "lineNumber": i,
-                    "originalText": line_stripped
+                    "lineNumber": i
                 })
                 break
-    
-    print(f"Detected {len(sections)} resume sections: {[s['type'] for s in sections]}")
+
     return sections
-        
-def normalize_bullet_points(text: str) -> str:
+
+
+def extract_experience_bullets(text: str) -> List[str]:
     """
-    Normalize various bullet point characters and OCR artifacts to standard bullets.
-    OCR can produce strange characters like %Ï, ¡, etc. instead of proper bullets.
+    Extract all bullet points from the experience section.
     """
-    import re
-    
-    # Common OCR misreadings and bullet variants to normalize
-    # These patterns appear at the start of lines (with optional leading whitespace)
-    bullet_patterns = [
-        r'^(\s*)%[ÏIi]\s*',       # OCR artifact %Ï or %I
-        r'^(\s*)¡\s*',            # Inverted exclamation mark
-        r'^(\s*)©\s*',            # Copyright symbol misread
-        r'^(\s*)®\s*',            # Registered trademark misread
-        r'^(\s*)¢\s*',            # Cent sign misread
-        r'^(\s*)§\s*',            # Section sign misread
-        r'^(\s*)¤\s*',            # Currency sign misread
-        r'^(\s*)†\s*',            # Dagger misread
-        r'^(\s*)‡\s*',            # Double dagger misread
-        r'^(\s*)°\s*',            # Degree symbol misread
-        r'^(\s*)»\s*',            # Right angle quote
-        r'^(\s*)›\s*',            # Single right angle quote
-        r'^(\s*)>\s*',            # Greater than as bullet
-        r'^(\s*)\*\s*',           # Asterisk
-        r'^(\s*)-\s*',            # Hyphen/dash
-        r'^(\s*)–\s*',            # En dash
-        r'^(\s*)—\s*',            # Em dash
-        r'^(\s*)·\s*',            # Middle dot
-        r'^(\s*)•\s*',            # Bullet (normalize spacing)
-        r'^(\s*)○\s*',            # Open circle
-        r'^(\s*)◦\s*',            # White bullet
-        r'^(\s*)▪\s*',            # Black small square
-        r'^(\s*)▫\s*',            # White small square
-        r'^(\s*)■\s*',            # Black square
-        r'^(\s*)□\s*',            # White square
-        r'^(\s*)◆\s*',            # Black diamond
-        r'^(\s*)◇\s*',            # White diamond
-        r'^(\s*)➢\s*',            # Arrow
-        r'^(\s*)➤\s*',            # Arrow
-        r'^(\s*)➔\s*',            # Arrow
-        r'^(\s*)✓\s*',            # Checkmark
-        r'^(\s*)✔\s*',            # Heavy checkmark
-        r'^(\s*)→\s*',            # Arrow
-    ]
-    
-    lines = text.split('\n')
-    normalized_lines = []
-    
-    for line in lines:
-        normalized_line = line
-        # Check if line starts with any bullet pattern
-        for pattern in bullet_patterns:
-            match = re.match(pattern, normalized_line)
-            if match:
-                # Replace with standard bullet, preserving indentation
-                indent = match.group(1) if match.group(1) else ''
-                remaining = normalized_line[match.end():]
-                normalized_line = f"{indent}• {remaining}"
-                break
-        
-        normalized_lines.append(normalized_line)
-    
-    return '\n'.join(normalized_lines)
+    sections = detect_resume_sections(text)
+    experience_section = next((s for s in sections if s['type'] == 'experience'), None)
 
+    if not experience_section:
+        return []
 
-        #Research how to directly pdf to text
-async def extract_text_with_ocr(pdf_buffer: bytes) -> str:
+    lines = text.split("\n")
+    start_line = experience_section['lineNumber']
+
+    # Find next section or end of document
+    next_section = next((s for s in sections if s['lineNumber'] > start_line), None)
+    end_line = next_section['lineNumber'] if next_section else len(lines)
+
+    # Extract bullets between start and end
+    bullets = []
+    for line in lines[start_line:end_line]:
+        if re.match(r'^\s*•\s+', line):
+            bullets.append(line.strip())
+
+    return bullets
+
+def count_bullets_per_section(text: str) -> Dict[str, int]:
     """
-    Extract text using OCR (Tesseract) for image-based PDFs
+    Count bullets in each section for validation.
     """
-    try:
-        print("Starting OCR extraction...")
+    sections = detect_resume_sections(text)
+    lines = text.split("\n")
+    bullet_counts = {}
 
-        # Convert PDF pages to images
-        images = convert_from_bytes(pdf_buffer, dpi=300, fmt='png')
+    for i, section in enumerate(sections):
+        start_line = section['lineNumber']
+        # Find next section or end
+        next_section = sections[i + 1] if i + 1 < len(sections) else None
+        end_line = next_section['lineNumber'] if next_section else len(lines)
 
-        full_text = ""
+        # Count bullets in this section
+        count = 0
+        for line in lines[start_line:end_line]:
+            if re.match(r'^\s*•\s+', line):
+                count += 1
 
-        for page_num, image in enumerate(images[:5], 1):  # Limit to first 5 pages
-            print(f"Processing page {page_num} with OCR...")
+        bullet_counts[section['type']] = count
 
-            # Perform OCR on image
-            text = pytesseract.image_to_string(image, lang='eng')
-            full_text += text + "\n\n"
+    return bullet_counts
 
-            print(f"Page {page_num} OCR complete: {len(text)} characters")
+# =========================================================
+# ---------------- FILE SAVING ----------------------------
+# =========================================================
 
-        print(f"OCR extraction complete: {len(full_text)} characters total")
-        
-        # Normalize bullet points that may have been misread by OCR
-        full_text = normalize_bullet_points(full_text)
-        
-        return full_text
-
-    except Exception as e:
-        print(f"OCR extraction failed: {str(e)}")
-        return ""
 def save_extracted_text_to_file(text: str) -> Optional[str]:
-    """Save extracted text to temporary file"""
+    """
+    Save extracted text to temporary file for debugging.
+    """
     try:
-        # Create temp file
-        temp_file = tempfile.NamedTemporaryFile(
-            mode='w',
-            suffix='.txt',
-            prefix='resume_',
+        tmp = tempfile.NamedTemporaryFile(
             delete=False,
-            encoding='utf-8'
+            suffix=".txt",
+            mode="w",
+            encoding="utf-8"
         )
-
-        temp_file.write(text)
-        temp_file.close()
-
-        file_size = os.path.getsize(temp_file.name)
-        print(f"Extracted text saved to temporary file: {temp_file.name}")
-        print(f"File size: {file_size} bytes")
-
-        return temp_file.name
-
+        tmp.write(text)
+        tmp.close()
+        print(f"Extracted text saved to: {tmp.name}")
+        return tmp.name
     except Exception as e:
-        print(f"Error saving temporary file: {str(e)}")
+        print(f"Failed to save extracted text: {e}")
         return None
 
-
-def save_extracted_text_to_project_base(text: str) -> Optional[str]:
-    """Save extracted text to project's resume/baseResume.txt"""
+def save_extracted_text_to_project_base(text: str) -> None:
+    """
+    Save extracted text to project directory for reference.
+    """
     try:
-        # Get project root (3 levels up from services/analysis_service.py)
-        project_root = Path(__file__).parent.parent.parent
-        resume_dir = project_root / "resume"
-
-        # Create directory if it doesn't exist
-        resume_dir.mkdir(exist_ok=True)
-
-        base_file_path = resume_dir / "baseResume.txt"
-
-        # Write text to file (overwrites existing content)
-        with open(base_file_path, 'w', encoding='utf-8') as f:
-            f.write(text)
-
-        file_size = os.path.getsize(base_file_path)
-        print(f"Extracted text written to project base file: {base_file_path}")
-        print(f"New file size: {file_size} bytes")
-
-        return str(base_file_path)
-
+        base = Path(__file__).parent.parent.parent / "resume"
+        base.mkdir(exist_ok=True)
+        path = base / "baseResume.txt"
+        path.write_text(text, encoding="utf-8")
+        print(f"Base resume saved to: {path}")
     except Exception as e:
-        print(f"Error writing project base resume file: {str(e)}")
-        return None
-
-
-async def filter_keywords_with_ai(
-    missing_phrases: List[str], 
-    job_title: str = ""
-) -> Dict[str, List]:
-    """
-    Use OpenAI to filter and categorize missing keywords, removing qualification-based 
-    requirements and returning only actionable skills/technologies.
-    
-    Args:
-        missing_phrases: List of missing keywords/phrases from the job description
-        job_title: The job title for context
-    
-    Returns:
-        Dictionary with categorized, actionable keywords for user selection
-    """
-    if not missing_phrases:
-        return {"actionableKeywords": [], "suggestions": []}
-    
-    # Get API key from environment or settings
-    api_key = os.getenv("OPENAI_API_KEY") or settings.openai_api_key
-    
-    if not api_key:
-        print("OpenAI API key not configured, returning unfiltered results")
-        return _basic_keyword_filter(missing_phrases)
-    
-    try:
-        client = OpenAI(api_key=api_key)
-        
-        keywords_text = "\n".join([f"- {phrase}" for phrase in missing_phrases[:40]])
-        
-        prompt = f"""Analyze these missing keywords/phrases from a job description for a {job_title or 'professional'} position.
-
-MISSING FROM RESUME:
-{keywords_text}
-
-Your task:
-1. REMOVE any items that are qualification-based requirements that cannot be added to a resume, such as:
-   - Years of experience requirements (e.g., "5+ years experience", "3-5 years")
-   - Degree requirements (e.g., "Bachelor's Degree", "Master's required", "JD/Law Degree")
-   - Certifications that require time to obtain (e.g., "CPA required", "bar admission")
-   - Age or time-based qualifications
-
-2. KEEP and categorize actionable items that can be added to a resume:
-   - Technical skills and technologies
-   - Software and tools
-   - Industry-specific terminology
-   - Soft skills and competencies
-   - Methodologies and frameworks
-   - Domain knowledge areas
-
-Return ONLY valid JSON (no markdown, no code blocks) in this exact format:
-{{
-    "actionableKeywords": [
-        {{"keyword": "keyword text", "category": "Technical Skill|Tool|Methodology|Domain Knowledge|Soft Skill", "priority": "high|medium|low"}},
-    ],
-    "filteredOut": ["items removed and why"],
-    "suggestions": ["1-2 specific suggestions for improving resume match"]
-}}
-
-Limit to the top 15 most impactful actionable keywords."""
-
-        response = client.chat.completions.create(
-            model=settings.openai_model or "gpt-3.5-turbo",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a resume optimization expert. You help candidates identify actionable keywords they can add to their resumes. Always return valid JSON only."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            temperature=0.3,
-            max_tokens=1500
-        )
-        
-        response_text = response.choices[0].message.content.strip()
-        print(f"AI keyword filtering response: {response_text[:200]}...")
-        
-        result = json.loads(response_text)
-        
-        return {
-            "actionableKeywords": result.get("actionableKeywords", []),
-            "filteredOut": result.get("filteredOut", []),
-            "suggestions": result.get("suggestions", [])
-        }
-        
-    except json.JSONDecodeError as e:
-        print(f"Failed to parse AI response as JSON: {e}")
-        return _basic_keyword_filter(missing_phrases)
-    except Exception as e:
-        print(f"AI keyword filtering failed: {e}")
-        return _basic_keyword_filter(missing_phrases)
-
-
-def _basic_keyword_filter(missing_phrases: List[str]) -> Dict[str, List]:
-    """
-    Fallback keyword filtering without AI.
-    Filters out obvious qualification-based requirements.
-    """
-    qualification_patterns = [
-        r'\d+\s*\+?\s*years?',
-        r'bachelor\'?s?\s*degree',
-        r'master\'?s?\s*degree',
-        r'phd|doctorate',
-        r'law\s*degree|jd\s*required|juris\s*doctor',
-        r'required\s*certification',
-        r'cpa\s*required',
-        r'bar\s*admission',
-        r'must\s*have\s*\d+',
-        r'minimum\s*\d+\s*years?',
-    ]
-    
-    actionable = []
-    for phrase in missing_phrases:
-        phrase_lower = phrase.lower()
-        is_qualification = any(re.search(pattern, phrase_lower) for pattern in qualification_patterns)
-        
-        if not is_qualification and len(phrase) > 2:
-            actionable.append({
-                "keyword": phrase,
-                "category": "Skill",
-                "priority": "medium"
-            })
-    
-    return {
-        "actionableKeywords": actionable[:15],
-        "filteredOut": [],
-        "suggestions": ["Consider adding the highlighted skills to your resume"]
-    }
-
-
-async def analyze_resume_against_job(resume_text: str, job_data: Dict) -> Dict:
-    """
-    Compare resume text against job description to find missing keywords and phrases.
-    
-    Args:
-        resume_text: Extracted text from the user's resume
-        job_data: Extracted job data containing requirements, skills, etc.
-    
-    Returns:
-        Dictionary with missing keywords, matching keywords, and optimization suggestions
-    """
-    # Normalize resume text for comparison
-    resume_lower = resume_text.lower()
-    resume_words = set(re.findall(r'\b[a-z]+(?:[a-z\-]+[a-z])?\b', resume_lower))
-    
-    # Extract keywords from job data
-    job_keywords = set()
-    job_phrases = []
-    
-    # Common fields to check in job_data
-    keyword_fields = ['skills', 'requirements', 'qualifications', 'technologies', 'tools']
-    text_fields = ['description', 'responsibilities', 'about']
-    
-    for field in keyword_fields:
-        if field in job_data and isinstance(job_data[field], list):
-            for item in job_data[field]:
-                if isinstance(item, str):
-                    job_keywords.add(item.lower().strip())
-                    job_phrases.append(item.strip())
-    
-    for field in text_fields:
-        if field in job_data and isinstance(job_data[field], str):
-            # Extract important words from text fields
-            words = re.findall(r'\b[a-z]+(?:[a-z\-]+[a-z])?\b', job_data[field].lower())
-            job_keywords.update(words)
-    
-    # Filter out common stop words
-    stop_words = {
-        'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-        'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
-        'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
-        'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need',
-        'we', 'you', 'your', 'our', 'their', 'this', 'that', 'these', 'those',
-        'it', 'its', 'they', 'them', 'he', 'she', 'his', 'her', 'who', 'what',
-        'which', 'where', 'when', 'why', 'how', 'all', 'each', 'every', 'both',
-        'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not',
-        'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'also', 'bachelor’s', 
-        'master’s', 'phd', 'degree'
-    }
-    
-    job_keywords = job_keywords - stop_words
-    
-    # Find missing and matching keywords
-    missing_keywords = []
-    matching_keywords = []
-    
-    for keyword in job_keywords:
-        if keyword in resume_lower or keyword in resume_words:
-            matching_keywords.append(keyword)
-        else:
-            missing_keywords.append(keyword)
-    
-    # Find missing phrases (multi-word terms from skills/requirements)
-    missing_phrases = []
-    matching_phrases = []
-    
-    for phrase in job_phrases:
-        if phrase.lower() in resume_lower:
-            matching_phrases.append(phrase)
-        else:
-            missing_phrases.append(phrase)
-    
-    # Calculate match score
-    total_keywords = len(job_keywords)
-    match_score = (len(matching_keywords) / total_keywords * 100) if total_keywords > 0 else 0
-    
-    # Get job title for context
-    job_title = job_data.get("title", "")
-    
-    # Use AI to filter and categorize missing keywords
-    ai_filtered = await filter_keywords_with_ai(missing_phrases, job_title)
-    
-    # Generate enhanced suggestions
-    suggestions = ai_filtered.get("suggestions", [])
-    if not suggestions:
-        suggestions = generate_optimization_suggestions(missing_keywords, missing_phrases)
-    
-    return {
-        "success": True,
-        "matchScore": round(match_score, 1),
-        "missingKeywords": sorted(set(missing_keywords))[:30],
-        "matchingKeywords": sorted(set(matching_keywords)),
-        "missingPhrases": missing_phrases[:20],
-        "matchingPhrases": matching_phrases,
-        "totalJobKeywords": total_keywords,
-        "suggestions": suggestions,
-        # AI-enhanced fields for user selection
-        "actionableKeywords": ai_filtered.get("actionableKeywords", []),
-        "filteredOutReasons": ai_filtered.get("filteredOut", [])
-    }
-
-
-def generate_optimization_suggestions(missing_keywords: List[str], missing_phrases: List[str]) -> List[str]:
-    """Generate actionable suggestions based on missing keywords and phrases."""
-    suggestions = []
-    
-    if missing_phrases:
-        top_phrases = missing_phrases[:10]
-        suggestions.append(f"Add these key skills/technologies to your resume: {', '.join(top_phrases)}")
-    
-    if len(missing_keywords) > 10:
-        suggestions.append(f"Consider incorporating {len(missing_keywords)} additional keywords from the job description")
-    
-    if missing_phrases:
-        suggestions.append("Tailor your experience descriptions to include the job's specific terminology")
-    
-    if not suggestions:
-        suggestions.append("Your resume already covers most of the job requirements - great job!")
-    
-    return suggestions
-
-
-async def generate_optimized_resume(
-    original_resume_text: str,
-    job_description: str,
-    selected_keywords: List[Dict[str, str]],
-    job_title: str = "",
-    formatting_info: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
-    """
-    Generate an optimized version of the resume incorporating selected keywords.
-    
-    This function uses AI to intelligently integrate the selected keywords into
-    the original resume content while maintaining the resume's structure,
-    formatting, and authenticity.
-    
-    Args:
-        original_resume_text: The extracted text from the user's original resume
-        job_description: The full job description text
-        selected_keywords: List of keyword objects the user selected to incorporate
-                          Each object has: {"keyword": str, "category": str, "priority": str}
-        job_title: The target job title for context
-        formatting_info: Optional formatting metadata from the original resume
-    
-    Returns:
-        Dictionary containing:
-            - success: bool
-            - optimizedResume: str - The full optimized resume text
-            - resumeSections: List[Dict] - Structured sections for PDF generation
-            - changes: List[Dict] - Summary of changes made
-            - atsScore: int - Estimated ATS compatibility score
-            - formatting: Dict - Formatting specifications for PDF generation
-            - message: str - Status message
-    """
-    # Default formatting settings
-    default_formatting = {
-        "fontFamily": "Times New Roman",
-        "fontSize": 12,
-        "headerStyle": "bold-italic",
-        "bulletStyle": "•",
-        "lineSpacing": 1.15,
-        "margins": {"top": 1, "bottom": 1, "left": 1, "right": 1}
-    }
-    
-    if formatting_info:
-        default_formatting.update({
-            k: v for k, v in formatting_info.items() 
-            if v and k in default_formatting
-        })
-    
-    if not original_resume_text or len(original_resume_text.strip()) < 50:
-        return {
-            "success": False,
-            "message": "Original resume text is too short or missing",
-            "optimizedResume": "",
-            "resumeSections": [],
-            "changes": [],
-            "atsScore": 0,
-            "formatting": default_formatting
-        }
-    
-    if not selected_keywords:
-        return {
-            "success": False,
-            "message": "No keywords selected for optimization",
-            "optimizedResume": original_resume_text,
-            "resumeSections": [],
-            "changes": [],
-            "atsScore": 0,
-            "formatting": default_formatting
-        }
-    
-    # Get API key from environment or settings
-    api_key = os.getenv("OPENAI_API_KEY") or settings.openai_api_key
-    
-    if not api_key:
-        return {
-            "success": False,
-            "message": "OpenAI API key not configured. Cannot generate optimized resume.",
-            "optimizedResume": "",
-            "resumeSections": [],
-            "changes": [],
-            "atsScore": 0,
-            "formatting": default_formatting
-        }
-    
-    try:
-        client = OpenAI(api_key=api_key)
-        
-        # Format selected keywords for the prompt
-        keywords_list = []
-        for kw in selected_keywords:
-            if isinstance(kw, dict):
-                keyword = kw.get("keyword", "")
-                category = kw.get("category", "Skill")
-                keywords_list.append(f"- {keyword} ({category})")
-            else:
-                keywords_list.append(f"- {kw}")
-        
-        keywords_text = "\n".join(keywords_list)
-        
-        # Detect sections from original resume for context
-        detected_sections = detect_resume_sections(original_resume_text)
-        sections_context = ""
-        if detected_sections:
-            sections_context = f"\n\nDETECTED SECTIONS IN ORIGINAL RESUME:\n{', '.join([s['name'] for s in detected_sections])}"
-        
-        prompt = f"""{SYSTEM_INSTRUCTIONS}
-
-{STANDARD_TEMPLATE}
-
-TARGET POSITION: {job_title or "Not specified"}
-
-ORIGINAL RESUME:
----
-{original_resume_text}
----
-
-JOB DESCRIPTION CONTEXT:
----
-{job_description[:3000]}
----
-
-SELECTED KEYWORDS TO INCORPORATE:
-{keywords_text}
-{sections_context}
-
-
-Return your response in the following JSON format (no markdown, no code blocks):
-{{
-    "optimizedResume": "The complete optimized resume text with EXACT formatting as specified above",
-    "resumeSections": [
-        {{
-            "type": "header|contact|summary|experience|education|skills|certifications|projects|leadership|interests|other",
-            "title": "Section header text in ALL CAPS exactly as it should appear",
-            "content": "Full section content with proper formatting",
-            "items": ["array of individual items if applicable"]
-        }}
-    ],
-    "changes": [
-        {{"section": "section name", "description": "brief description of what was changed", "keywordsAdded": ["keywords"]}}
-    ],
-    "atsScore": 85,
-    "tips": ["Additional tips for the candidate"]
-}}
-
-The atsScore should be your estimate (0-100) of how well the optimized resume will perform in ATS systems for this job.
-"""
-
-        response = client.chat.completions.create(
-            model=settings.openai_model if hasattr(settings, 'openai_model') else "gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are an expert resume writer and ATS optimization specialist. You help candidates optimize their resumes to pass ATS systems while maintaining authenticity and PRESERVING the original resume's formatting and structure. Always return valid JSON only, no markdown formatting."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            temperature=0.3,
-            max_tokens=6000
-        )
-        
-        response_text = response.choices[0].message.content.strip()
-        
-        # Clean up response if it has markdown code blocks
-        if response_text.startswith("```"):
-            response_text = re.sub(r'^```(?:json)?\s*', '', response_text)
-            response_text = re.sub(r'\s*```$', '', response_text)
-        
-        print(f"Resume generation response received: {len(response_text)} characters")
-        
-        result = json.loads(response_text)
-        
-        optimized_resume = result.get("optimizedResume", "")
-        resume_sections = result.get("resumeSections", [])
-
-        # Safety net: if the optimized resume is significantly shorter than the original,
-        # fall back to the original text to avoid missing sections/lines.
-        original_lines = [ln for ln in original_resume_text.split('\n') if ln.strip()]
-        optimized_lines = [ln for ln in optimized_resume.split('\n') if ln.strip()]
-        if len(optimized_lines) < 0.8 * len(original_lines):
-            print("Optimized resume shorter than original; using original text to preserve structure.")
-            optimized_resume = normalize_bullet_points(original_resume_text)
-        
-        # Save the optimized resume to a file
-        save_optimized_resume_to_file(optimized_resume)
-        
-        return {
-            "success": True,
-            "message": "Resume successfully optimized",
-            "optimizedResume": optimized_resume,
-            "resumeSections": resume_sections,
-            "changes": result.get("changes", []),
-            "atsScore": result.get("atsScore", 0),
-            "tips": result.get("tips", []),
-            "formatting": default_formatting
-        }
-        
-    except json.JSONDecodeError as e:
-        print(f"Failed to parse AI response as JSON: {e}")
-        print(f"Raw response: {response_text[:500]}...")
-        return {
-            "success": False,
-            "message": f"Failed to parse optimization response: {str(e)}",
-            "optimizedResume": "",
-            "resumeSections": [],
-            "changes": [],
-            "atsScore": 0,
-            "formatting": default_formatting
-        }
-    except Exception as e:
-        print(f"Resume optimization failed: {e}")
-        return {
-            "success": False,
-            "message": f"Resume optimization failed: {str(e)}",
-            "optimizedResume": "",
-            "resumeSections": [],
-            "changes": [],
-            "atsScore": 0,
-            "formatting": default_formatting
-        }
+        print(f"Failed to save base resume: {e}")
 
 
 def save_optimized_resume_to_file(text: str) -> Optional[str]:
     """
-    Save the optimized resume to the project's resume folder.
-    
-    Args:
-        text: The optimized resume text
-    
-    Returns:
-        The file path where the resume was saved, or None if failed
+    Save optimized resume to project directory.
     """
     try:
-        from datetime import datetime
-        
-        # Get project root
-        project_root = Path(__file__).parent.parent.parent
-        resume_dir = project_root / "resume"
-        
-        # Create directory if it doesn't exist
-        resume_dir.mkdir(exist_ok=True)
-        
-        # Create filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        optimized_file_path = resume_dir / f"optimizedResume_{timestamp}.txt"
-        
-        # Write optimized resume
-        with open(optimized_file_path, 'w', encoding='utf-8') as f:
-            f.write(text)
-        
-        file_size = os.path.getsize(optimized_file_path)
-        print(f"Optimized resume saved to: {optimized_file_path}")
-        print(f"File size: {file_size} bytes")
-        
-        return str(optimized_file_path)
-        
+        base = Path(__file__).parent.parent.parent / "resume"
+        base.mkdir(exist_ok=True)
+        path = base / "optimizedResume.txt"
+        path.write_text(text, encoding="utf-8")
+        print(f"Optimized resume saved to: {path}")
+        return str(path)
     except Exception as e:
-        print(f"Error saving optimized resume: {str(e)}")
+        print(f"Failed to save optimized resume: {e}")
         return None
+
+
+# =========================================================
+# ---------------- RESUME ANALYSIS ------------------------
+# =========================================================
+
+async def analyze_resume_against_job(resume_text: str, job_data: Dict) -> Dict[str, Any]:
+    """
+    Compare resume against job description to identify missing and matching keywords.
+    Uses AI to filter out non-actionable keywords.
+    """
+    # Extract all potential keywords from job description
+    job_phrases = []
+    for field in ["skills", "requirements", "technologies", "tools", "qualifications"]:
+        if isinstance(job_data.get(field), list):
+            job_phrases.extend(job_data[field])
+
+    # Remove duplicates and clean
+    job_phrases = list(set([p.strip() for p in job_phrases if p.strip()]))
+
+    if not job_phrases:
+        return {
+            "success": True,
+            "matchScore": 0,
+            "missingPhrases": [],
+            "matchingPhrases": [],
+            "actionableKeywords": []
+        }
+
+    # Categorize keywords
+    missing = []
+    matching = []
+    resume_lower = resume_text.lower()
+
+    for phrase in job_phrases:
+        phrase_lower = phrase.lower()
+        # Check for exact match or close variations
+        if phrase_lower in resume_lower or any(word in resume_lower for word in phrase_lower.split() if len(word) > 3):
+            matching.append(phrase)
+        else:
+            missing.append(phrase)
+
+    # Use AI to filter actionable keywords from missing list
+    ai_filtered = await filter_keywords_with_ai(
+        missing,
+        job_data.get("title", ""),
+        resume_text
+    )
+
+    # Calculate match score
+    score = (len(matching) / max(len(job_phrases), 1)) * 100
+
+    return {
+        "success": True,
+        "matchScore": round(score, 1),
+        "missingPhrases": missing,
+        "matchingPhrases": matching,
+        "actionableKeywords": ai_filtered.get("actionableKeywords", []),
+        "totalKeywords": len(job_phrases)
+    }
+
+
+# =========================================================
+# ---------------- KEYWORD FILTERING ---------------------
+# =========================================================
+
+async def filter_keywords_with_ai(
+        missing_phrases: List[str],
+        job_title: str = "",
+        resume_text: str = ""
+) -> Dict[str, Any]:
+    """
+    Use AI to filter keywords into actionable vs non-actionable categories.
+    Removes requirements like degrees, years of experience, certifications requiring time.
+    """
+    if not missing_phrases:
+        return {"actionableKeywords": []}
+
+    api_key = settings.openai_api_key or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        print("No OpenAI API key found. Using basic keyword filter.")
+        return _basic_keyword_filter(missing_phrases)
+
+    try:
+        client = OpenAI(api_key=api_key)
+
+        prompt = f"""
+Analyze these keywords from a job posting for a {job_title or 'professional'} role.
+
+TASK: Filter ONLY keywords that can be incorporated into an existing resume through rewording experience bullets.
+
+INCLUDE (Actionable):
+✓ Skills (e.g., "data analysis", "project management")
+✓ Tools/Technologies (e.g., "Python", "SQL", "Tableau")
+✓ Methodologies (e.g., "Agile", "Six Sigma")
+✓ Soft skills if specific (e.g., "stakeholder communication")
+✓ Industry terms (e.g., "A/B testing", "ETL pipelines")
+
+EXCLUDE (Non-Actionable):
+✗ Years of experience (e.g., "5+ years", "3-5 years experience")
+✗ Education requirements (e.g., "Bachelor's degree", "Master's in CS")
+✗ Certifications requiring exams/time (e.g., "PMP", "CPA", "AWS Certified")
+✗ Clearance requirements (e.g., "Security Clearance")
+✗ Vague phrases (e.g., "strong communication", "team player")
+✗ Job requirements (e.g., "ability to travel", "work independently")
+
+KEYWORDS TO FILTER:
+{chr(10).join(f"- {p}" for p in missing_phrases[:40])}
+
+Return ONLY valid JSON with this exact structure:
+{{
+  "actionableKeywords": [
+    {{
+      "keyword": "exact keyword text",
+      "category": "Skill|Tool|Methodology|Technology",
+      "priority": "high|medium|low",
+      "suggestedIntegration": "brief tip on how to integrate this into experience bullets"
+    }}
+  ]
+}}
+
+Priority guidelines:
+- high: Core technical skills and tools directly mentioned multiple times in job description
+- medium: Supplementary skills and methodologies
+- low: Nice-to-have skills or tangential technologies
+"""
+
+        response = client.chat.completions.create(
+            model=settings.openai_model or "gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an expert ATS keyword analyzer. Return only valid JSON, no markdown formatting."
+                },
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2,
+            max_tokens=1500
+        )
+
+        content = response.choices[0].message.content.strip()
+        content = re.sub(r"^```(?:json)?|```$", "", content, flags=re.MULTILINE).strip()
+
+        print(f"Raw AI response (first 500 chars): {content[:500]}")
+
+        try:
+            result = json.loads(content)
+        except json.JSONDecodeError as e:
+            print(f"JSON error: {e}")
+            print(f"Content that failed to parse: {content[:1000]}")
+            return _basic_keyword_filter(missing_phrases)
+
+        # Validate and return actionable keywords
+        actionable_keywords = result.get("actionableKeywords", [])
+
+        if not isinstance(actionable_keywords, list):
+            print("ERROR: actionableKeywords is not a list")
+            return _basic_keyword_filter(missing_phrases)
+
+        print(f"Successfully extracted {len(actionable_keywords)} actionable keywords")
+
+        return {
+            "actionableKeywords": actionable_keywords
+        }
+    except Exception as e:
+        print(f"AI keyword filtering error: {e}")
+        return _basic_keyword_filter(missing_phrases)
+
+
+def _basic_keyword_filter(missing_phrases: List[str]) -> Dict[str, Any]:
+    """
+    Basic keyword filtering without AI - filters out obvious non-actionable keywords.
+    """
+    non_actionable_patterns = [
+        r'\d+\+?\s*years?',  # "5+ years", "3 years"
+        r'bachelor',
+        r'master',
+        r'ph\.?d',
+        r'degree',
+        r'clearance',
+        r'certification',
+        r'travel',
+        r'ability to',
+        r'strong\s+\w+',  # "strong communication"
+        r'excellent\s+\w+',
+        r'team player',
+    ]
+
+    actionable = []
+    for phrase in missing_phrases:
+        phrase_lower = phrase.lower()
+        is_actionable = True
+
+        for pattern in non_actionable_patterns:
+            if re.search(pattern, phrase_lower, re.IGNORECASE):
+                is_actionable = False
+                break
+
+        if is_actionable:
+            actionable.append({
+                "keyword": phrase,
+                "category": "Skill",
+                "priority": "medium",
+                "suggestedIntegration": "Add to relevant experience bullets or skills section"
+            })
+
+    return {"actionableKeywords": actionable}
+
+
+async def generate_optimized_resume(
+        original_resume_text: str,
+        selected_keywords: List[Dict[str, str]],
+        job_description: str = "",
+        job_title: str = "",
+        formatting_info: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+
+    if not selected_keywords:
+        return {"success": False, "optimizedResume": "", "message": "No keywords selected."}
+
+    api_key = settings.openai_api_key or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return {"success": False, "optimizedResume": "", "message": "OpenAI API key missing."}
+
+    # Extract keywords with robust handling for different input formats
+    keywords = []
+    for k in selected_keywords:
+        if isinstance(k, dict):
+            keyword_value = k.get("keyword", "")
+        elif isinstance(k, str):
+            keyword_value = k
+        else:
+            keyword_value = str(k)
+
+        if keyword_value:
+            keywords.append(str(keyword_value).strip())
+
+    if not keywords:
+        return {"success": False, "optimizedResume": "", "message": "No valid keywords."}
+
+    print(f"Generating new resume with {len(keywords)} keywords")
+
+    try:
+        client = OpenAI(api_key=api_key)
+
+        prompt = f"""{SYSTEM_INSTRUCTIONS}
+
+ORIGINAL USER RESUME TO OPTIMIZE:
+{original_resume_text}
+
+TARGET ROLE: {job_title or "Not specified"}
+
+SELECTED KEYWORDS TO INTEGRATE ({len(keywords)} total):
+{chr(10).join(f"→ {kw}" for kw in keywords)}
+
+JOB DESCRIPTION FOR CONTEXT:
+{job_description[:2000] if job_description else "Not provided"}
+
+IMPORTANT: Return the optimized resume as PLAIN TEXT ONLY in the "optimizedResume" field, not as a dictionary or list.
+
+OUTPUT (valid JSON only, no markdown):
+{{
+  "optimizedResume": "COMPLETE TEXT of the enhanced resume with all sections, preserving original formatting and content",
+  "atsScore": 85,
+  "tips": ["Improvement 1", "Improvement 2"]
+}}"""
+
+        print("Sending comprehensive optimization request to OpenAI...")
+
+        response = client.chat.completions.create(
+            model=settings.openai_model or "gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a resume optimizer. Create a COMPLETE enhanced resume using ALL the user's real information. Return ONLY valid JSON with the optimizedResume field containing the FULL FORMATTED RESUME TEXT (not a dictionary). Include every section, job, and achievement from the original."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=12000
+        )
+
+        content = response.choices[0].message.content.strip()
+        print(f"Raw AI response (first 300 chars): {content[:300]}")
+
+        content = re.sub(r"^```(?:json)?|```$", "", content, flags=re.MULTILINE).strip()
+
+        try:
+            result = json.loads(content)
+        except json.JSONDecodeError as e:
+            print(f"JSON parse error: {e}")
+            print(f"Content that failed to parse: {content[:500]}")
+            return {"success": False, "optimizedResume": "", "message": "AI returned invalid JSON."}
+
+        optimized_text = result.get("optimizedResume", "")
+
+        # Check if optimizedResume is a dict/list (meaning AI returned wrong format)
+        if isinstance(optimized_text, (dict, list)):
+            print(f"ERROR: optimizedResume is a {type(optimized_text).__name__}, converting to string")
+            print(f"Type: {type(optimized_text)}")
+            # Convert dict structure back to formatted resume text
+            optimized_text = _dict_to_resume_text(optimized_text)
+
+        if not optimized_text:
+            print("ERROR: No optimized_text extracted from AI response")
+            return {"success": False, "optimizedResume": "", "message": "No resume generated."}
+
+        if not isinstance(optimized_text, str):
+            optimized_text = str(optimized_text)
+
+        print(f"Extracted resume text length: {len(optimized_text)} characters")
+
+        # Clean encoding artifacts from the generated resume
+        optimized_text = clean_encoding_artifacts(optimized_text)
+
+        print(f"After cleaning, resume length: {len(optimized_text)} characters")
+
+        keyword_check = verify_keyword_integration(optimized_text, keywords)
+        save_optimized_resume_to_file(optimized_text)
+
+        print(f"Success! {len(keyword_check['integrated'])} keywords integrated")
+
+        return {
+            "success": True,
+            "message": "New resume generated successfully",
+            "optimizedResume": optimized_text,
+            "resumeSections": result.get("resumeSections", []),
+            "keywordIntegration": result.get("keywordIntegration", []),
+            "keywordVerification": keyword_check,
+            "atsScore": result.get("atsScore", 0),
+            "tips": result.get("tips", []),
+            "metadata": {
+                "keywordsRequested": len(keywords),
+                "keywordsIntegrated": len(keyword_check['integrated'])
+            }
+        }
+
+    except Exception as e:
+        import traceback
+        print(f"Generation error: {e}")
+        print(f"Error traceback: {traceback.format_exc()}")
+        return {"success": False, "optimizedResume": "", "message": f"Generation failed: {str(e)}"}
+
+
+
+def verify_keyword_integration(optimized_text: str, keywords: List[str]) -> Dict[str, Any]:
+    """
+    Verify that selected keywords were actually integrated into the resume.
+    """
+    optimized_lower = optimized_text.lower()
+
+    integrated = []
+    missing = []
+
+    for keyword in keywords:
+        # Ensure keyword is a string
+        if isinstance(keyword, dict):
+            keyword = keyword.get("keyword", "")
+        elif not isinstance(keyword, str):
+            keyword = str(keyword)
+
+        if not keyword:
+            continue
+
+        keyword_lower = keyword.lower()
+        if keyword_lower in optimized_lower:
+            integrated.append(keyword)
+        else:
+            # Check for partial matches (e.g., "machine learning" might appear as "ML")
+            keyword_words = keyword_lower.split()
+            if len(keyword_words) > 1 and all(word in optimized_lower for word in keyword_words):
+                integrated.append(keyword)
+            else:
+                missing.append(keyword)
+
+    return {
+        "integrated": integrated,
+        "missing": missing,
+        "integrationRate": round((len(integrated) / max(len(keywords), 1)) * 100, 1)
+    }
+
+
+# =========================================================
+# ---------------- HELPER FUNCTIONS ----------------------
+# =========================================================
+
+def validate_resume_structure(original: str, optimized: str) -> Dict[str, Any]:
+    """
+    Validate that optimized resume maintains original structure.
+    """
+    original_sections = detect_resume_sections(original)
+    optimized_sections = detect_resume_sections(optimized)
+
+    return {
+        "sectionsPreserved": len(original_sections) == len(optimized_sections),
+        "originalSections": [s['type'] for s in original_sections],
+        "optimizedSections": [s['type'] for s in optimized_sections],
+        "bulletCountOriginal": count_bullet_points(original),
+        "bulletCountOptimized": count_bullet_points(optimized)
+    }
+
+
+def _dict_to_resume_text(resume_dict: Any) -> str:
+    """
+    Convert a resume dictionary back to formatted text.
+    Handles cases where AI returns structured data instead of plain text.
+    Formats resume with proper professional structure: ALL CAPS headers, inline job titles with dates.
+    """
+    if not isinstance(resume_dict, dict):
+        return str(resume_dict)
+
+    resume_text = []
+
+    # Name and contact
+    if 'name' in resume_dict:
+        resume_text.append(resume_dict['name'])
+
+    if 'contact' in resume_dict:
+        contact = resume_dict['contact']
+        contact_info = []
+        for key, value in contact.items():
+            if value and value not in ['GitHub', 'LinkedIn', 'github', 'linkedin']:
+                contact_info.append(str(value))
+        if contact_info:
+            resume_text.append(' | '.join(contact_info))
+
+    # Education
+    if 'education' in resume_dict:
+        resume_text.append('\nEDUCATION')
+        edu = resume_dict['education']
+        if isinstance(edu, dict):
+            if 'institution' in edu:
+                inst_line = f"{edu['institution']}, {edu.get('location', '')}"
+                if 'expectedGraduation' in edu:
+                    inst_line += f", Expected: {edu['expectedGraduation']}"
+                resume_text.append(inst_line)
+
+            if 'degree' in edu:
+                resume_text.append(edu['degree'])
+            if 'gpa' in edu:
+                resume_text.append(f"GPA: {edu['gpa']}")
+            if 'honors' in edu and isinstance(edu['honors'], list):
+                for honor in edu['honors']:
+                    resume_text.append(f"• {honor}")
+            if 'courses' in edu and isinstance(edu['courses'], list):
+                resume_text.append(f"• Relevant Courses: {', '.join(edu['courses'])}")
+        else:
+            resume_text.append(str(edu))
+
+    # Technical Skills
+    if 'skills' in resume_dict:
+        resume_text.append('\nTECHNICAL SKILLS')
+        skills = resume_dict['skills']
+        if isinstance(skills, dict):
+            for skill_category, skill_list in skills.items():
+                if isinstance(skill_list, list) and skill_list:
+                    # Format: "Category: skill1, skill2, skill3"
+                    category_name = skill_category.replace('_', ' ').title()
+                    skills_str = ', '.join(str(s) for s in skill_list)
+                    resume_text.append(f"{category_name}: {skills_str}")
+        else:
+            resume_text.append(str(skills))
+
+    # Professional Experiences
+    if 'professionalExperiences' in resume_dict:
+        resume_text.append('\nEXPERIENCE')
+        experiences = resume_dict['professionalExperiences']
+        if isinstance(experiences, list):
+            for exp in experiences:
+                if isinstance(exp, dict):
+                    title = exp.get('title', '')
+                    company = exp.get('company', '')
+                    location = exp.get('location', '')
+                    dates = exp.get('dates', '')
+
+                    # Format: "Job Title, Date Range" on one line
+                    exp_line = f"{title}"
+                    if dates:
+                        exp_line += f", {dates}"
+                    resume_text.append(exp_line)
+
+                    # Company and location on next line
+                    company_line = company
+                    if location:
+                        company_line += f", {location}"
+                    if company:
+                        resume_text.append(company_line)
+
+                    # Responsibilities as bullets
+                    responsibilities = exp.get('responsibilities', [])
+                    if isinstance(responsibilities, list):
+                        for resp in responsibilities:
+                            resume_text.append(f"• {resp}")
+
+    # Technical Projects
+    if 'technicalProjects' in resume_dict:
+        projects = resume_dict['technicalProjects']
+        if projects and isinstance(projects, list) and len(projects) > 0:
+            resume_text.append('\nTECHNICAL PROJECTS')
+            for project in projects:
+                if isinstance(project, dict):
+                    title = project.get('title', '')
+                    description = project.get('description', '')
+                    if title:
+                        resume_text.append(f"• {title}")
+                    if description:
+                        resume_text.append(f"  {description}")
+
+    # Leadership and Affiliations
+    if 'leadership' in resume_dict:
+        leadership = resume_dict['leadership']
+        if leadership and isinstance(leadership, list) and len(leadership) > 0:
+            resume_text.append('\nLEADERSHIP')
+            for item in leadership:
+                resume_text.append(f"• {item}")
+
+    # Certifications
+    if 'certifications' in resume_dict:
+        certs = resume_dict['certifications']
+        if certs and isinstance(certs, list) and len(certs) > 0:
+            resume_text.append('\nCERTIFICATIONS')
+            for cert in certs:
+                resume_text.append(f"• {cert}")
+
+    return '\n'.join(resume_text).strip()

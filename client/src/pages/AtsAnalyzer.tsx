@@ -134,8 +134,12 @@ export default function ATSAnalyzer() {
 
   // Handle resume optimization with selected keywords
   const handleOptimizeResume = async (keywords: ActionableKeyword[]) => {
-    if (!resumeText) {
-      alert('Resume text not available. Please analyze your resume first.');
+    console.log('=== OPTIMIZATION DEBUG ===');
+    console.log('resumeText state:', resumeText ? `${resumeText.substring(0, 100)}...` : 'EMPTY!');
+    console.log('resumeText length:', resumeText.length);
+
+    if (!resumeText || resumeText.length < 50) {
+      alert('Resume text not available. Please analyze your resume first by clicking the "Analyze" button.');
       return;
     }
     
@@ -154,6 +158,8 @@ export default function ATSAnalyzer() {
 
     try {
       console.log('Starting resume optimization with keywords:', keywords);
+      console.log('Sending resume text (first 200 chars):', resumeText.substring(0, 200));
+
       const result = await optimizeResume(
         resumeText,
         jobDescription,
@@ -164,6 +170,7 @@ export default function ATSAnalyzer() {
       if (result.success) {
         setOptimizationResult(result);
         console.log('Resume optimization successful:', result);
+        console.log('Optimized resume preview:', result.optimizedResume.substring(0, 200));
       } else {
         alert(`Optimization failed: ${result.message}`);
       }
@@ -276,7 +283,7 @@ export default function ATSAnalyzer() {
                       {keywordResults.matchScore}%
                     </div>
                   </div>
-                  {keywordResults.suggestions.length > 0 && (
+                  {keywordResults.suggestions && keywordResults.suggestions.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-gray-200">
                       <h4 className="font-semibold text-gray-700 mb-2">Suggestions:</h4>
                       <ul className="space-y-1">
@@ -293,12 +300,12 @@ export default function ATSAnalyzer() {
 
                 {/* Missing and Matching Keywords */}
                 <KeywordAnalysis
-                  missingKeywords={keywordResults.missingPhrases.length > 0 
-                    ? keywordResults.missingPhrases 
-                    : keywordResults.missingKeywords.slice(0, 15)}
-                  suggestedKeywords={keywordResults.matchingPhrases.length > 0 
-                    ? keywordResults.matchingPhrases 
-                    : keywordResults.matchingKeywords.slice(0, 15)}
+                  missingKeywords={(keywordResults.missingPhrases && keywordResults.missingPhrases.length > 0)
+                    ? keywordResults.missingPhrases
+                    : (keywordResults.missingKeywords || []).slice(0, 15)}
+                  suggestedKeywords={(keywordResults.matchingPhrases && keywordResults.matchingPhrases.length > 0)
+                    ? keywordResults.matchingPhrases
+                    : (keywordResults.matchingKeywords || []).slice(0, 15)}
                   actionableKeywords={keywordResults.actionableKeywords || []}
                   onKeywordsSelected={(selected) => {
                     console.log('Selected keywords for optimization:', selected);
@@ -323,4 +330,3 @@ export default function ATSAnalyzer() {
     </div>
   );
 }
-
