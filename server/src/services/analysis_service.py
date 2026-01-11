@@ -35,73 +35,23 @@ KEY REQUIREMENTS:
 ✅ Improve formatting and ATS compatibility
 ✅ Preserve the user's genuine education and work timeline
 ✅ Add missing relevant skills that align with the job description
+✅ 
+
 
 HOW TO INTEGRATE KEYWORDS:
 ✓ Enhance existing bullet points to include keywords naturally
 ✓ Add keywords to skills sections where they fit the user's background
 ✓ Improve job descriptions to incorporate relevant technologies and methodologies
 ✓ Optimize the professional summary to include key terms
+✓ Focus keyword integration on relevant experiences, but preserve all experiences
 
 FORBIDDEN ACTIONS:
 ❌ Do NOT create fake job experiences
 ❌ Do NOT invent companies, dates, or achievements
 ❌ Do NOT add false educational credentials
 ❌ Do NOT fabricate project details
-
-CRITICAL FORMATTING REQUIREMENTS:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️ DO NOT USE MARKDOWN FORMATTING (NO ** for bold, NO # for headers)
-⚠️ Use PLAIN TEXT ONLY with proper spacing and capitalization
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-REQUIRED RESUME STRUCTURE:
-
-[Full Name]
-[Phone] | [Email] | [LinkedIn] | [GitHub]
-
-EDUCATION
-[School Name], [City, State]
-[Degree and Major], Expected: [Date]
-• [Achievement/Scholarship]
-• Relevant Courses: [List courses]
-
-TECHNICAL SKILLS
-Languages: [List]
-Technologies: [List]
-Tools: [List]
-
-EXPERIENCE
-[Job Title], [Start Date] – [End Date]
-[Company Name], [City, State]
-• [Achievement/responsibility with metrics]
-• [Achievement/responsibility with metrics]
-• [Achievement/responsibility with metrics]
-
-[Job Title], [Start Date] – [End Date]
-[Company Name], [City, State]
-• [Achievement/responsibility with metrics]
-• [Achievement/responsibility with metrics]
-
-PROJECTS (if applicable)
-• [Project description with technologies used]
-• [Project description with technologies used]
-
-CERTIFICATIONS (if applicable)
-• [Certification name and issuer]
-
-PROFESSIONAL AFFILIATIONS (if applicable)
-• [Affiliation]
-
-
-FORMATTING RULES:
-1. Section headers (EDUCATION, TECHNICAL SKILLS, EXPERIENCE, etc.) must be in ALL CAPS
-2. NO markdown symbols (**, ##, etc.) - use plain text only
-3. Job titles and company names on separate lines
-4. Use bullet points (•) for lists and achievements
-5. Include dates in format: Month YYYY – Month YYYY
-6. Keep consistent spacing between sections
-7. Use proper comma placement for locations (City, State)"""
-
+❌ Do NOT remove or omit any existing work experiences from the original resume
+"""
 
 OPTIMIZATION_EXAMPLES = """
 EXAMPLE 1 - Software Developer Resume:
@@ -273,11 +223,11 @@ def clean_encoding_artifacts(text: str) -> str:
     text = re.sub(r'^\s*%[ÏïĪīÎîØø]\s*', '• ', text, flags=re.MULTILINE)
 
     # Fix split section headers
-    text = re.sub(r'PROFESSIONAL\s+EXPERIENCE[S]?', 'PROFESSIONAL EXPERIENCES', text)
+    text = re.sub(r'PROFESSIONAL\s+EXPERIENCES', 'PROFESSIONAL EXPERIENCES', text)
     text = re.sub(r'TECHNICAL\s+PROJECTS', 'TECHNICAL PROJECTS', text)
 
     # Ensure proper section formatting - add line breaks before section headers
-    section_headers = ['EDUCATION', 'SKILLS', 'PROFESSIONAL EXPERIENCES', 'EXPERIENCE',
+    section_headers = ['EDUCATION', 'TECHNICAL SKILLS', 'PROFESSIONAL EXPERIENCES',
                       'TECHNICAL PROJECTS', 'PROJECTS', 'LEADERSHIP', 'CERTIFICATIONS']
 
     for header in section_headers:
@@ -303,7 +253,7 @@ def detect_resume_sections(text: str) -> List[Dict[str, Any]]:
     # Common section headers with variations
     patterns = [
         (r'^(SUMMARY|PROFESSIONAL SUMMARY|PROFILE|OBJECTIVE|CAREER OBJECTIVE)$', 'summary'),
-        (r'^(EXPERIENCE|WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|EMPLOYMENT HISTORY|WORK HISTORY)$', 'experience'),
+        (r'^(EXPERIENCES|WORK EXPERIENCE|PROFESSIONAL EXPERIENCES|EMPLOYMENT HISTORY|WORK HISTORY)$', 'experience'),
         (r'^(EDUCATION|ACADEMIC BACKGROUND)$', 'education'),
         (r'^(SKILLS|TECHNICAL SKILLS|CORE COMPETENCIES|EXPERTISE)$', 'skills'),
         (r'^(CERTIFICATIONS|CERTIFICATES|LICENSES)$', 'certifications'),
@@ -887,8 +837,8 @@ def _dict_to_resume_text(resume_dict: Any) -> str:
             resume_text.append(str(skills))
 
     # Professional Experiences
-    if 'professionalExperiences' in resume_dict:
-        resume_text.append('\nEXPERIENCE')
+    if 'experiences' in resume_dict:
+        resume_text.append('\nPROFESSIONAL EXPERIENCES')
         experiences = resume_dict['professionalExperiences']
         if isinstance(experiences, list):
             for exp in experiences:
