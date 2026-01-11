@@ -51,6 +51,61 @@ FORBIDDEN ACTIONS:
 ❌ Do NOT add false educational credentials
 ❌ Do NOT fabricate project details
 ❌ Do NOT remove or omit any existing work experiences from the original resume
+
+
+CRITICAL FORMATTING REQUIREMENTS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ DO NOT USE MARKDOWN FORMATTING (NO ** for bold, NO # for headers)
+⚠️ Use PLAIN TEXT ONLY with proper spacing and capitalization
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REQUIRED RESUME STRUCTURE:
+
+[Full Name]
+[Phone] | [Email] | [LinkedIn] | [GitHub]
+
+EDUCATION
+[School Name], [City, State]
+[Degree and Major], Expected: [Date]
+• [Achievement/Scholarship]
+• Relevant Courses: [List courses]
+
+TECHNICAL SKILLS
+Languages: [List]
+Technologies: [List]
+Tools: [List]
+
+EXPERIENCE
+[Job Title], [Start Date] – [End Date]
+[Company Name], [City, State]
+• [Achievement/responsibility with metrics]
+• [Achievement/responsibility with metrics]
+• [Achievement/responsibility with metrics]
+
+[Job Title], [Start Date] – [End Date]
+[Company Name], [City, State]
+• [Achievement/responsibility with metrics]
+• [Achievement/responsibility with metrics]
+
+PROJECTS (if applicable)
+• [Project description with technologies used]
+• [Project description with technologies used]
+
+CERTIFICATIONS (if applicable)
+• [Certification name and issuer]
+
+PROFESSIONAL AFFILIATIONS (if applicable)
+• [Affiliation]
+
+
+FORMATTING RULES:
+1. Section headers (EDUCATION, TECHNICAL SKILLS, EXPERIENCE, etc.) must be in ALL CAPS
+2. NO markdown symbols (**, ##, etc.) - use plain text only
+3. Job titles and company names on separate lines
+4. Use bullet points (•) for lists and achievements
+5. Include dates in format: Month YYYY – Month YYYY
+6. Keep consistent spacing between sections
+7. Use proper comma placement for locations (City, State)
 """
 
 OPTIMIZATION_EXAMPLES = """
@@ -512,7 +567,7 @@ Priority guidelines:
                 },
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.2,
+            temperature=0.1,
             max_tokens=1500
         )
 
@@ -651,8 +706,8 @@ OUTPUT (valid JSON only, no markdown):
                 {"role": "system", "content": "You are a resume optimizer. Create a COMPLETE enhanced resume using ALL the user's real information. Return ONLY valid JSON with the optimizedResume field containing the FULL FORMATTED RESUME TEXT (not a dictionary). Include every section, job, and achievement from the original."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.3,
-            max_tokens=12000
+            temperature=0.1,
+            max_tokens=16000
         )
 
         content = response.choices[0].message.content.strip()
