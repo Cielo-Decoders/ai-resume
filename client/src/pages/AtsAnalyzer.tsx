@@ -86,14 +86,20 @@ export default function ATSAnalyzer() {
       console.log('Starting resume analysis with actual PDF content...');
       const aiResults = await extractTextFromResume(resumeFile!);
       console.log('AI analysis complete with real data:', aiResults);
-      extractedResumeText = aiResults.text || '';
+
+      // Use fullText if available, otherwise fall back to text
+      extractedResumeText = aiResults.fullText || aiResults.text || '';
+
+      console.log('Full extracted resume length:', extractedResumeText.length);
+      console.log('Resume line count:', extractedResumeText.split('\n').length);
 
       if (!extractedResumeText || extractedResumeText.length < 50) {
         throw new Error('Could not extract meaningful text from the resume');
       }
       
-      // Store resume text for optimization
+      // Store FULL resume text for optimization
       setResumeText(extractedResumeText);
+      console.log('Stored resume text length:', extractedResumeText.length);
     } catch (error: any) {
       console.error('AI analysis failed:', error);
 

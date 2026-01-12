@@ -31,6 +31,8 @@ export interface AnalysisResults {
   success?: boolean;
   filename?: string;
   text?: string;
+  fullText?: string;
+  preview?: string;
   textLength?: number;
   fullTextLength?: number;
   overallScore: number;

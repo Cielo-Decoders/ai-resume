@@ -91,8 +91,6 @@ PROJECTS (if applicable)
 • [Project description with technologies used]
 • [Project description with technologies used]
 
-CERTIFICATIONS (if applicable)
-• [Certification name and issuer]
 
 PROFESSIONAL AFFILIATIONS (if applicable)
 • [Affiliation]
@@ -247,14 +245,31 @@ def clean_encoding_artifacts(text: str) -> str:
     Remove problematic encoding artifacts like %Ï that cause formatting issues
     while preserving proper line breaks and structure.
     """
+    # DEBUG: Track input
+    print("=" * 80)
+    print("DEBUG: clean_encoding_artifacts() CALLED")
+    print("=" * 80)
+    print(f"Input type: {type(text)}")
+    print(f"Input length: {len(text) if isinstance(text, str) else 'N/A'}")
+    if isinstance(text, str):
+        print(f"Input first 300 chars:\n{text[:300]}")
+    else:
+        print(f"Input value (non-string): {str(text)[:300]}")
+    print("=" * 80)
+
     # Ensure text is a string
     if isinstance(text, dict):
+        print("WARNING: Input is dict, converting to string")
         text = str(text)
     elif not isinstance(text, str):
+        print(f"WARNING: Input is {type(text)}, converting to string")
         text = str(text) if text else ""
 
     if not text:
+        print("WARNING: Empty text after conversion")
         return text
+
+    original_length = len(text)
 
     # Remove ALL variations of the problematic characters
     text = re.sub(r'%[ÏïĪīÎîØø]', '', text)
@@ -292,7 +307,19 @@ def clean_encoding_artifacts(text: str) -> str:
     text = re.sub(r'([^\n])•', r'\1\n•', text)
     text = re.sub(r'([^\n])●', r'\1\n●', text)
 
-    return text.strip()
+    final_text = text.strip()
+
+    # DEBUG: Track output
+    print("=" * 80)
+    print("DEBUG: clean_encoding_artifacts() OUTPUT")
+    print("=" * 80)
+    print(f"Original length: {original_length} → Final length: {len(final_text)}")
+    print(f"Characters removed/changed: {original_length - len(final_text)}")
+    print(f"Output first 300 chars:\n{final_text[:300]}")
+    print(f"Output last 300 chars:\n{final_text[-300:]}")
+    print("=" * 80)
+
+    return final_text
 
 
 # =========================================================
@@ -567,7 +594,7 @@ Priority guidelines:
                 },
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.1,
+            temperature=0.3,
             max_tokens=1500
         )
 
@@ -645,7 +672,7 @@ async def generate_optimized_resume(
         selected_keywords: List[Dict[str, str]],
         job_description: str = "",
         job_title: str = "",
-        formatting_info: Optional[Dict[str, Any]] = None
+
 ) -> Dict[str, Any]:
 
     if not selected_keywords:
@@ -671,6 +698,13 @@ async def generate_optimized_resume(
     if not keywords:
         return {"success": False, "optimizedResume": "", "message": "No valid keywords."}
 
+    # Count sections in original
+    original_sections = detect_resume_sections(original_resume_text)
+    print(f"\nSections detected in original: {[s['name'] for s in original_sections]}")
+    original_bullet_count = count_bullet_points(original_resume_text)
+    print(f"Bullet points in original: {original_bullet_count}")
+    print("=" * 80)
+
     print(f"Generating new resume with {len(keywords)} keywords")
 
     try:
@@ -689,11 +723,18 @@ SELECTED KEYWORDS TO INTEGRATE ({len(keywords)} total):
 JOB DESCRIPTION FOR CONTEXT:
 {job_description[:2000] if job_description else "Not provided"}
 
-IMPORTANT: Return the optimized resume as PLAIN TEXT ONLY in the "optimizedResume" field, not as a dictionary or list.
+CRITICAL REQUIREMENTS:
+1. The optimized resume MUST contain ALL experiences, projects, and achievements from the original
+2. DO NOT remove or omit any work experiences
+3. DO NOT remove any projects or skills
+4. ONLY enhance the existing content by integrating keywords naturally
+5. The optimized resume should be AT LEAST as long as the original resume
+
+Return the optimized resume as PLAIN TEXT ONLY in the "optimizedResume" field, not as a dictionary or list.
 
 OUTPUT (valid JSON only, no markdown):
 {{
-  "optimizedResume": "COMPLETE TEXT of the enhanced resume with all sections, preserving original formatting and content",
+  "optimizedResume": "COMPLETE FULL-LENGTH TEXT of the enhanced resume with ALL sections, ALL experiences, ALL projects",
   "atsScore": 85,
   "tips": ["Improvement 1", "Improvement 2"]
 }}"""
@@ -703,15 +744,14 @@ OUTPUT (valid JSON only, no markdown):
         response = client.chat.completions.create(
             model=settings.openai_model or "gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a resume optimizer. Create a COMPLETE enhanced resume using ALL the user's real information. Return ONLY valid JSON with the optimizedResume field containing the FULL FORMATTED RESUME TEXT (not a dictionary). Include every section, job, and achievement from the original."},
+                {"role": "system", "content": "You are a resume optimizer. Create a COMPLETE enhanced resume using ALL the user's real information. Return ONLY valid JSON with the optimizedResume field containing the FULL FORMATTED RESUME TEXT (not a dictionary). Include EVERY SINGLE section, job, project, and achievement from the original. DO NOT omit or summarize anything."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.1,
+            temperature=0.3,
             max_tokens=16000
         )
 
         content = response.choices[0].message.content.strip()
-        print(f"Raw AI response (first 300 chars): {content[:300]}")
 
         content = re.sub(r"^```(?:json)?|```$", "", content, flags=re.MULTILINE).strip()
 
@@ -724,10 +764,20 @@ OUTPUT (valid JSON only, no markdown):
 
         optimized_text = result.get("optimizedResume", "")
 
+
+        if isinstance(optimized_text, dict):
+            print(f"WARNING: optimizedResume is a dict with keys: {list(optimized_text.keys())}")
+            print(f"Dict content preview: {str(optimized_text)[:500]}")
+        elif isinstance(optimized_text, list):
+            print(f"WARNING: optimizedResume is a list with {len(optimized_text)} items")
+            print(f"List content preview: {str(optimized_text)[:500]}")
+        else:
+            print(f"optimizedResume length before conversion: {len(str(optimized_text))} characters")
+        print("=" * 80)
+
         # Check if optimizedResume is a dict/list (meaning AI returned wrong format)
         if isinstance(optimized_text, (dict, list)):
-            print(f"ERROR: optimizedResume is a {type(optimized_text).__name__}, converting to string")
-            print(f"Type: {type(optimized_text)}")
+
             # Convert dict structure back to formatted resume text
             optimized_text = _dict_to_resume_text(optimized_text)
 
@@ -739,11 +789,33 @@ OUTPUT (valid JSON only, no markdown):
             optimized_text = str(optimized_text)
 
         print(f"Extracted resume text length: {len(optimized_text)} characters")
+        print(f"Extracted resume line count: {len(optimized_text.splitlines())}")
 
         # Clean encoding artifacts from the generated resume
         optimized_text = clean_encoding_artifacts(optimized_text)
 
-        print(f"After cleaning, resume length: {len(optimized_text)} characters")
+        # Check sections in optimized
+        optimized_sections = detect_resume_sections(optimized_text)
+        print(f"\nSections detected in optimized: {[s['name'] for s in optimized_sections]}")
+        optimized_bullet_count = count_bullet_points(optimized_text)
+        print(f"Bullet points in optimized: {optimized_bullet_count}")
+
+        # Compare
+        print(f"\nCOMPARISON:")
+        print(f"  Original bullets: {original_bullet_count} → Optimized bullets: {optimized_bullet_count}")
+        print(f"  Original sections: {len(original_sections)} → Optimized sections: {len(optimized_sections)}")
+        print(f"  Original length: {len(original_resume_text)} → Optimized length: {len(optimized_text)}")
+
+        # WARN if content was significantly reduced
+        if len(optimized_text) < len(original_resume_text) * 0.8:
+            print(f"⚠️  WARNING: Optimized resume is {len(original_resume_text) - len(optimized_text)} characters shorter!")
+            print(f"⚠️  This suggests the AI may have omitted content from the original resume.")
+
+        if optimized_bullet_count < original_bullet_count:
+            print(f"⚠️  WARNING: Optimized resume has {original_bullet_count - optimized_bullet_count} fewer bullet points!")
+            print(f"⚠️  Some experiences or achievements may have been omitted.")
+
+        print("=" * 80)
 
         keyword_check = verify_keyword_integration(optimized_text, keywords)
         save_optimized_resume_to_file(optimized_text)
@@ -836,8 +908,20 @@ def _dict_to_resume_text(resume_dict: Any) -> str:
     Handles cases where AI returns structured data instead of plain text.
     Formats resume with proper professional structure: ALL CAPS headers, inline job titles with dates.
     """
+    # DEBUG: Track input
+    print("=" * 80)
+    print("DEBUG: _dict_to_resume_text() CALLED")
+    print("=" * 80)
+    print(f"Input type: {type(resume_dict)}")
+
     if not isinstance(resume_dict, dict):
+        print(f"WARNING: Input is not a dict, it's {type(resume_dict)}")
+        print(f"Input value: {str(resume_dict)[:500]}")
         return str(resume_dict)
+
+    print(f"Dictionary keys: {list(resume_dict.keys())}")
+    print(f"Full dictionary structure (first 1000 chars): {str(resume_dict)[:1000]}")
+    print("=" * 80)
 
     resume_text = []
 
@@ -877,37 +961,56 @@ def _dict_to_resume_text(resume_dict: Any) -> str:
         else:
             resume_text.append(str(edu))
 
-    # Technical Skills
-    if 'skills' in resume_dict:
+    # Technical Skills - check multiple possible keys
+    skills_key = None
+    for possible_key in ['skills', 'technicalSkills', 'technical_skills']:
+        if possible_key in resume_dict:
+            skills_key = possible_key
+            break
+
+    if skills_key:
+        print(f"Found skills under key '{skills_key}': {resume_dict[skills_key]}")
         resume_text.append('\nTECHNICAL SKILLS')
-        skills = resume_dict['skills']
+        skills = resume_dict[skills_key]
         if isinstance(skills, dict):
             for skill_category, skill_list in skills.items():
                 if isinstance(skill_list, list) and skill_list:
-                    # Format: "Category: skill1, skill2, skill3"
                     category_name = skill_category.replace('_', ' ').title()
                     skills_str = ', '.join(str(s) for s in skill_list)
                     resume_text.append(f"{category_name}: {skills_str}")
         else:
             resume_text.append(str(skills))
 
-    # Professional Experiences
-    if 'experiences' in resume_dict:
+    # Professional Experiences - check multiple possible keys
+    exp_key = None
+    for possible_key in ['professionalExperiences', 'experiences', 'workExperience', 'professional_experiences']:
+        if possible_key in resume_dict:
+            exp_key = possible_key
+            break
+
+    if exp_key:
+        print(f"Found experiences under key '{exp_key}'")
+        experiences = resume_dict[exp_key]
+        print(f"Number of experiences: {len(experiences) if isinstance(experiences, list) else 'N/A (not a list)'}")
+        print(f"Experiences preview: {str(experiences)[:500]}")
+
         resume_text.append('\nPROFESSIONAL EXPERIENCES')
-        experiences = resume_dict['professionalExperiences']
         if isinstance(experiences, list):
-            for exp in experiences:
+            for idx, exp in enumerate(experiences):
+                print(f"  Processing experience #{idx + 1}: {type(exp)}")
                 if isinstance(exp, dict):
-                    title = exp.get('title', '')
-                    company = exp.get('company', '')
+                    print(f"    Experience keys: {list(exp.keys())}")
+                    title = exp.get('title', '') or exp.get('jobTitle', '') or exp.get('position', '')
+                    company = exp.get('company', '') or exp.get('employer', '')
                     location = exp.get('location', '')
-                    dates = exp.get('dates', '')
+                    dates = exp.get('dates', '') or exp.get('dateRange', '') or exp.get('duration', '')
 
                     # Format: "Job Title, Date Range" on one line
                     exp_line = f"{title}"
                     if dates:
                         exp_line += f", {dates}"
                     resume_text.append(exp_line)
+                    print(f"    Added title line: {exp_line}")
 
                     # Company and location on next line
                     company_line = company
@@ -915,22 +1018,41 @@ def _dict_to_resume_text(resume_dict: Any) -> str:
                         company_line += f", {location}"
                     if company:
                         resume_text.append(company_line)
+                        print(f"    Added company line: {company_line}")
 
-                    # Responsibilities as bullets
-                    responsibilities = exp.get('responsibilities', [])
+                    # Responsibilities as bullets - check multiple keys
+                    responsibilities = (exp.get('responsibilities') or
+                                      exp.get('bullets') or
+                                      exp.get('achievements') or
+                                      exp.get('duties') or [])
+
+                    print(f"    Responsibilities count: {len(responsibilities) if isinstance(responsibilities, list) else 'N/A'}")
+
                     if isinstance(responsibilities, list):
                         for resp in responsibilities:
                             resume_text.append(f"• {resp}")
+                    elif responsibilities:
+                        # Single string - split by lines
+                        for line in str(responsibilities).split('\n'):
+                            if line.strip():
+                                resume_text.append(f"• {line.strip()}")
+        else:
+            print(f"WARNING: Experiences is not a list, it's {type(experiences)}")
+    else:
+        print("WARNING: No experiences key found in dictionary!")
 
     # Technical Projects
-    if 'technicalProjects' in resume_dict:
-        projects = resume_dict['technicalProjects']
+    if 'technicalProjects' in resume_dict or 'projects' in resume_dict:
+        projects_key = 'technicalProjects' if 'technicalProjects' in resume_dict else 'projects'
+        projects = resume_dict[projects_key]
+        print(f"Found projects under key '{projects_key}': {len(projects) if isinstance(projects, list) else 'N/A'}")
+
         if projects and isinstance(projects, list) and len(projects) > 0:
             resume_text.append('\nTECHNICAL PROJECTS')
             for project in projects:
                 if isinstance(project, dict):
-                    title = project.get('title', '')
-                    description = project.get('description', '')
+                    title = project.get('title', '') or project.get('name', '')
+                    description = project.get('description', '') or project.get('summary', '')
                     if title:
                         resume_text.append(f"• {title}")
                     if description:
@@ -939,6 +1061,7 @@ def _dict_to_resume_text(resume_dict: Any) -> str:
     # Leadership and Affiliations
     if 'leadership' in resume_dict:
         leadership = resume_dict['leadership']
+        print(f"Found leadership: {len(leadership) if isinstance(leadership, list) else 'N/A'}")
         if leadership and isinstance(leadership, list) and len(leadership) > 0:
             resume_text.append('\nLEADERSHIP')
             for item in leadership:
@@ -947,9 +1070,22 @@ def _dict_to_resume_text(resume_dict: Any) -> str:
     # Certifications
     if 'certifications' in resume_dict:
         certs = resume_dict['certifications']
+        print(f"Found certifications: {len(certs) if isinstance(certs, list) else 'N/A'}")
         if certs and isinstance(certs, list) and len(certs) > 0:
             resume_text.append('\nCERTIFICATIONS')
             for cert in certs:
                 resume_text.append(f"• {cert}")
 
-    return '\n'.join(resume_text).strip()
+    final_text = '\n'.join(resume_text).strip()
+
+    # DEBUG: Track output
+    print("=" * 80)
+    print("DEBUG: _dict_to_resume_text() OUTPUT")
+    print("=" * 80)
+    print(f"Total lines generated: {len(resume_text)}")
+    print(f"Final text length: {len(final_text)} characters")
+    print(f"Final text first 500 chars:\n{final_text[:500]}")
+    print(f"Final text last 500 chars:\n{final_text[-500:]}")
+    print("=" * 80)
+
+    return final_text

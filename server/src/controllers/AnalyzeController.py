@@ -84,7 +84,9 @@ class AnalyzeController:
                 "success": True,
                 "filename": resume.filename,
                 "textLength": len(extracted_data["text"]),
-                "text": extracted_data["text"][:2000],  # First 2000 chars for preview
+                "text": extracted_data["text"],
+                "fullText": extracted_data["text"],
+                "preview": extracted_data["text"][:2000],
                 "fullTextLength": len(extracted_data["text"])
             }
             
