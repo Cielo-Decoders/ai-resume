@@ -2,18 +2,26 @@
 AnalyzeController module for handling resume analysis endpoints.
 """
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List
 from fastapi import HTTPException, UploadFile, File
 from pydantic import BaseModel
 
 from ..config import settings
-from ..services.analysis_service import extract_text_from_pdf, analyze_resume_against_job
+from ..services.analysis_service import extract_text_from_pdf, analyze_resume_against_job, generate_optimized_resume
 
 
 class KeywordAnalysisRequest(BaseModel):
     """Request model for keyword analysis."""
     resume_text: str
     job_data: Dict[str, Any]
+
+
+class ResumeOptimizationRequest(BaseModel):
+    """Request model for resume optimization/generation."""
+    original_resume_text: str
+    job_description: str
+    selected_keywords: List[Dict[str, str]]
+    job_title: str = ""
 
 
 class AnalyzeController:
@@ -76,7 +84,9 @@ class AnalyzeController:
                 "success": True,
                 "filename": resume.filename,
                 "textLength": len(extracted_data["text"]),
-                "text": extracted_data["text"][:2000],  # First 2000 chars for preview
+                "text": extracted_data["text"],
+                "fullText": extracted_data["text"],
+                "preview": extracted_data["text"][:2000],
                 "fullTextLength": len(extracted_data["text"])
             }
             
@@ -158,4 +168,73 @@ class AnalyzeController:
             raise HTTPException(
                 status_code=500,
                 detail=f"Keyword analysis failed: {str(e)}"
+            )
+
+    async def optimize_resume(self, request: ResumeOptimizationRequest) -> Dict[str, Any]:
+        """
+        Generate an optimized resume based on selected keywords.
+        
+        Takes the original resume, job description, and user-selected keywords
+        to create an ATS-optimized version of the resume.
+        
+        Args:
+            request (ResumeOptimizationRequest): Contains original_resume_text,
+                job_description, selected_keywords, and optional job_title
+            
+        Returns:
+            Dict[str, Any]: Optimization results including the new resume text
+            
+        Raises:
+            HTTPException: If validation fails or optimization errors occur
+        """
+        try:
+            # Validate inputs
+            if not request.original_resume_text or len(request.original_resume_text.strip()) < 50:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Original resume text is required and must contain meaningful content"
+                )
+            
+            if not request.job_description or len(request.job_description.strip()) < 50:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Job description is required and must contain meaningful content"
+                )
+            
+            if not request.selected_keywords or len(request.selected_keywords) == 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="At least one keyword must be selected for optimization"
+                )
+
+            self.logger.info(
+                f"Starting resume optimization with {len(request.selected_keywords)} keywords..."
+            )
+            
+            # Call the optimization service
+            optimization_result = await generate_optimized_resume(
+                original_resume_text=request.original_resume_text,
+                job_description=request.job_description,
+                selected_keywords=request.selected_keywords,
+                job_title=request.job_title
+            )
+            
+            if optimization_result.get("success"):
+                self.logger.info(
+                    f"Resume optimization complete. ATS Score: {optimization_result.get('atsScore', 'N/A')}%"
+                )
+            else:
+                self.logger.warning(
+                    f"Resume optimization failed: {optimization_result.get('message', 'Unknown error')}"
+                )
+            
+            return optimization_result
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            self.logger.error(f"Resume optimization error: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Resume optimization failed: {str(e)}"
             )

@@ -3,8 +3,9 @@ import { Upload, Zap, CheckCircle } from 'lucide-react';
 import TabNavigation from '../components/tabs/TabNavigation';
 import ResumeUpload from '../components/resume/ResumeUpload';
 import KeywordAnalysis from '../components/resume/KeywordAnalysis';
-import {Application, JobData, KeywordAnalysisResult } from '../types/index';
-import {extractJobDataFromText, extractTextFromResume, analyzeKeywords} from '../services/api';
+import OptimizedResumeDisplay from '../components/resume/OptimizedResumeDisplay';
+import {Application, JobData, KeywordAnalysisResult, ActionableKeyword, OptimizationResult } from '../types/index';
+import {extractJobDataFromText, extractTextFromResume, analyzeKeywords, optimizeResume} from '../services/api';
 import JobDescriptionInput from '../components/jobs/JobDescriptionInput';
 
 export default function ATSAnalyzer() {
@@ -18,6 +19,13 @@ export default function ATSAnalyzer() {
   const [scrapingStatus, setScrapingStatus] = useState('');
   const [keywordResults, setKeywordResults] = useState<KeywordAnalysisResult | null>(null);
   const [analysisComplete, setAnalysisComplete] = useState(false);
+  
+  // New state for optimization
+  const [resumeText, setResumeText] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
+  const [selectedKeywords, setSelectedKeywords] = useState<ActionableKeyword[]>([]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -45,10 +53,11 @@ export default function ATSAnalyzer() {
   setIsAnalyzing(true);
   setKeywordResults(null);
   setAnalysisComplete(false);
+  setOptimizationResult(null); // Reset optimization result
 
   try {
     let jobData: JobData;
-    let resumeText: string = '';
+    let extractedResumeText: string = '';
 
     // Step 1: Extract job data from description
     if (inputMode === 'paste') {
@@ -56,6 +65,8 @@ export default function ATSAnalyzer() {
       try {
         jobData = await extractJobDataFromText(jobDescription);
         console.log('Job data extracted:', jobData);
+        // Store job title for optimization
+        setJobTitle(jobData.title || '');
       } catch (error) {
         console.error('AI extraction failed:', error);
         alert('Failed to extract job data. Please try again.');
@@ -75,11 +86,20 @@ export default function ATSAnalyzer() {
       console.log('Starting resume analysis with actual PDF content...');
       const aiResults = await extractTextFromResume(resumeFile!);
       console.log('AI analysis complete with real data:', aiResults);
-      resumeText = aiResults.text || '';
 
-      if (!resumeText || resumeText.length < 50) {
+      // Use fullText if available, otherwise fall back to text
+      extractedResumeText = aiResults.fullText || aiResults.text || '';
+
+      console.log('Full extracted resume length:', extractedResumeText.length);
+      console.log('Resume line count:', extractedResumeText.split('\n').length);
+
+      if (!extractedResumeText || extractedResumeText.length < 50) {
         throw new Error('Could not extract meaningful text from the resume');
       }
+      
+      // Store FULL resume text for optimization
+      setResumeText(extractedResumeText);
+      console.log('Stored resume text length:', extractedResumeText.length);
     } catch (error: any) {
       console.error('AI analysis failed:', error);
 
@@ -98,7 +118,7 @@ export default function ATSAnalyzer() {
     // Step 3: Analyze keywords - compare resume against job description
     try {
       setScrapingStatus('Analyzing keywords and matching skills...');
-      const keywordAnalysis = await analyzeKeywords(resumeText, jobData);
+      const keywordAnalysis = await analyzeKeywords(extractedResumeText, jobData);
       console.log('Keyword analysis complete:', keywordAnalysis);
       setKeywordResults(keywordAnalysis);
       setAnalysisComplete(true);
@@ -117,6 +137,57 @@ export default function ATSAnalyzer() {
     setIsAnalyzing(false);
   }
 };
+
+  // Handle resume optimization with selected keywords
+  const handleOptimizeResume = async (keywords: ActionableKeyword[]) => {
+    console.log('=== OPTIMIZATION DEBUG ===');
+    console.log('resumeText state:', resumeText ? `${resumeText.substring(0, 100)}...` : 'EMPTY!');
+    console.log('resumeText length:', resumeText.length);
+
+    if (!resumeText || resumeText.length < 50) {
+      alert('Resume text not available. Please analyze your resume first by clicking the "Analyze" button.');
+      return;
+    }
+    
+    if (!jobDescription) {
+      alert('Job description not available. Please provide a job description.');
+      return;
+    }
+    
+    if (keywords.length === 0) {
+      alert('Please select at least one keyword for optimization.');
+      return;
+    }
+
+    setIsOptimizing(true);
+    setOptimizationResult(null);
+
+    try {
+      console.log('Starting resume optimization with keywords:', keywords);
+      console.log('Sending resume text (first 200 chars):', resumeText.substring(0, 200));
+
+      const result = await optimizeResume(
+        resumeText,
+        jobDescription,
+        keywords,
+        jobTitle
+      );
+
+      if (result.success) {
+        setOptimizationResult(result);
+        console.log('Resume optimization successful:', result);
+        console.log('Optimized resume preview:', result.optimizedResume.substring(0, 200));
+      } else {
+        alert(`Optimization failed: ${result.message}`);
+      }
+    } catch (error: any) {
+      console.error('Resume optimization failed:', error);
+      alert(`Failed to optimize resume: ${error.message}`);
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -218,7 +289,7 @@ export default function ATSAnalyzer() {
                       {keywordResults.matchScore}%
                     </div>
                   </div>
-                  {keywordResults.suggestions.length > 0 && (
+                  {keywordResults.suggestions && keywordResults.suggestions.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-gray-200">
                       <h4 className="font-semibold text-gray-700 mb-2">Suggestions:</h4>
                       <ul className="space-y-1">
@@ -235,18 +306,28 @@ export default function ATSAnalyzer() {
 
                 {/* Missing and Matching Keywords */}
                 <KeywordAnalysis
-                  missingKeywords={keywordResults.missingPhrases.length > 0 
-                    ? keywordResults.missingPhrases 
-                    : keywordResults.missingKeywords.slice(0, 15)}
-                  suggestedKeywords={keywordResults.matchingPhrases.length > 0 
-                    ? keywordResults.matchingPhrases 
-                    : keywordResults.matchingKeywords.slice(0, 15)}
+                  missingKeywords={(keywordResults.missingPhrases && keywordResults.missingPhrases.length > 0)
+                    ? keywordResults.missingPhrases
+                    : (keywordResults.missingKeywords || []).slice(0, 15)}
+                  suggestedKeywords={(keywordResults.matchingPhrases && keywordResults.matchingPhrases.length > 0)
+                    ? keywordResults.matchingPhrases
+                    : (keywordResults.matchingKeywords || []).slice(0, 15)}
                   actionableKeywords={keywordResults.actionableKeywords || []}
                   onKeywordsSelected={(selected) => {
                     console.log('Selected keywords for optimization:', selected);
-                    // TODO: Use selected keywords for resume optimization
+                    setSelectedKeywords(selected);
                   }}
+                  onOptimizeResume={handleOptimizeResume}
+                  isOptimizing={isOptimizing}
                 />
+
+                {/* Optimized Resume Display */}
+                {optimizationResult && optimizationResult.success && (
+                  <OptimizedResumeDisplay
+                    result={optimizationResult}
+                    onClose={() => setOptimizationResult(null)}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -255,4 +336,3 @@ export default function ATSAnalyzer() {
     </div>
   );
 }
-

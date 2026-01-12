@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, Star, Check, Zap } from 'lucide-react';
+import { AlertCircle, Star, Check, Zap, Sparkles } from 'lucide-react';
 import { ActionableKeyword } from '../../types';
 
 interface KeywordAnalysisProps {
@@ -7,6 +7,8 @@ interface KeywordAnalysisProps {
   suggestedKeywords: string[];
   actionableKeywords?: ActionableKeyword[];
   onKeywordsSelected?: (selectedKeywords: ActionableKeyword[]) => void;
+  onOptimizeResume?: (selectedKeywords: ActionableKeyword[]) => void;
+  isOptimizing?: boolean;
 }
 
 const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
@@ -14,6 +16,8 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
   suggestedKeywords,
   actionableKeywords = [],
   onKeywordsSelected,
+  onOptimizeResume,
+  isOptimizing = false,
 }) => {
   const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set());
 
@@ -121,10 +125,34 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
           </div>
           
           {selectedKeywords.size > 0 && (
-            <div className="mt-4 p-3 bg-indigo-50 rounded-lg">
-              <p className="text-sm text-indigo-700">
-                <strong>{selectedKeywords.size}</strong> keyword{selectedKeywords.size > 1 ? 's' : ''} selected for optimization
-              </p>
+            <div className="mt-4 p-4 bg-indigo-50 rounded-lg">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <p className="text-sm text-indigo-700">
+                  <strong>{selectedKeywords.size}</strong> keyword{selectedKeywords.size > 1 ? 's' : ''} selected for optimization
+                </p>
+                {onOptimizeResume && (
+                  <button
+                    onClick={() => {
+                      const selected = actionableKeywords.filter(k => selectedKeywords.has(k.keyword));
+                      onOptimizeResume(selected);
+                    }}
+                    disabled={isOptimizing}
+                    className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all shadow-md"
+                  >
+                    {isOptimizing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Optimizing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        Generate Optimized Resume
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
