@@ -27,6 +27,16 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
   // Use formatting from result or default
   const formatting = result.formatting || DEFAULT_FORMATTING;
 
+  // Ref for scrolling to this component
+  const displayRef = React.useRef<HTMLDivElement>(null);
+
+  // Scroll into view when component mounts
+  React.useEffect(() => {
+    if (displayRef.current) {
+      displayRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
+
   const handleCopyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(result.optimizedResume);
@@ -441,7 +451,7 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden" ref={displayRef}>
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6">
         <div className="flex items-center justify-between">
