@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Zap, CheckCircle } from 'lucide-react';
+import { Upload, CheckCircle, FileText } from 'lucide-react';
 import TabNavigation from '../components/tabs/TabNavigation';
 import ResumeUpload from '../components/resume/ResumeUpload';
 import KeywordAnalysis from '../components/resume/KeywordAnalysis';
@@ -26,6 +26,20 @@ export default function ATSAnalyzer() {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
   const [selectedKeywords, setSelectedKeywords] = useState<ActionableKeyword[]>([]);
+  const [clearKeywordSelections, setClearKeywordSelections] = useState(false);
+
+  // Ref for scrolling to results section
+  const resultsRef = React.useRef<HTMLDivElement>(null);
+
+  // Scroll to results when analysis is complete
+  React.useEffect(() => {
+    if (analysisComplete && resultsRef.current) {
+      // Small delay to ensure the DOM has rendered
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [analysisComplete]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -161,6 +175,8 @@ export default function ATSAnalyzer() {
 
     setIsOptimizing(true);
     setOptimizationResult(null);
+    setScrapingStatus('Generating your optimized resume with AI...');
+    setClearKeywordSelections(false); // Reset the clear flag
 
     try {
       console.log('Starting resume optimization with keywords:', keywords);
@@ -175,6 +191,8 @@ export default function ATSAnalyzer() {
 
       if (result.success) {
         setOptimizationResult(result);
+        // Trigger keyword selections to be cleared
+        setClearKeywordSelections(true);
         console.log('Resume optimization successful:', result);
         console.log('Optimized resume preview:', result.optimizedResume.substring(0, 200));
       } else {
@@ -185,36 +203,53 @@ export default function ATSAnalyzer() {
       alert(`Failed to optimize resume: ${error.message}`);
     } finally {
       setIsOptimizing(false);
+      setScrapingStatus('');
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      {/* Full-page Loading Overlay */}
+      {(isAnalyzing || isOptimizing) && scrapingStatus && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform animate-fadeIn">
+            <div className="flex flex-col items-center text-center space-y-6">
+              <div className="relative">
+                <div className="w-20 h-20 border-4 border-indigo-200 rounded-full"></div>
+                <div className="w-20 h-20 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin absolute top-0"></div>
+                <Upload className="w-8 h-8 text-indigo-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-gray-800">Processing...</h3>
+                <p className="text-gray-600 font-medium">{scrapingStatus}</p>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 h-full rounded-full animate-progress"></div>
+              </div>
+
+              <p className="text-sm text-gray-500">This may take a few moments...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
         <div className="mb-8">
-          {/* Top Bar with User Menu */}
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-3">
-              <div className="relative">
-                <Zap className="w-12 h-12 text-indigo-600" />
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
-              </div>
               <div>
-                <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  ATS Analyzer Pro
+                <h1 className="text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 bg-clip-text text-transparent drop-shadow-2xl tracking-tight">
+                  CareerLab AI
                 </h1>
-                <p className="text-gray-600 hidden sm:block">
-                  Welcome!
+                <p className="text-gray-600 text-sm font-medium hidden sm:block tracking-wide">
+                    Your AI-Powered Career Assistant
                 </p>
               </div>
             </div>
-            {/* User Menu */}
           </div>
-          {/* Subtitle and Resume Info */}
           <div className="text-center">
             <p className="text-gray-600 text-lg mb-4">
-              AI-Powered Resume Optimization • Job Tracker • Interview Prep • Salary Insights
+              AI-Powered Resume Optimization for Career Success
             </p>
             {baseResume && (
               <div className="inline-flex items-center gap-2 bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full">
@@ -224,21 +259,24 @@ export default function ATSAnalyzer() {
             )}
           </div>
         </div>
-        {/* Navigation Tabs */}
         <TabNavigation
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           applicationsCount={applications.length}
         />
-        {/* Analyze Tab */}
         {activeTab === 'analyze' && (
           <div className="space-y-6">
-            {/* Upload Section */}
             <div className="bg-white rounded-xl shadow-lg p-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                <Upload className="w-6 h-6 text-indigo-600" />
-                Upload & Analyze
-              </h2>
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                  <Upload className="w-6 h-6 text-indigo-600" />
+                  Upload & Analyze
+                </h2>
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2 pl-8">
+                  <FileText className="w-6 h-6 text-indigo-600" />
+                  Job Description
+                </h2>
+              </div>
               <div className="grid md:grid-cols-2 gap-6">
                 <ResumeUpload
                   resumeFile={resumeFile}
@@ -256,7 +294,7 @@ export default function ATSAnalyzer() {
               <button
                 onClick={analyzeResume}
                 disabled={isAnalyzing || !resumeFile || !jobDescription}
-                className="mt-6 w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg"
+                className="mt-6 mx-auto w-auto min-w-[220px] md:min-w-[260px] bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg"
               >
                 {isAnalyzing ? (
                   <>
@@ -265,22 +303,24 @@ export default function ATSAnalyzer() {
                   </>
                 ) : (
                   <>
-                    <Zap className="w-5 h-5" />
+                    <Upload className="w-5 h-5" />
                     Analyze
                   </>
                 )}
               </button>
+
             </div>
 
             {/* Keyword Analysis Results */}
             {analysisComplete && keywordResults && (
-              <div className="space-y-6">
+              <div className="space-y-6" ref={resultsRef}>
                 {/* Match Score Card */}
                 <div className="bg-white rounded-xl shadow-lg p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-xl font-bold text-gray-800">Keyword Match Score</h3>
-                      <p className="text-gray-500">How well your resume matches the job description</p>
+                      <h3 className="text-xl font-bold text-gray-800">Job Match Score</h3>
+                      <p className="text-gray-500">How well your uploaded resume matches this job description
+                      based on our AI analysis of your resume and this job description</p>
                     </div>
                     <div className={`text-4xl font-bold ${
                       keywordResults.matchScore >= 70 ? 'text-green-600' :
@@ -319,6 +359,7 @@ export default function ATSAnalyzer() {
                   }}
                   onOptimizeResume={handleOptimizeResume}
                   isOptimizing={isOptimizing}
+                  clearSelections={clearKeywordSelections}
                 />
 
                 {/* Optimized Resume Display */}

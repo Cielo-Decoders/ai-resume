@@ -110,7 +110,7 @@ export default function AuthPage() {
               </div>
               <div>
                 <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  ATS Analyzer Pro
+                 CareerLab AI
                 </h1>
                 <p className="text-gray-600 text-lg mt-1">
                   Your AI-Powered Career Assistant

@@ -13,11 +13,15 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({
   onFileUpload,
 }) => {
   return (
-    <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-3">
+    <div className="mt-6">
+      <label
+        className={`block text-sm font-semibold mb-3 ${
+          baseResume ? 'text-green-600' : 'text-gray-700'
+        }`}
+      >
         {baseResume ? 'Base Resume Loaded ✓' : 'Upload Base Resume (PDF)'}
       </label>
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-indigo-500 transition-colors cursor-pointer">
+      <div className="border-2 border-dashed border-gray-300 rounded-lg py-20 px-8 text-center hover:border-indigo-500 transition-colors cursor-pointer">
         <input
           type="file"
           accept=".pdf"

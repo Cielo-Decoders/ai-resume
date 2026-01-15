@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Download, Copy, Check, Sparkles, ChevronDown, ChevronUp, Eye, X } from 'lucide-react';
+import { FileText, Download, Check, Sparkles, ChevronDown, ChevronUp, Eye, X } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { OptimizationResult, ResumeChange, ResumeFormatting } from '../../types';
 
@@ -26,6 +26,16 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
 
   // Use formatting from result or default
   const formatting = result.formatting || DEFAULT_FORMATTING;
+
+  // Ref for scrolling to this component
+  const displayRef = React.useRef<HTMLDivElement>(null);
+
+  // Scroll into view when component mounts
+  React.useEffect(() => {
+    if (displayRef.current) {
+      displayRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
 
   const handleCopyToClipboard = async () => {
     try {
@@ -422,18 +432,6 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
     doc.save(`optimized_resume_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  const handleDownloadText = () => {
-    const blob = new Blob([result.optimizedResume], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `optimized_resume_${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600 bg-green-100';
     if (score >= 60) return 'text-yellow-600 bg-yellow-100';
@@ -441,7 +439,7 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden" ref={displayRef}>
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6">
         <div className="flex items-center justify-between">
@@ -523,9 +521,9 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
 
       {/* Resume Content */}
       <div className="p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Optimized Resume</h3>
-        
-        <div className="flex flex-wrap gap-3">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">Optimized Resume</h3>
+
+        <div className="flex flex-wrap gap-3 justify-center">
           <button
             onClick={() => setShowPreview(true)}
             className="flex items-center gap-2 px-6 py-3 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors font-medium"
@@ -533,38 +531,13 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
             <Eye className="w-5 h-5" />
             Preview Resume
           </button>
-          
-          <button
-            onClick={handleCopyToClipboard}
-            className="flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-          >
-            {copied ? (
-              <>
-                <Check className="w-5 h-5 text-green-600" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="w-5 h-5" />
-                Copy Text
-              </>
-            )}
-          </button>
-          
+
           <button
             onClick={handleDownloadPDF}
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-colors font-medium shadow-md"
           >
             <Download className="w-5 h-5" />
             Download PDF
-          </button>
-
-          <button
-            onClick={handleDownloadText}
-            className="flex items-center gap-2 px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-          >
-            <Download className="w-5 h-5" />
-            Download Text
           </button>
         </div>
       </div>
@@ -616,18 +589,6 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Close Button */}
-      {onClose && (
-        <div className="p-4 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="w-full py-2 text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            Close
-          </button>
         </div>
       )}
     </div>

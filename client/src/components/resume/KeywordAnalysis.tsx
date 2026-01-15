@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, Star, Check, Zap, Sparkles } from 'lucide-react';
+import { AlertCircle, Star, Check, Zap, Sparkles, CheckCircle, X } from 'lucide-react';
 import { ActionableKeyword } from '../../types';
 
 interface KeywordAnalysisProps {
@@ -9,6 +9,7 @@ interface KeywordAnalysisProps {
   onKeywordsSelected?: (selectedKeywords: ActionableKeyword[]) => void;
   onOptimizeResume?: (selectedKeywords: ActionableKeyword[]) => void;
   isOptimizing?: boolean;
+  clearSelections?: boolean;
 }
 
 const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
@@ -18,8 +19,18 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
   onKeywordsSelected,
   onOptimizeResume,
   isOptimizing = false,
+  clearSelections = false,
 }) => {
   const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set());
+  const [showOptimizeModal, setShowOptimizeModal] = useState(false);
+
+  // Clear selections when parent requests it
+  React.useEffect(() => {
+    if (clearSelections) {
+      setSelectedKeywords(new Set());
+      setShowOptimizeModal(false);
+    }
+  }, [clearSelections]);
 
   const toggleKeyword = (keyword: string) => {
     const newSelected = new Set(selectedKeywords);
@@ -29,12 +40,13 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
       newSelected.add(keyword);
     }
     setSelectedKeywords(newSelected);
-    
-    // Notify parent of selection changes
+
     if (onKeywordsSelected) {
       const selected = actionableKeywords.filter(k => newSelected.has(k.keyword));
       onKeywordsSelected(selected);
     }
+
+    // Don't show modal automatically - let user select multiple skills
   };
 
   const selectAll = () => {
@@ -43,12 +55,33 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
     if (onKeywordsSelected) {
       onKeywordsSelected(actionableKeywords);
     }
+    // Don't show modal automatically
   };
 
   const clearSelection = () => {
     setSelectedKeywords(new Set());
     if (onKeywordsSelected) {
       onKeywordsSelected([]);
+    }
+    setShowOptimizeModal(false);
+  };
+
+  const handleCloseModal = () => {
+    // Just close the modal without clearing selections
+    setShowOptimizeModal(false);
+  };
+
+  const handleOptimize = () => {
+    const selected = actionableKeywords.filter(k => selectedKeywords.has(k.keyword));
+    if (onOptimizeResume) {
+      onOptimizeResume(selected);
+    }
+    setShowOptimizeModal(false); // Close modal after optimization starts
+  };
+
+  const handleShowModal = () => {
+    if (selectedKeywords.size > 0) {
+      setShowOptimizeModal(true);
     }
   };
 
@@ -73,98 +106,128 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Actionable Keywords Section - Main focus */}
-      {actionableKeywords.length > 0 && (
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-              <Zap className="w-5 h-5 text-indigo-600" />
-              Recommended Keywords to Add
-            </h3>
-            <div className="flex gap-2">
-              <button
-                onClick={selectAll}
-                className="text-sm px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
-              >
-                Select All
-              </button>
-              <button
-                onClick={clearSelection}
-                className="text-sm px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-          
-          <p className="text-sm text-gray-600 mb-4">
-            Click to select keywords you want to add to your resume. These are actionable skills and technologies filtered by AI.
-          </p>
-          
-          <div className="flex flex-wrap gap-2">
-            {actionableKeywords.map((item, idx) => {
-              const isSelected = selectedKeywords.has(item.keyword);
-              return (
+      {/* Optimization Modal */}
+      {showOptimizeModal && selectedKeywords.size > 0 && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 transform animate-fadeIn">
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                  <Sparkles className="w-6 h-6 text-indigo-600" />
+                  Ready to Optimize
+                </h3>
                 <button
-                  key={idx}
-                  onClick={() => toggleKeyword(item.keyword)}
-                  className={`
-                    px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all
-                    ${isSelected 
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' 
-                      : getCategoryColor(item.category) + ' hover:shadow-md'
-                    }
-                  `}
+                  onClick={() => setShowOptimizeModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Close modal"
                 >
-                  {isSelected && <Check className="w-4 h-4 inline mr-1" />}
-                  {item.keyword}
-                  {getPriorityBadge(item.priority)}
+                  <X className="w-6 h-6" />
                 </button>
-              );
-            })}
-          </div>
-          
-          {selectedKeywords.size > 0 && (
-            <div className="mt-4 p-4 bg-indigo-50 rounded-lg">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <p className="text-sm text-indigo-700">
-                  <strong>{selectedKeywords.size}</strong> keyword{selectedKeywords.size > 1 ? 's' : ''} selected for optimization
-                </p>
-                {onOptimizeResume && (
+              </div>
+
+              {/* Content */}
+              <div className="space-y-4">
+                <div className="bg-indigo-50 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-indigo-600 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-indigo-900 mb-1">
+                        {selectedKeywords.size} skill{selectedKeywords.size > 1 ? 's' : ''} selected
+                      </p>
+                      <p className="text-sm text-indigo-700">
+                        Our AI will intelligently integrate these skills into your resume to improve your match score.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Selected Keywords Preview */}
+                <div className="max-h-40 overflow-y-auto">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Selected Skills:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from(selectedKeywords).map((keyword, idx) => (
+                      <span
+                        key={idx}
+                        className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold"
+                      >
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4">
                   <button
-                    onClick={() => {
-                      const selected = actionableKeywords.filter(k => selectedKeywords.has(k.keyword));
-                      onOptimizeResume(selected);
-                    }}
+                    onClick={handleOptimize}
                     disabled={isOptimizing}
-                    className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all shadow-md"
+                    className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105 transform focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
                   >
                     {isOptimizing ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                         Optimizing...
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-4 h-4" />
+                        <Sparkles className="w-5 h-5" />
                         Generate Optimized Resume
                       </>
                     )}
                   </button>
-                )}
+                  <button
+                    onClick={handleCloseModal}
+                    disabled={isOptimizing}
+                    className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
       )}
 
-      {/* Original Missing/Matching Keywords Grid */}
+      {/* Floating Continue Button Card - Appears when skills are selected */}
+      {selectedKeywords.size > 0 && !showOptimizeModal && (
+        <div className="fixed bottom-2 left-1/2 transform -translate-x-1/2 z-40 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl border-2 border-indigo-200 p-4 max-w-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-800">
+                  {selectedKeywords.size} skill{selectedKeywords.size > 1 ? 's' : ''} selected
+                </p>
+                <p className="text-xs text-gray-500">Ready to optimize your resume</p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleShowModal}
+              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105 transform focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
+            >
+              <Sparkles className="w-5 h-5" />
+              Continue to Optimize
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-lg p-6">
           <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-red-500" />
             Missing from Your Resume
           </h3>
+
+          <p className="text-gray-500 mb-3">
+            These skills appear in the job description but are not found in your resume. Adding these relevant skills would significantly improve how well your resume matches this role.
+          </p>
+
           <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
             {missingKeywords.map((keyword, idx) => (
               <span
@@ -180,11 +243,15 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
           )}
         </div>
 
+
         <div className="bg-white rounded-xl shadow-lg p-6">
           <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
             <Star className="w-5 h-5 text-green-500" />
             Already in Your Resume
           </h3>
+          <p className="text-gray-500 mb-3">
+            These job-description terms already appear in your resume.
+            </p>
           <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
             {suggestedKeywords.map((keyword, idx) => (
               <span
@@ -196,13 +263,82 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
             ))}
           </div>
           {suggestedKeywords.length === 0 && (
-            <p className="text-gray-500 text-sm">No matching keywords found.</p>
+            <p className="text-gray-500 text-sm">No matching terms found.</p>
           )}
         </div>
+
       </div>
+
+      {actionableKeywords.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <Zap className="w-5 h-5 text-indigo-600" />
+              Job-Relevant Skills & Terms to Add To Optimize Resume
+            </h3>
+            <div className="flex gap-3">
+              <button
+                onClick={selectAll}
+                aria-label="Select all keywords"
+                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm md:text-base font-semibold rounded-lg shadow-lg hover:scale-105 transform transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
+              >
+                <Check className="w-4 h-4" />
+                Select All
+              </button>
+
+              <button
+                onClick={clearSelection}
+                aria-label="Clear selected keywords"
+                className="flex items-center gap-2 px-5 py-3 bg-white border-2 border-gray-200 text-gray-700 text-sm md:text-base font-semibold rounded-lg hover:bg-gray-50 hover:scale-105 transform transition-all shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-100"
+              >
+                <Zap className="w-4 h-4 text-indigo-600" />
+                Clear
+              </button>
+            </div>
+
+          </div>
+
+          <p className="text-sm text-gray-600 mb-4">
+            Click to select these role specific skills you want to add to your resume. These are actionable skills and technologies specific to this role filtered by AI.
+          </p>
+
+          <div className="flex flex-wrap gap-2">
+            {actionableKeywords.map((item, idx) => {
+              const isSelected = selectedKeywords.has(item.keyword);
+              return (
+                <button
+                  key={idx}
+                  onClick={() => toggleKeyword(item.keyword)}
+                  className={`
+                    px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all
+                    ${isSelected
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                      : getCategoryColor(item.category) + ' hover:shadow-md'
+                    }
+                  `}
+                >
+                  {isSelected && <Check className="w-4 h-4 inline mr-1" />}
+                  {item.keyword}
+                  {getPriorityBadge(item.priority)}
+                </button>
+              );
+            })}
+          </div>
+
+          {selectedKeywords.size > 0 && (
+            <div className="mt-6 border-t border-gray-200 pt-4">
+              <div className="flex items-center gap-2 text-indigo-700 bg-indigo-50 rounded-lg p-3">
+                <CheckCircle className="w-5 h-5" />
+                <span className="font-semibold">
+                  {selectedKeywords.size} skill{selectedKeywords.size > 1 ? 's' : ''} selected for resume optimization.
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
 export default KeywordAnalysis;
-

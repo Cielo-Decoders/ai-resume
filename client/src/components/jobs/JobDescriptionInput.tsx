@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, FileText } from 'lucide-react';
+import React from 'react';
+import { FileText } from 'lucide-react';
 
 interface JobDescriptionInputProps {
   jobDescription: string;
@@ -18,20 +18,14 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
 }) => {
   return (
     <div>
-      {/* Toggle Tabs */}
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => onInputModeChange('paste')}
-          className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
-            inputMode === 'paste'
-              ? 'bg-indigo-600 text-white shadow-md'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          <FileText className="w-4 h-4" />
-          Paste Job Description
-        </button>
-      </div>
+      {/* Recommendation text */}
+      <div className="mb-4 flex items-start gap-2 text-sm text-gray-600">
+         <div className="mt-0.5">💡</div>
+           <div>
+              <strong>Recommended:</strong> Copy the entire job posting from any job site.
+                Our AI will extract all the important details automatically!
+           </div>
+         </div>
 
       {/* Paste Text Area */}
       {inputMode === 'paste' && (
@@ -43,13 +37,6 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
             rows={12}
           />
-          <div className="mt-2 flex items-start gap-2 text-sm text-gray-600">
-            <div className="mt-0.5">💡</div>
-            <div>
-              <strong>Recommended:</strong> Copy the entire job posting from any job site.
-              Our AI will extract all the important details automatically!
-            </div>
-          </div>
         </div>
       )}
       {scrapingStatus && (
