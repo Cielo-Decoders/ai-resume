@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Zap, CheckCircle, FileText } from 'lucide-react';
+import { Upload, CheckCircle, FileText } from 'lucide-react';
 import TabNavigation from '../components/tabs/TabNavigation';
 import ResumeUpload from '../components/resume/ResumeUpload';
 import KeywordAnalysis from '../components/resume/KeywordAnalysis';
@@ -214,20 +214,15 @@ export default function ATSAnalyzer() {
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform animate-fadeIn">
             <div className="flex flex-col items-center text-center space-y-6">
-              {/* Animated Spinner */}
               <div className="relative">
                 <div className="w-20 h-20 border-4 border-indigo-200 rounded-full"></div>
                 <div className="w-20 h-20 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin absolute top-0"></div>
-                <Zap className="w-8 h-8 text-indigo-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                <Upload className="w-8 h-8 text-indigo-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
               </div>
-
-              {/* Status Message */}
               <div className="space-y-2">
                 <h3 className="text-xl font-bold text-gray-800">Processing...</h3>
                 <p className="text-gray-600 font-medium">{scrapingStatus}</p>
               </div>
-
-              {/* Progress Indicator */}
               <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                 <div className="bg-gradient-to-r from-indigo-600 to-purple-600 h-full rounded-full animate-progress"></div>
               </div>
@@ -239,27 +234,19 @@ export default function ATSAnalyzer() {
       )}
 
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
         <div className="mb-8">
-          {/* Top Bar with User Menu */}
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-3">
-              <div className="relative">
-                <Zap className="w-12 h-12 text-indigo-600" />
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
-              </div>
               <div>
-                <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                <h1 className="text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 bg-clip-text text-transparent drop-shadow-2xl tracking-tight">
                   CareerLab AI
                 </h1>
-                <p className="text-gray-600 hidden sm:block">
+                <p className="text-gray-600 text-sm font-medium hidden sm:block tracking-wide">
                     Your AI-Powered Career Assistant
                 </p>
               </div>
             </div>
-            {/* User Menu */}
           </div>
-          {/* Subtitle and Resume Info */}
           <div className="text-center">
             <p className="text-gray-600 text-lg mb-4">
               AI-Powered Resume Optimization for Career Success
@@ -272,16 +259,13 @@ export default function ATSAnalyzer() {
             )}
           </div>
         </div>
-        {/* Navigation Tabs */}
         <TabNavigation
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           applicationsCount={applications.length}
         />
-        {/* Analyze Tab */}
         {activeTab === 'analyze' && (
           <div className="space-y-6">
-            {/* Upload Section */}
             <div className="bg-white rounded-xl shadow-lg p-8">
               <div className="grid md:grid-cols-2 gap-6 mb-6">
                 <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -319,7 +303,7 @@ export default function ATSAnalyzer() {
                   </>
                 ) : (
                   <>
-                    <Zap className="w-5 h-5" />
+                    <Upload className="w-5 h-5" />
                     Analyze
                   </>
                 )}
