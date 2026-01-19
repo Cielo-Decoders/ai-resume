@@ -220,7 +220,7 @@ export default function ATSAnalyzer() {
                 <Upload className="w-8 h-8 text-indigo-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-gray-800">Processing...</h3>
+                <h3 className="text-xl font-bold text-gray-800">Analyzing ...</h3>
                 <p className="text-gray-600 font-medium">{scrapingStatus}</p>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
@@ -366,6 +366,7 @@ export default function ATSAnalyzer() {
                 {optimizationResult && optimizationResult.success && (
                   <OptimizedResumeDisplay
                     result={optimizationResult}
+                    originalResume={resumeText}
                     onClose={() => setOptimizationResult(null)}
                   />
                 )}
