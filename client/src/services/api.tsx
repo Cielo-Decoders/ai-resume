@@ -18,16 +18,13 @@ export const extractTextFromResume = async (
   resumeFile: File
 ): Promise<AnalysisResults> => {
   try {
-    console.log('Sending resume to backend for analysis...');
-
     const formData = new FormData();
     formData.append('resume', resumeFile);
-
     const response = await axios.post(`${API_URL}/api/extract-text`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      timeout: 60000, // 1 minute timeout for large files
+      timeout: 60000,
     });
 
     if (!response.data) {
@@ -57,14 +54,13 @@ export const extractTextFromResume = async (
 export const extractJobDataFromText = async (jobDescription: string): Promise<JobData> => {
   try {
     console.log('Extracting job data from text using AI...');
-    console.log('API Key exists:', !!process.env.REACT_APP_OPENAI_API_KEY);
 
     if (!process.env.REACT_APP_OPENAI_API_KEY) {
       throw new Error('OpenAI API key not configured. Please set REACT_APP_OPENAI_API_KEY in your .env file.');
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -73,7 +69,7 @@ export const extractJobDataFromText = async (jobDescription: string): Promise<Jo
         'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -192,7 +188,7 @@ export const analyzeKeywords = async (
         headers: {
           'Content-Type': 'application/json',
         },
-        timeout: 30000, // 30 second timeout
+        timeout: 30000,
       }
     );
 
@@ -215,7 +211,6 @@ export const analyzeKeywords = async (
 
 /**
  * Optimize resume with AI by integrating selected keywords
- * CRITICAL FIX: This is where selected keywords are sent to backend for optimization
  */
 export const optimizeResume = async (
   originalResumeText: string,
@@ -224,7 +219,6 @@ export const optimizeResume = async (
   jobTitle: string = ''
 ): Promise<OptimizationResult> => {
   try {
-    console.log('=== OPTIMIZATION REQUEST ===');
     console.log('Resume text length:', originalResumeText.length);
     console.log('Job description length:', jobDescription.length);
     console.log('Selected keywords count:', selectedKeywords.length);

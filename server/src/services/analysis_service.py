@@ -2,6 +2,7 @@ import os
 import re
 import json
 import tempfile
+import hashlib
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from io import BytesIO
@@ -12,6 +13,49 @@ import pytesseract
 from openai import OpenAI
 
 from ..config.settings import settings
+
+
+# =========================================================
+# ---------------- ANALYSIS CACHE -------------------------
+# =========================================================
+
+# In-memory cache for analysis results
+_analysis_cache: Dict[str, Dict[str, Any]] = {}
+_keyword_filter_cache: Dict[str, Dict[str, Any]] = {}
+
+
+def _generate_cache_key(resume_text: str, job_data: Dict) -> str:
+    """
+    Generate a unique cache key based on resume text and job data.
+    Uses SHA256 hash to create a consistent identifier.
+    """
+    # Create a deterministic string from job data
+    job_fields = ["title", "skills", "requirements", "technologies", "tools", "qualifications"]
+    job_str = ""
+    for field in job_fields:
+        if field in job_data:
+            value = job_data[field]
+            if isinstance(value, list):
+                # Sort list items for consistency
+                job_str += f"{field}:" + ",".join(sorted([str(v) for v in value]))
+            else:
+                job_str += f"{field}:{value}"
+
+    # Combine resume and job data
+    combined = f"{resume_text.strip()}|||{job_str}"
+
+    # Generate SHA256 hash
+    return hashlib.sha256(combined.encode('utf-8')).hexdigest()
+
+
+def _generate_keyword_cache_key(missing_phrases: List[str], job_title: str) -> str:
+    """
+    Generate cache key for keyword filtering.
+    """
+    # Sort phrases for consistency
+    sorted_phrases = sorted(missing_phrases)
+    combined = f"{job_title}|||{','.join(sorted_phrases)}"
+    return hashlib.sha256(combined.encode('utf-8')).hexdigest()
 
 
 # =========================================================
@@ -35,7 +79,6 @@ KEY REQUIREMENTS:
 ✅ Improve formatting and ATS compatibility
 ✅ Preserve the user's genuine education and work timeline
 ✅ Add missing relevant skills that align with the job description
-✅ 
 
 
 HOW TO INTEGRATE KEYWORDS:
@@ -149,6 +192,9 @@ async def extract_text_from_pdf(pdf_buffer: bytes) -> Dict[str, Any]:
             if page_text:
                 extracted_text += page_text + "\n"
 
+        # Normalize text for consistency across extractions
+        extracted_text = _normalize_extracted_text(extracted_text)
+
         # Normalize bullet points for consistency
         extracted_text = normalize_bullet_points(extracted_text)
 
@@ -162,7 +208,8 @@ async def extract_text_from_pdf(pdf_buffer: bytes) -> Dict[str, Any]:
             print("Primary extraction yielded minimal text. Attempting OCR...")
             ocr_text = await extract_text_with_ocr(pdf_buffer)
             if len(ocr_text) > len(extracted_text):
-                extracted_text = ocr_text
+                extracted_text = _normalize_extracted_text(ocr_text)
+                extracted_text = normalize_bullet_points(extracted_text)
                 formatting_info["sections"] = detect_resume_sections(extracted_text)
                 formatting_info["bulletCount"] = count_bullet_points(extracted_text)
 
@@ -178,6 +225,8 @@ async def extract_text_from_pdf(pdf_buffer: bytes) -> Dict[str, Any]:
     except Exception as e:
         print(f"PDF extraction error: {e}. Falling back to OCR...")
         ocr_text = await extract_text_with_ocr(pdf_buffer)
+        ocr_text = _normalize_extracted_text(ocr_text)
+        ocr_text = normalize_bullet_points(ocr_text)
         formatting_info["bulletCount"] = count_bullet_points(ocr_text)
         save_extracted_text_to_project_base(ocr_text)
         return {
@@ -245,12 +294,6 @@ def clean_encoding_artifacts(text: str) -> str:
     Remove problematic encoding artifacts like %Ï that cause formatting issues
     while preserving proper line breaks and structure.
     """
-    # DEBUG: Track input
-    print("=" * 80)
-    print("DEBUG: clean_encoding_artifacts() CALLED")
-    print("=" * 80)
-    print(f"Input type: {type(text)}")
-    print(f"Input length: {len(text) if isinstance(text, str) else 'N/A'}")
     if isinstance(text, str):
         print(f"Input first 300 chars:\n{text[:300]}")
     else:
@@ -309,17 +352,43 @@ def clean_encoding_artifacts(text: str) -> str:
 
     final_text = text.strip()
 
-    # DEBUG: Track output
-    print("=" * 80)
-    print("DEBUG: clean_encoding_artifacts() OUTPUT")
-    print("=" * 80)
-    print(f"Original length: {original_length} → Final length: {len(final_text)}")
-    print(f"Characters removed/changed: {original_length - len(final_text)}")
-    print(f"Output first 300 chars:\n{final_text[:300]}")
-    print(f"Output last 300 chars:\n{final_text[-300:]}")
-    print("=" * 80)
-
     return final_text
+
+
+def _normalize_extracted_text(text: str) -> str:
+    """
+    Normalize extracted text to ensure consistency across multiple extractions.
+    Removes inconsistent whitespace while preserving document structure.
+    """
+    if not text:
+        return text
+
+    # Normalize line endings
+    text = text.replace('\r\n', '\n').replace('\r', '\n')
+
+    # Remove excessive whitespace while preserving single spaces
+    text = re.sub(r'[ \t]+', ' ', text)  # Multiple spaces/tabs to single space
+
+    # Normalize multiple blank lines to maximum of 2
+    text = re.sub(r'\n{3,}', '\n\n', text)
+
+    # Remove trailing/leading whitespace from each line
+    lines = [line.strip() for line in text.split('\n')]
+    text = '\n'.join(lines)
+
+    # Remove any zero-width or invisible characters
+    text = re.sub(r'[\u200b\u200c\u200d\ufeff]', '', text)
+
+    # Normalize unicode characters (e.g., different types of dashes, quotes)
+    text = text.replace('\u2013', '-')  # En dash to hyphen
+    text = text.replace('\u2014', '-')  # Em dash to hyphen
+    text = text.replace('\u2018', "'")  # Left single quote
+    text = text.replace('\u2019', "'")  # Right single quote
+    text = text.replace('\u201c', '"')  # Left double quote
+    text = text.replace('\u201d', '"')  # Right double quote
+    text = text.replace('\u2022', '•')  # Bullet point normalization
+
+    return text.strip()
 
 
 # =========================================================
@@ -469,14 +538,21 @@ async def analyze_resume_against_job(resume_text: str, job_data: Dict) -> Dict[s
     Compare resume against job description to identify missing and matching keywords.
     Uses AI to filter out non-actionable keywords.
     """
+    # Check cache first
+    cache_key = _generate_cache_key(resume_text, job_data)
+
+    if cache_key in _analysis_cache:
+        print("Cache hit for analysis")
+        return _analysis_cache[cache_key]
+
     # Extract all potential keywords from job description
     job_phrases = []
     for field in ["skills", "requirements", "technologies", "tools", "qualifications"]:
         if isinstance(job_data.get(field), list):
             job_phrases.extend(job_data[field])
 
-    # Remove duplicates and clean
-    job_phrases = list(set([p.strip() for p in job_phrases if p.strip()]))
+    # Remove duplicates and clean - SORT for consistency
+    job_phrases = sorted(list(set([p.strip() for p in job_phrases if p.strip()])))
 
     if not job_phrases:
         return {
@@ -487,18 +563,51 @@ async def analyze_resume_against_job(resume_text: str, job_data: Dict) -> Dict[s
             "actionableKeywords": []
         }
 
-    # Categorize keywords
+    # Categorize keywords with improved matching logic
     missing = []
     matching = []
     resume_lower = resume_text.lower()
 
+    # Normalize resume text for better matching
+    resume_normalized = re.sub(r'[^\w\s]', ' ', resume_lower)  # Remove punctuation
+    resume_words = set(resume_normalized.split())
+
     for phrase in job_phrases:
         phrase_lower = phrase.lower()
-        # Check for exact match or close variations
-        if phrase_lower in resume_lower or any(word in resume_lower for word in phrase_lower.split() if len(word) > 3):
-            matching.append(phrase)
+        phrase_normalized = re.sub(r'[^\w\s]', ' ', phrase_lower)
+
+        # Multi-word phrases: check for exact phrase match or word boundary match
+        if ' ' in phrase_normalized:
+            phrase_words = phrase_normalized.split()
+            # Check exact phrase match with word boundaries
+            pattern = r'\b' + re.escape(phrase_lower.strip()) + r'\b'
+
+            if re.search(pattern, resume_lower):
+                matching.append(phrase)
+            # Check if all words in the phrase appear in resume
+            elif all(word in resume_words for word in phrase_words if len(word) > 2):
+                matching.append(phrase)
+            else:
+                missing.append(phrase)
         else:
-            missing.append(phrase)
+            # Single word: check with word boundaries to avoid false positives
+            pattern = r'\b' + re.escape(phrase_lower.strip()) + r'\b'
+
+            if re.search(pattern, resume_lower):
+                matching.append(phrase)
+            # Also check for plural/singular variations
+            elif (phrase_lower.endswith('s') and re.search(r'\b' + re.escape(phrase_lower[:-1]) + r'\b', resume_lower)) or \
+                 (re.search(r'\b' + re.escape(phrase_lower + 's') + r'\b', resume_lower)):
+                matching.append(phrase)
+            # Check common variations (e.g., "JavaScript" vs "JS")
+            elif _check_skill_variations(phrase_lower, resume_lower):
+                matching.append(phrase)
+            else:
+                missing.append(phrase)
+
+    # Sort for consistency
+    missing = sorted(missing)
+    matching = sorted(matching)
 
     # Use AI to filter actionable keywords from missing list
     ai_filtered = await filter_keywords_with_ai(
@@ -510,7 +619,8 @@ async def analyze_resume_against_job(resume_text: str, job_data: Dict) -> Dict[s
     # Calculate match score
     score = (len(matching) / max(len(job_phrases), 1)) * 100
 
-    return {
+    # Save to cache
+    _analysis_cache[cache_key] = {
         "success": True,
         "matchScore": round(score, 1),
         "missingPhrases": missing,
@@ -518,6 +628,145 @@ async def analyze_resume_against_job(resume_text: str, job_data: Dict) -> Dict[s
         "actionableKeywords": ai_filtered.get("actionableKeywords", []),
         "totalKeywords": len(job_phrases)
     }
+
+    return _analysis_cache[cache_key]
+
+
+def _check_skill_variations(skill: str, resume_text: str) -> bool:
+    """
+    Check for common skill variations and abbreviations across all professions.
+    Uses AI to dynamically identify variations for any skill in any industry.
+    Results are cached for performance.
+    """
+    # Common hardcoded variations for performance (most frequently used)
+    common_variations = {
+        # Tech
+        'javascript': ['js'], 'typescript': ['ts'], 'python': ['py'],
+        'kubernetes': ['k8s'], 'artificial intelligence': ['ai'], 'machine learning': ['ml'],
+
+        # Business
+        'search engine optimization': ['seo'], 'customer relationship management': ['crm'],
+        'return on investment': ['roi'], 'key performance indicator': ['kpi', 'kpis'],
+
+        # Finance
+        'generally accepted accounting principles': ['gaap'], 'profit and loss': ['p&l'],
+
+        # Healthcare
+        'electronic health records': ['ehr', 'emr'], 'registered nurse': ['rn'],
+
+        # HR
+        'human resources': ['hr'], 'diversity equity and inclusion': ['dei'],
+    }
+
+    skill_lower = skill.lower().strip()
+
+    # Quick check: common variations first (no API call needed)
+    if skill_lower in common_variations:
+        for variant in common_variations[skill_lower]:
+            pattern = r'\b' + re.escape(variant) + r'\b'
+            if re.search(pattern, resume_text):
+                return True
+
+    # Reverse lookup for common variations
+    for full_form, abbrevs in common_variations.items():
+        if skill_lower in abbrevs:
+            pattern = r'\b' + re.escape(full_form) + r'\b'
+            if re.search(pattern, resume_text):
+                return True
+
+    # If not in common variations, use AI to check for variations dynamically
+    return _check_skill_variations_with_ai(skill_lower, resume_text)
+
+
+# Cache for AI-detected skill variations
+_skill_variations_cache: Dict[str, List[str]] = {}
+
+
+def _check_skill_variations_with_ai(skill: str, resume_text: str) -> bool:
+    """
+    Use AI to dynamically detect skill variations and abbreviations.
+    Works for any skill in any profession. Results are cached.
+    """
+    skill_lower = skill.lower().strip()
+
+    # Check if we've already looked up variations for this skill
+    if skill_lower not in _skill_variations_cache:
+        # Get variations from AI
+        variations = _get_skill_variations_from_ai(skill_lower)
+        _skill_variations_cache[skill_lower] = variations
+    else:
+        variations = _skill_variations_cache[skill_lower]
+
+    # Check if any variation exists in resume
+    resume_lower = resume_text.lower()
+    for variant in variations:
+        pattern = r'\b' + re.escape(variant.lower()) + r'\b'
+        if re.search(pattern, resume_lower):
+            return True
+
+    return False
+
+
+def _get_skill_variations_from_ai(skill: str) -> List[str]:
+    """
+    Ask AI to identify common variations and abbreviations for a skill.
+    Returns list of variations including the original skill.
+    """
+    api_key = settings.openai_api_key or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        # Fallback: return just the skill itself
+        return [skill]
+
+    try:
+        client = OpenAI(api_key=api_key)
+
+        prompt = f"""List ALL common variations, abbreviations, and alternative names for this skill/term: "{skill}"
+
+Include:
+- Common abbreviations (e.g., "JavaScript" → "JS")
+- Alternative names (e.g., "Machine Learning" → "ML", "AI")
+- Industry-specific terms
+- Plural/singular forms if relevant
+
+Return ONLY a JSON array of strings. No explanations.
+
+Example for "JavaScript": ["javascript", "js", "ecmascript", "node.js", "nodejs"]
+Example for "Search Engine Optimization": ["search engine optimization", "seo"]
+
+Skill: "{skill}"
+"""
+
+        response = client.chat.completions.create(
+            model=settings.openai_model or "gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a skill variation expert. Return ONLY a JSON array of strings with no markdown formatting."
+                },
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.0,
+            max_tokens=200
+        )
+
+        content = response.choices[0].message.content.strip()
+        content = re.sub(r"^```(?:json)?|```$", "", content, flags=re.MULTILINE).strip()
+
+        variations = json.loads(content)
+
+        # Ensure it's a list and includes the original skill
+        if isinstance(variations, list):
+            # Add original skill if not present
+            if skill.lower() not in [v.lower() for v in variations]:
+                variations.append(skill)
+            return variations
+        else:
+            return [skill]
+
+    except Exception as e:
+        print(f"AI skill variation lookup error for '{skill}': {e}")
+        # Fallback: return just the skill itself
+        return [skill]
 
 
 # =========================================================
@@ -533,6 +782,13 @@ async def filter_keywords_with_ai(
     Use AI to filter keywords into actionable vs non-actionable categories.
     Removes requirements like degrees, years of experience, certifications requiring time.
     """
+    # Check keyword filter cache
+    keyword_cache_key = _generate_keyword_cache_key(missing_phrases, job_title)
+
+    if keyword_cache_key in _keyword_filter_cache:
+        print("Cache hit for keyword filtering")
+        return _keyword_filter_cache[keyword_cache_key]
+
     if not missing_phrases:
         return {"actionableKeywords": []}
 
@@ -545,9 +801,9 @@ async def filter_keywords_with_ai(
         client = OpenAI(api_key=api_key)
 
         prompt = f"""
-Analyze these keywords from a job posting for a {job_title or 'professional'} role.
+Analyze these keywords or skills from a job posting for a {job_title or 'professional'} role.
 
-TASK: Filter ONLY keywords that can be incorporated into an existing resume through rewording experience bullets.
+TASK: Filter ONLY keywords or skills that can be incorporated into an existing resume through rewording experience bullets.
 
 INCLUDE (Actionable):
 ✓ Skills (e.g., "data analysis", "project management")
@@ -594,7 +850,11 @@ Priority guidelines:
                 },
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.3,
+            temperature=0.0,
+            top_p=0.1,
+            frequency_penalty=0.0,
+            presence_penalty=0.0,
+            seed=12345,
             max_tokens=1500
         )
 
@@ -606,7 +866,6 @@ Priority guidelines:
         try:
             result = json.loads(content)
         except json.JSONDecodeError as e:
-            print(f"JSON error: {e}")
             print(f"Content that failed to parse: {content[:1000]}")
             return _basic_keyword_filter(missing_phrases)
 
@@ -618,6 +877,11 @@ Priority guidelines:
             return _basic_keyword_filter(missing_phrases)
 
         print(f"Successfully extracted {len(actionable_keywords)} actionable keywords")
+
+        # Save to keyword filter cache
+        _keyword_filter_cache[keyword_cache_key] = {
+            "actionableKeywords": actionable_keywords
+        }
 
         return {
             "actionableKeywords": actionable_keywords
@@ -666,6 +930,50 @@ def _basic_keyword_filter(missing_phrases: List[str]) -> Dict[str, Any]:
 
     return {"actionableKeywords": actionable}
 
+
+def _dict_to_resume_text(data: Any) -> str:
+    """
+    Convert a dictionary or list structure back to formatted resume text.
+    This is a fallback when AI returns structured data instead of plain text.
+    """
+    if isinstance(data, str):
+        return data
+
+    if isinstance(data, dict):
+        # Try to extract text from common dictionary structures
+        if "text" in data:
+            return str(data["text"])
+        elif "content" in data:
+            return str(data["content"])
+        elif "resume" in data:
+            return str(data["resume"])
+        else:
+            # Convert dict to a readable text format
+            lines = []
+            for key, value in data.items():
+                if isinstance(value, (list, dict)):
+                    lines.append(f"{key.upper()}:")
+                    lines.append(_dict_to_resume_text(value))
+                else:
+                    lines.append(f"{key}: {value}")
+            return "\n".join(lines)
+
+    if isinstance(data, list):
+        # Convert list to text with bullet points
+        lines = []
+        for item in data:
+            if isinstance(item, dict):
+                lines.append(_dict_to_resume_text(item))
+            else:
+                lines.append(f"• {str(item)}")
+        return "\n".join(lines)
+
+    return str(data)
+
+
+# =========================================================
+# ---------------- RESUME OPTIMIZATION --------------------
+# =========================================================
 
 async def generate_optimized_resume(
         original_resume_text: str,
@@ -747,12 +1055,15 @@ OUTPUT (valid JSON only, no markdown):
                 {"role": "system", "content": "You are a resume optimizer. Create a COMPLETE enhanced resume using ALL the user's real information. Return ONLY valid JSON with the optimizedResume field containing the FULL FORMATTED RESUME TEXT (not a dictionary). Include EVERY SINGLE section, job, project, and achievement from the original. DO NOT omit or summarize anything."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.3,
+            temperature=0.0,
+            top_p=0.1,
+            frequency_penalty=0.0,
+            presence_penalty=0.0,
+            seed=54321,
             max_tokens=16000
         )
 
         content = response.choices[0].message.content.strip()
-
         content = re.sub(r"^```(?:json)?|```$", "", content, flags=re.MULTILINE).strip()
 
         try:
@@ -763,7 +1074,6 @@ OUTPUT (valid JSON only, no markdown):
             return {"success": False, "optimizedResume": "", "message": "AI returned invalid JSON."}
 
         optimized_text = result.get("optimizedResume", "")
-
 
         if isinstance(optimized_text, dict):
             print(f"WARNING: optimizedResume is a dict with keys: {list(optimized_text.keys())}")
@@ -777,7 +1087,6 @@ OUTPUT (valid JSON only, no markdown):
 
         # Check if optimizedResume is a dict/list (meaning AI returned wrong format)
         if isinstance(optimized_text, (dict, list)):
-
             # Convert dict structure back to formatted resume text
             optimized_text = _dict_to_resume_text(optimized_text)
 
@@ -822,6 +1131,41 @@ OUTPUT (valid JSON only, no markdown):
 
         print(f"Success! {len(keyword_check['integrated'])} keywords integrated")
 
+        # Create job_data from job_description and selected_keywords for ATS score calculation
+        job_data = {
+            "title": job_title or "",
+            "description": job_description,
+            "skills": keywords,
+            "requirements": [],
+            "technologies": [],
+            "tools": [],
+            "qualifications": []
+        }
+
+        # Extract additional job data from job description if available
+        if job_description:
+            # Simple extraction - can be enhanced with AI parsing if needed
+            job_desc_lower = job_description.lower()
+
+            # Common technology/tool patterns
+            tech_patterns = [
+                'python', 'java', 'javascript', 'typescript', 'react', 'angular', 'vue',
+                'node', 'sql', 'nosql', 'mongodb', 'postgresql', 'mysql', 'docker',
+                'kubernetes', 'aws', 'azure', 'gcp', 'git', 'jenkins', 'ci/cd'
+            ]
+
+            for tech in tech_patterns:
+                if tech in job_desc_lower and tech not in job_data["technologies"]:
+                    job_data["technologies"].append(tech)
+
+        # Calculate accurate ATS score based on optimization results
+        calculated_ats_score = calculate_ats_score(
+            optimized_text=optimized_text,
+            original_text=original_resume_text,
+            job_data=job_data,
+            keyword_verification=keyword_check
+        )
+
         return {
             "success": True,
             "message": "New resume generated successfully",
@@ -829,7 +1173,7 @@ OUTPUT (valid JSON only, no markdown):
             "resumeSections": result.get("resumeSections", []),
             "keywordIntegration": result.get("keywordIntegration", []),
             "keywordVerification": keyword_check,
-            "atsScore": result.get("atsScore", 0),
+            "atsScore": calculated_ats_score,  # Use calculated score instead of AI-generated
             "tips": result.get("tips", []),
             "metadata": {
                 "keywordsRequested": len(keywords),
@@ -842,7 +1186,6 @@ OUTPUT (valid JSON only, no markdown):
         print(f"Generation error: {e}")
         print(f"Error traceback: {traceback.format_exc()}")
         return {"success": False, "optimizedResume": "", "message": f"Generation failed: {str(e)}"}
-
 
 
 def verify_keyword_integration(optimized_text: str, keywords: List[str]) -> Dict[str, Any]:
@@ -882,210 +1225,96 @@ def verify_keyword_integration(optimized_text: str, keywords: List[str]) -> Dict
     }
 
 
-# =========================================================
-# ---------------- HELPER FUNCTIONS ----------------------
-# =========================================================
-
-def validate_resume_structure(original: str, optimized: str) -> Dict[str, Any]:
+def calculate_ats_score(
+    optimized_text: str,
+    original_text: str,
+    job_data: Dict,
+    keyword_verification: Dict[str, Any]
+) -> int:
     """
-    Validate that optimized resume maintains original structure.
+    Calculate accurate ATS score based on multiple factors:
+    - Keyword integration rate (40% weight)
+    - Job requirements match (30% weight)
+    - Resume completeness (20% weight)
+    - Formatting quality (10% weight)
     """
-    original_sections = detect_resume_sections(original)
-    optimized_sections = detect_resume_sections(optimized)
+    score = 0
 
-    return {
-        "sectionsPreserved": len(original_sections) == len(optimized_sections),
-        "originalSections": [s['type'] for s in original_sections],
-        "optimizedSections": [s['type'] for s in optimized_sections],
-        "bulletCountOriginal": count_bullet_points(original),
-        "bulletCountOptimized": count_bullet_points(optimized)
-    }
+    # Factor 1: Keyword Integration (40 points max)
+    integration_rate = keyword_verification.get("integrationRate", 0)
+    keyword_score = (integration_rate / 100) * 40
+    score += keyword_score
 
+    # Factor 2: Job Requirements Match (30 points max)
+    job_phrases = []
+    for field in ["skills", "requirements", "technologies", "tools", "qualifications"]:
+        if isinstance(job_data.get(field), list):
+            job_phrases.extend(job_data[field])
 
-def _dict_to_resume_text(resume_dict: Any) -> str:
-    """
-    Convert a resume dictionary back to formatted text.
-    Handles cases where AI returns structured data instead of plain text.
-    Formats resume with proper professional structure: ALL CAPS headers, inline job titles with dates.
-    """
-    # DEBUG: Track input
-    print("=" * 80)
-    print("DEBUG: _dict_to_resume_text() CALLED")
-    print("=" * 80)
-    print(f"Input type: {type(resume_dict)}")
+    job_phrases = list(set([p.strip() for p in job_phrases if p.strip()]))
 
-    if not isinstance(resume_dict, dict):
-        print(f"WARNING: Input is not a dict, it's {type(resume_dict)}")
-        print(f"Input value: {str(resume_dict)[:500]}")
-        return str(resume_dict)
+    requirements_score = 0
+    if job_phrases:
+        matched_count = 0
+        optimized_lower = optimized_text.lower()
 
-    print(f"Dictionary keys: {list(resume_dict.keys())}")
-    print(f"Full dictionary structure (first 1000 chars): {str(resume_dict)[:1000]}")
-    print("=" * 80)
+        for phrase in job_phrases:
+            phrase_lower = phrase.lower()
+            pattern = r'\b' + re.escape(phrase_lower.strip()) + r'\b'
 
-    resume_text = []
+            if re.search(pattern, optimized_lower):
+                matched_count += 1
+            elif _check_skill_variations(phrase_lower, optimized_lower):
+                matched_count += 1
 
-    # Name and contact
-    if 'name' in resume_dict:
-        resume_text.append(resume_dict['name'])
-
-    if 'contact' in resume_dict:
-        contact = resume_dict['contact']
-        contact_info = []
-        for key, value in contact.items():
-            if value and value not in ['GitHub', 'LinkedIn', 'github', 'linkedin']:
-                contact_info.append(str(value))
-        if contact_info:
-            resume_text.append(' | '.join(contact_info))
-
-    # Education
-    if 'education' in resume_dict:
-        resume_text.append('\nEDUCATION')
-        edu = resume_dict['education']
-        if isinstance(edu, dict):
-            if 'institution' in edu:
-                inst_line = f"{edu['institution']}, {edu.get('location', '')}"
-                if 'expectedGraduation' in edu:
-                    inst_line += f", Expected: {edu['expectedGraduation']}"
-                resume_text.append(inst_line)
-
-            if 'degree' in edu:
-                resume_text.append(edu['degree'])
-            if 'gpa' in edu:
-                resume_text.append(f"GPA: {edu['gpa']}")
-            if 'honors' in edu and isinstance(edu['honors'], list):
-                for honor in edu['honors']:
-                    resume_text.append(f"• {honor}")
-            if 'courses' in edu and isinstance(edu['courses'], list):
-                resume_text.append(f"• Relevant Courses: {', '.join(edu['courses'])}")
-        else:
-            resume_text.append(str(edu))
-
-    # Technical Skills - check multiple possible keys
-    skills_key = None
-    for possible_key in ['skills', 'technicalSkills', 'technical_skills']:
-        if possible_key in resume_dict:
-            skills_key = possible_key
-            break
-
-    if skills_key:
-        print(f"Found skills under key '{skills_key}': {resume_dict[skills_key]}")
-        resume_text.append('\nTECHNICAL SKILLS')
-        skills = resume_dict[skills_key]
-        if isinstance(skills, dict):
-            for skill_category, skill_list in skills.items():
-                if isinstance(skill_list, list) and skill_list:
-                    category_name = skill_category.replace('_', ' ').title()
-                    skills_str = ', '.join(str(s) for s in skill_list)
-                    resume_text.append(f"{category_name}: {skills_str}")
-        else:
-            resume_text.append(str(skills))
-
-    # Professional Experiences - check multiple possible keys
-    exp_key = None
-    for possible_key in ['professionalExperiences', 'experiences', 'workExperience', 'professional_experiences']:
-        if possible_key in resume_dict:
-            exp_key = possible_key
-            break
-
-    if exp_key:
-        print(f"Found experiences under key '{exp_key}'")
-        experiences = resume_dict[exp_key]
-        print(f"Number of experiences: {len(experiences) if isinstance(experiences, list) else 'N/A (not a list)'}")
-        print(f"Experiences preview: {str(experiences)[:500]}")
-
-        resume_text.append('\nPROFESSIONAL EXPERIENCES')
-        if isinstance(experiences, list):
-            for idx, exp in enumerate(experiences):
-                print(f"  Processing experience #{idx + 1}: {type(exp)}")
-                if isinstance(exp, dict):
-                    print(f"    Experience keys: {list(exp.keys())}")
-                    title = exp.get('title', '') or exp.get('jobTitle', '') or exp.get('position', '')
-                    company = exp.get('company', '') or exp.get('employer', '')
-                    location = exp.get('location', '')
-                    dates = exp.get('dates', '') or exp.get('dateRange', '') or exp.get('duration', '')
-
-                    # Format: "Job Title, Date Range" on one line
-                    exp_line = f"{title}"
-                    if dates:
-                        exp_line += f", {dates}"
-                    resume_text.append(exp_line)
-                    print(f"    Added title line: {exp_line}")
-
-                    # Company and location on next line
-                    company_line = company
-                    if location:
-                        company_line += f", {location}"
-                    if company:
-                        resume_text.append(company_line)
-                        print(f"    Added company line: {company_line}")
-
-                    # Responsibilities as bullets - check multiple keys
-                    responsibilities = (exp.get('responsibilities') or
-                                      exp.get('bullets') or
-                                      exp.get('achievements') or
-                                      exp.get('duties') or [])
-
-                    print(f"    Responsibilities count: {len(responsibilities) if isinstance(responsibilities, list) else 'N/A'}")
-
-                    if isinstance(responsibilities, list):
-                        for resp in responsibilities:
-                            resume_text.append(f"• {resp}")
-                    elif responsibilities:
-                        # Single string - split by lines
-                        for line in str(responsibilities).split('\n'):
-                            if line.strip():
-                                resume_text.append(f"• {line.strip()}")
-        else:
-            print(f"WARNING: Experiences is not a list, it's {type(experiences)}")
+        requirements_match_rate = (matched_count / len(job_phrases)) * 100
+        requirements_score = (requirements_match_rate / 100) * 30
+        score += requirements_score
     else:
-        print("WARNING: No experiences key found in dictionary!")
+        requirements_score = 20
+        score += requirements_score
 
-    # Technical Projects
-    if 'technicalProjects' in resume_dict or 'projects' in resume_dict:
-        projects_key = 'technicalProjects' if 'technicalProjects' in resume_dict else 'projects'
-        projects = resume_dict[projects_key]
-        print(f"Found projects under key '{projects_key}': {len(projects) if isinstance(projects, list) else 'N/A'}")
+    # Factor 3: Resume Completeness (20 points max)
+    original_sections = detect_resume_sections(original_text)
+    optimized_sections = detect_resume_sections(optimized_text)
+    original_bullets = count_bullet_points(original_text)
+    optimized_bullets = count_bullet_points(optimized_text)
 
-        if projects and isinstance(projects, list) and len(projects) > 0:
-            resume_text.append('\nTECHNICAL PROJECTS')
-            for project in projects:
-                if isinstance(project, dict):
-                    title = project.get('title', '') or project.get('name', '')
-                    description = project.get('description', '') or project.get('summary', '')
-                    if title:
-                        resume_text.append(f"• {title}")
-                    if description:
-                        resume_text.append(f"  {description}")
+    completeness_score = 0
 
-    # Leadership and Affiliations
-    if 'leadership' in resume_dict:
-        leadership = resume_dict['leadership']
-        print(f"Found leadership: {len(leadership) if isinstance(leadership, list) else 'N/A'}")
-        if leadership and isinstance(leadership, list) and len(leadership) > 0:
-            resume_text.append('\nLEADERSHIP')
-            for item in leadership:
-                resume_text.append(f"• {item}")
+    if len(optimized_sections) >= len(original_sections):
+        completeness_score += 10
+    else:
+        completeness_score += (len(optimized_sections) / max(len(original_sections), 1)) * 10
 
-    # Certifications
-    if 'certifications' in resume_dict:
-        certs = resume_dict['certifications']
-        print(f"Found certifications: {len(certs) if isinstance(certs, list) else 'N/A'}")
-        if certs and isinstance(certs, list) and len(certs) > 0:
-            resume_text.append('\nCERTIFICATIONS')
-            for cert in certs:
-                resume_text.append(f"• {cert}")
+    if optimized_bullets >= original_bullets:
+        completeness_score += 10
+    else:
+        completeness_score += (optimized_bullets / max(original_bullets, 1)) * 10
 
-    final_text = '\n'.join(resume_text).strip()
+    score += completeness_score
 
-    # DEBUG: Track output
-    print("=" * 80)
-    print("DEBUG: _dict_to_resume_text() OUTPUT")
-    print("=" * 80)
-    print(f"Total lines generated: {len(resume_text)}")
-    print(f"Final text length: {len(final_text)} characters")
-    print(f"Final text first 500 chars:\n{final_text[:500]}")
-    print(f"Final text last 500 chars:\n{final_text[-500:]}")
+    # Factor 4: Formatting Quality (10 points max)
+    formatting_score = 0
+
+    required_sections = ['education', 'skills', 'experience']
+    found_sections = [s['type'] for s in optimized_sections]
+    sections_found = sum(1 for req in required_sections if req in found_sections)
+    formatting_score += (sections_found / len(required_sections)) * 5
+
+    if optimized_bullets > 0:
+        formatting_score += 5
+
+    score += formatting_score
+
+    final_score = max(0, min(100, round(score)))
+
+    print(f"\nATS Score Breakdown:")
+    print(f"  Keyword Integration: {round(keyword_score, 1)}/40")
+    print(f"  Job Requirements Match: {round(requirements_score, 1)}/30")
+    print(f"  Resume Completeness: {round(completeness_score, 1)}/20")
+    print(f"  Formatting Quality: {round(formatting_score, 1)}/10")
+    print(f"  TOTAL ATS SCORE: {final_score}/100")
     print("=" * 80)
 
-    return final_text
+    return final_score
