@@ -10,6 +10,8 @@ interface KeywordAnalysisProps {
   onOptimizeResume?: (selectedKeywords: ActionableKeyword[]) => void;
   isOptimizing?: boolean;
   clearSelections?: boolean;
+  jobTitle?: string;
+  company?: string;
 }
 
 const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
@@ -20,6 +22,8 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
   onOptimizeResume,
   isOptimizing = false,
   clearSelections = false,
+  jobTitle = '',
+  company = '',
 }) => {
   const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set());
   const [showOptimizeModal, setShowOptimizeModal] = useState(false);
@@ -113,10 +117,31 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
             <div className="p-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                  <Sparkles className="w-6 h-6 text-indigo-600" />
-                  Ready to Optimize
-                </h3>
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    <Sparkles className="w-6 h-6 text-indigo-600" />
+                    Optimize Your Resume
+                  </h3>
+                  {(jobTitle || company) && (
+                    <div className="text-lg font-bold italic mt-2 space-y-0" style={{ color: '#FE7F2D' }}>
+                      {jobTitle && company && (
+                        <p>
+                          for <span>{jobTitle}</span> at <span>{company}</span>
+                        </p>
+                      )}
+                      {jobTitle && !company && (
+                        <p>
+                          for <span>{jobTitle}</span>
+                        </p>
+                      )}
+                      {!jobTitle && company && (
+                        <p>
+                          at <span>{company}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <button
                   onClick={() => setShowOptimizeModal(false)}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -202,7 +227,7 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
                 <p className="font-semibold text-gray-800">
                   {selectedKeywords.size} skill{selectedKeywords.size > 1 ? 's' : ''} selected
                 </p>
-                <p className="text-xs text-gray-500">Ready to optimize your resume</p>
+                <p className="text-xs text-gray-500">Optimize Your Resume</p>
               </div>
             </div>
 

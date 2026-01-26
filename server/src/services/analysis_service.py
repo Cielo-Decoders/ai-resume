@@ -773,6 +773,52 @@ Skill: "{skill}"
 # ---------------- KEYWORD FILTERING ---------------------
 # =========================================================
 
+def _basic_keyword_filter(missing_phrases: List[str]) -> Dict[str, Any]:
+    """
+    Basic keyword filter fallback when AI is unavailable.
+    Filters out obvious non-actionable items like years of experience, degrees, etc.
+    """
+    non_actionable_patterns = [
+        r'\d+\+?\s*years?',  # "5+ years", "3 years"
+        r'years?\s+of\s+experience',  # "years of experience"
+        r'bachelor[\'"]?s?\s+degree',  # "Bachelor's degree"
+        r'master[\'"]?s?\s+degree',  # "Master's degree"
+        r'phd',  # PhD
+        r'doctorate',  # Doctorate
+        r'security\s+clearance',  # Security clearance
+        r'ability\s+to\s+travel',  # Ability to travel
+        r'willing\s+to\s+relocate',  # Willing to relocate
+        r'work\s+independently',  # Work independently
+        r'team\s+player',  # Team player
+        r'strong\s+communication',  # Strong communication
+        r'certified\s+\w+',  # Certified X (e.g., Certified Public Accountant)
+        r'\w+\s+certification',  # X certification
+    ]
+
+    actionable_keywords = []
+
+    for phrase in missing_phrases:
+        # Skip if matches non-actionable patterns
+        is_non_actionable = False
+        phrase_lower = phrase.lower()
+
+        for pattern in non_actionable_patterns:
+            if re.search(pattern, phrase_lower, re.IGNORECASE):
+                is_non_actionable = True
+                break
+
+        if not is_non_actionable and len(phrase.strip()) > 2:
+            # Add to actionable keywords with basic metadata
+            actionable_keywords.append({
+                "keyword": phrase,
+                "category": "Skill",  # Default category
+                "priority": "medium",  # Default priority
+                "suggestedIntegration": f"Consider incorporating '{phrase}' into relevant experience bullets"
+            })
+
+    return {"actionableKeywords": actionable_keywords}
+
+
 async def filter_keywords_with_ai(
         missing_phrases: List[str],
         job_title: str = "",
@@ -889,48 +935,6 @@ Priority guidelines:
     except Exception as e:
         print(f"AI keyword filtering error: {e}")
         return _basic_keyword_filter(missing_phrases)
-
-
-def _basic_keyword_filter(missing_phrases: List[str]) -> Dict[str, Any]:
-    """
-    Basic keyword filtering without AI - filters out obvious non-actionable keywords.
-    """
-    non_actionable_patterns = [
-        r'\d+\+?\s*years?',  # "5+ years", "3 years"
-        r'bachelor',
-        r'master',
-        r'ph\.?d',
-        r'degree',
-        r'clearance',
-        r'certification',
-        r'travel',
-        r'ability to',
-        r'strong\s+\w+',  # "strong communication"
-        r'excellent\s+\w+',
-        r'team player',
-    ]
-
-    actionable = []
-    for phrase in missing_phrases:
-        phrase_lower = phrase.lower()
-        is_actionable = True
-
-        for pattern in non_actionable_patterns:
-            if re.search(pattern, phrase_lower, re.IGNORECASE):
-                is_actionable = False
-                break
-
-        if is_actionable:
-            actionable.append({
-                "keyword": phrase,
-                "category": "Skill",
-                "priority": "medium",
-                "suggestedIntegration": "Add to relevant experience bullets or skills section"
-            })
-
-    return {"actionableKeywords": actionable}
-
-
 def _dict_to_resume_text(data: Any) -> str:
     """
     Convert a dictionary or list structure back to formatted resume text.
