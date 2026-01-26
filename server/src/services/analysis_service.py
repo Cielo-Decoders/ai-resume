@@ -4,7 +4,7 @@ import json
 import tempfile
 import hashlib
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 from io import BytesIO
 
 import PyPDF2
@@ -773,6 +773,52 @@ Skill: "{skill}"
 # ---------------- KEYWORD FILTERING ---------------------
 # =========================================================
 
+def _basic_keyword_filter(missing_phrases: List[str]) -> Dict[str, Any]:
+    """
+    Basic keyword filter fallback when AI is unavailable.
+    Filters out obvious non-actionable items like years of experience, degrees, etc.
+    """
+    non_actionable_patterns = [
+        r'\d+\+?\s*years?',  # "5+ years", "3 years"
+        r'years?\s+of\s+experience',  # "years of experience"
+        r'bachelor[\'"]?s?\s+degree',  # "Bachelor's degree"
+        r'master[\'"]?s?\s+degree',  # "Master's degree"
+        r'phd',  # PhD
+        r'doctorate',  # Doctorate
+        r'security\s+clearance',  # Security clearance
+        r'ability\s+to\s+travel',  # Ability to travel
+        r'willing\s+to\s+relocate',  # Willing to relocate
+        r'work\s+independently',  # Work independently
+        r'team\s+player',  # Team player
+        r'strong\s+communication',  # Strong communication
+        r'certified\s+\w+',  # Certified X (e.g., Certified Public Accountant)
+        r'\w+\s+certification',  # X certification
+    ]
+
+    actionable_keywords = []
+
+    for phrase in missing_phrases:
+        # Skip if matches non-actionable patterns
+        is_non_actionable = False
+        phrase_lower = phrase.lower()
+
+        for pattern in non_actionable_patterns:
+            if re.search(pattern, phrase_lower, re.IGNORECASE):
+                is_non_actionable = True
+                break
+
+        if not is_non_actionable and len(phrase.strip()) > 2:
+            # Add to actionable keywords with basic metadata
+            actionable_keywords.append({
+                "keyword": phrase,
+                "category": "Skill",  # Default category
+                "priority": "medium",  # Default priority
+                "suggestedIntegration": f"Consider incorporating '{phrase}' into relevant experience bullets"
+            })
+
+    return {"actionableKeywords": actionable_keywords}
+
+
 async def filter_keywords_with_ai(
         missing_phrases: List[str],
         job_title: str = "",
@@ -889,48 +935,6 @@ Priority guidelines:
     except Exception as e:
         print(f"AI keyword filtering error: {e}")
         return _basic_keyword_filter(missing_phrases)
-
-
-def _basic_keyword_filter(missing_phrases: List[str]) -> Dict[str, Any]:
-    """
-    Basic keyword filtering without AI - filters out obvious non-actionable keywords.
-    """
-    non_actionable_patterns = [
-        r'\d+\+?\s*years?',  # "5+ years", "3 years"
-        r'bachelor',
-        r'master',
-        r'ph\.?d',
-        r'degree',
-        r'clearance',
-        r'certification',
-        r'travel',
-        r'ability to',
-        r'strong\s+\w+',  # "strong communication"
-        r'excellent\s+\w+',
-        r'team player',
-    ]
-
-    actionable = []
-    for phrase in missing_phrases:
-        phrase_lower = phrase.lower()
-        is_actionable = True
-
-        for pattern in non_actionable_patterns:
-            if re.search(pattern, phrase_lower, re.IGNORECASE):
-                is_actionable = False
-                break
-
-        if is_actionable:
-            actionable.append({
-                "keyword": phrase,
-                "category": "Skill",
-                "priority": "medium",
-                "suggestedIntegration": "Add to relevant experience bullets or skills section"
-            })
-
-    return {"actionableKeywords": actionable}
-
-
 def _dict_to_resume_text(data: Any) -> str:
     """
     Convert a dictionary or list structure back to formatted resume text.
@@ -1051,8 +1055,28 @@ OUTPUT (valid JSON only, no markdown):
 
         response = client.chat.completions.create(
             model=settings.openai_model or "gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a resume optimizer. Create a COMPLETE enhanced resume using ALL the user's real information. Return ONLY valid JSON with the optimizedResume field containing the FULL FORMATTED RESUME TEXT (not a dictionary). Include EVERY SINGLE section, job, project, and achievement from the original. DO NOT omit or summarize anything."},
+            messages=[{
+                    "role": "system",
+                    "content": (
+                        "You are an expert ATS resume optimizer specializing in keyword integration. "
+                        "Your task is to create a COMPLETE enhanced resume that:\n\n"
+                        "1. PRESERVES ALL content from the original resume (every section, job, project, and achievement)\n"
+                        "2. INTEGRATES the selected keywords naturally into existing content\n"
+                        "3. ENHANCES bullet points to incorporate keywords without fabricating experiences\n"
+                        "4. MAINTAINS the user's authentic work history and timeline\n\n"
+                        "   USER SELECTED KEYWORDS/SLILLS INTEGRATION STRATEGY:\n"
+                        "- Weave keywords into existing job descriptions and bullet points\n"
+                        "- Add keywords to skills sections where they align with user's background\n"
+                        "- Incorporate keywords into work experiences bullet points naturally\n"
+                        "- Ensure keywords feel organic, not forced or repetitive\n\n"
+                        "OUTPUT REQUIREMENTS:\n"
+                        "- Return ONLY valid JSON with 'optimizedResume' field containing PLAIN TEXT (not a dictionary or list)\n"
+                        "- The optimized resume MUST be at least as comprehensive as the original\n"
+                        "- DO NOT omit, remove, or summarize any experiences, projects, or achievements\n"
+                        "- DO NOT create fake experiences bullet points to accommodate keywords\n"
+                        "- Use proper resume formatting with clear section headers and bullet points"
+                    )
+                },
                 {"role": "user", "content": prompt}
             ],
             temperature=0.0,
@@ -1173,7 +1197,7 @@ OUTPUT (valid JSON only, no markdown):
             "resumeSections": result.get("resumeSections", []),
             "keywordIntegration": result.get("keywordIntegration", []),
             "keywordVerification": keyword_check,
-            "atsScore": calculated_ats_score,  # Use calculated score instead of AI-generated
+            "atsScore": calculated_ats_score,
             "tips": result.get("tips", []),
             "metadata": {
                 "keywordsRequested": len(keywords),
@@ -1308,13 +1332,5 @@ def calculate_ats_score(
     score += formatting_score
 
     final_score = max(0, min(100, round(score)))
-
-    print(f"\nATS Score Breakdown:")
-    print(f"  Keyword Integration: {round(keyword_score, 1)}/40")
-    print(f"  Job Requirements Match: {round(requirements_score, 1)}/30")
-    print(f"  Resume Completeness: {round(completeness_score, 1)}/20")
-    print(f"  Formatting Quality: {round(formatting_score, 1)}/10")
-    print(f"  TOTAL ATS SCORE: {final_score}/100")
-    print("=" * 80)
 
     return final_score

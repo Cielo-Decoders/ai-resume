@@ -23,6 +23,7 @@ export default function ATSAnalyzer() {
   // New state for optimization
   const [resumeText, setResumeText] = useState('');
   const [jobTitle, setJobTitle] = useState('');
+  const [company, setCompany] = useState('');
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
   const [selectedKeywords, setSelectedKeywords] = useState<ActionableKeyword[]>([]);
@@ -81,6 +82,8 @@ export default function ATSAnalyzer() {
         console.log('Job data extracted:', jobData);
         // Store job title for optimization
         setJobTitle(jobData.title || '');
+        // Store company name for optimization
+        setCompany(jobData.company || '');
       } catch (error) {
         console.error('AI extraction failed:', error);
         alert('Failed to extract job data. Please try again.');
@@ -220,7 +223,9 @@ export default function ATSAnalyzer() {
                 <Upload className="w-8 h-8 text-indigo-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-gray-800">Analyzing ...</h3>
+                <h3 className="text-xl font-bold text-gray-800">
+                  {isOptimizing ? 'Optimizing ...' : 'Analyzing ...'}
+                </h3>
                 <p className="text-gray-600 font-medium">{scrapingStatus}</p>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
@@ -353,6 +358,8 @@ export default function ATSAnalyzer() {
                     ? keywordResults.matchingPhrases
                     : (keywordResults.matchingKeywords || []).slice(0, 15)}
                   actionableKeywords={keywordResults.actionableKeywords || []}
+                  jobTitle={jobTitle}
+                  company={company}
                   onKeywordsSelected={(selected) => {
                     console.log('Selected keywords for optimization:', selected);
                     setSelectedKeywords(selected);
