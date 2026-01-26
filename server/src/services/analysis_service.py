@@ -4,7 +4,7 @@ import json
 import tempfile
 import hashlib
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 from io import BytesIO
 
 import PyPDF2
@@ -1055,8 +1055,28 @@ OUTPUT (valid JSON only, no markdown):
 
         response = client.chat.completions.create(
             model=settings.openai_model or "gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a resume optimizer. Create a COMPLETE enhanced resume using ALL the user's real information. Return ONLY valid JSON with the optimizedResume field containing the FULL FORMATTED RESUME TEXT (not a dictionary). Include EVERY SINGLE section, job, project, and achievement from the original. DO NOT omit or summarize anything."},
+            messages=[{
+                    "role": "system",
+                    "content": (
+                        "You are an expert ATS resume optimizer specializing in keyword integration. "
+                        "Your task is to create a COMPLETE enhanced resume that:\n\n"
+                        "1. PRESERVES ALL content from the original resume (every section, job, project, and achievement)\n"
+                        "2. INTEGRATES the selected keywords naturally into existing content\n"
+                        "3. ENHANCES bullet points to incorporate keywords without fabricating experiences\n"
+                        "4. MAINTAINS the user's authentic work history and timeline\n\n"
+                        "   USER SELECTED KEYWORDS/SLILLS INTEGRATION STRATEGY:\n"
+                        "- Weave keywords into existing job descriptions and bullet points\n"
+                        "- Add keywords to skills sections where they align with user's background\n"
+                        "- Incorporate keywords into work experiences bullet points naturally\n"
+                        "- Ensure keywords feel organic, not forced or repetitive\n\n"
+                        "OUTPUT REQUIREMENTS:\n"
+                        "- Return ONLY valid JSON with 'optimizedResume' field containing PLAIN TEXT (not a dictionary or list)\n"
+                        "- The optimized resume MUST be at least as comprehensive as the original\n"
+                        "- DO NOT omit, remove, or summarize any experiences, projects, or achievements\n"
+                        "- DO NOT create fake experiences bullet points to accommodate keywords\n"
+                        "- Use proper resume formatting with clear section headers and bullet points"
+                    )
+                },
                 {"role": "user", "content": prompt}
             ],
             temperature=0.0,
@@ -1177,7 +1197,7 @@ OUTPUT (valid JSON only, no markdown):
             "resumeSections": result.get("resumeSections", []),
             "keywordIntegration": result.get("keywordIntegration", []),
             "keywordVerification": keyword_check,
-            "atsScore": calculated_ats_score,  # Use calculated score instead of AI-generated
+            "atsScore": calculated_ats_score,
             "tips": result.get("tips", []),
             "metadata": {
                 "keywordsRequested": len(keywords),
@@ -1312,13 +1332,5 @@ def calculate_ats_score(
     score += formatting_score
 
     final_score = max(0, min(100, round(score)))
-
-    print(f"\nATS Score Breakdown:")
-    print(f"  Keyword Integration: {round(keyword_score, 1)}/40")
-    print(f"  Job Requirements Match: {round(requirements_score, 1)}/30")
-    print(f"  Resume Completeness: {round(completeness_score, 1)}/20")
-    print(f"  Formatting Quality: {round(formatting_score, 1)}/10")
-    print(f"  TOTAL ATS SCORE: {final_score}/100")
-    print("=" * 80)
 
     return final_score
