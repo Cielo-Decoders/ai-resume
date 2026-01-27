@@ -375,6 +375,7 @@ export default function ATSAnalyzer() {
                     result={optimizationResult}
                     originalResume={resumeText}
                     onClose={() => setOptimizationResult(null)}
+                    company={company}
                   />
                 )}
               </div>

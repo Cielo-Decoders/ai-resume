@@ -7,6 +7,7 @@ interface OptimizedResumeDisplayProps {
   result: OptimizationResult;
   originalResume?: string;
   onClose?: () => void;
+  company?: string;
 }
 
 // Default formatting settings matching user's resume style
@@ -19,7 +20,7 @@ const DEFAULT_FORMATTING: ResumeFormatting = {
   margins: { top: 12.7, bottom: 12.7, left: 12.7, right: 12.7 }
 };
 
-const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result, originalResume, onClose }) => {
+const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result, originalResume, onClose, company }) => {
   const [copied, setCopied] = useState(false);
   const [showChanges, setShowChanges] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
@@ -337,7 +338,20 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
       .replace(/\s+/g, '_') // Replace spaces with underscores
       .trim();
 
-    const fileName = `${cleanName}_${new Date().toISOString().split('T')[0]}.pdf`;
+    // Clean the company name if available
+    const cleanCompany = company
+      ? company
+          .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+          .replace(/\s+/g, '_') // Replace spaces with underscores
+          .trim()
+      : '';
+
+    // Format: username_date_company.pdf or username_date.pdf if no company
+    const datePart = new Date().toISOString().split('T')[0];
+    const fileName = cleanCompany
+      ? `${cleanName}_${datePart}_${cleanCompany}.pdf`
+      : `${cleanName}_${datePart}.pdf`;
+
     doc.save(fileName);
   };
 
