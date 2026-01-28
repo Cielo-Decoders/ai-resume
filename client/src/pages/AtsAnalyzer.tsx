@@ -7,6 +7,7 @@ import OptimizedResumeDisplay from '../components/resume/OptimizedResumeDisplay'
 import {Application, JobData, KeywordAnalysisResult, ActionableKeyword, OptimizationResult } from '../types/index';
 import {extractJobDataFromText, extractTextFromResume, analyzeKeywords, optimizeResume} from '../services/api';
 import JobDescriptionInput from '../components/jobs/JobDescriptionInput';
+import Footer from '../components/Footer';
 
 export default function ATSAnalyzer() {
   const [activeTab, setActiveTab] = useState('analyze');
@@ -383,6 +384,7 @@ export default function ATSAnalyzer() {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   );
 }
