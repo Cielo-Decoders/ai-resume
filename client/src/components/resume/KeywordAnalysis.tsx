@@ -27,14 +27,25 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
 }) => {
   const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set());
   const [showOptimizeModal, setShowOptimizeModal] = useState(false);
-
-  // Clear selections when parent requests it
+  const buttonSectionRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     if (clearSelections) {
       setSelectedKeywords(new Set());
       setShowOptimizeModal(false);
     }
   }, [clearSelections]);
+
+  React.useEffect(() => {
+    if (selectedKeywords.size > 0 && buttonSectionRef.current) {
+      setTimeout(() => {
+        buttonSectionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest'
+        });
+      }, 150);
+    }
+  }, [selectedKeywords.size]);
 
   const toggleKeyword = (keyword: string) => {
     const newSelected = new Set(selectedKeywords);
@@ -49,8 +60,6 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
       const selected = actionableKeywords.filter(k => newSelected.has(k.keyword));
       onKeywordsSelected(selected);
     }
-
-    // Don't show modal automatically - let user select multiple skills
   };
 
   const selectAll = () => {
@@ -59,7 +68,6 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
     if (onKeywordsSelected) {
       onKeywordsSelected(actionableKeywords);
     }
-    // Don't show modal automatically
   };
 
   const clearSelection = () => {
@@ -71,7 +79,6 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
   };
 
   const handleCloseModal = () => {
-    // Just close the modal without clearing selections
     setShowOptimizeModal(false);
   };
 
@@ -110,7 +117,6 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Optimization Modal */}
       {showOptimizeModal && selectedKeywords.size > 0 && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 transform animate-fadeIn">
@@ -181,8 +187,6 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
                     ))}
                   </div>
                 </div>
-
-                {/* Action Buttons */}
                 <div className="flex gap-3 pt-4">
                   <button
                     onClick={handleOptimize}
@@ -214,34 +218,6 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
           </div>
         </div>
       )}
-
-      {/* Floating Continue Button Card - Appears when skills are selected */}
-      {selectedKeywords.size > 0 && !showOptimizeModal && (
-        <div className="fixed bottom-2 left-1/2 transform -translate-x-1/2 z-40 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl border-2 border-indigo-200 p-4 max-w-sm">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-indigo-600" />
-              </div>
-              <div>
-                <p className="font-semibold text-gray-800">
-                  {selectedKeywords.size} skill{selectedKeywords.size > 1 ? 's' : ''} selected
-                </p>
-                <p className="text-xs text-gray-500">Optimize Your Resume</p>
-              </div>
-            </div>
-
-            <button
-              onClick={handleShowModal}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105 transform focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
-            >
-              <Sparkles className="w-5 h-5" />
-              Continue to Optimize
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-lg p-6">
           <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -349,14 +325,23 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
               );
             })}
           </div>
-
           {selectedKeywords.size > 0 && (
-            <div className="mt-6 border-t border-gray-200 pt-4">
-              <div className="flex items-center gap-2 text-indigo-700 bg-indigo-50 rounded-lg p-3">
+            <div ref={buttonSectionRef} className="mt-6 border-t border-gray-200 pt-6">
+              <div className="flex items-left justify-left gap-2 text-indigo-700 bg-indigo-50 rounded-lg p-3 mb-4">
                 <CheckCircle className="w-5 h-5" />
                 <span className="font-semibold">
                   {selectedKeywords.size} skill{selectedKeywords.size > 1 ? 's' : ''} selected for resume optimization.
                 </span>
+              </div>
+              <div className="flex justify-center">
+                <button
+                  onClick={handleShowModal}
+                  disabled={isOptimizing}
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 px-10 rounded-xl font-bold text-lg hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3 shadow-xl hover:scale-105 transform focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
+                >
+                  <Sparkles className="w-6 h-6" />
+                  Continue to Optimize
+                </button>
               </div>
             </div>
           )}
