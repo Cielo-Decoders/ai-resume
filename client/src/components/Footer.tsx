@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Sparkles, Mail, Linkedin, Github, Twitter, Heart } from 'lucide-react';
 
 const Footer: React.FC = () => {
@@ -53,24 +54,24 @@ const Footer: React.FC = () => {
             <h4 className="text-lg font-semibold mb-4 text-indigo-300">Quick Links</h4>
             <ul className="space-y-2">
               <li>
-                <a href="#analyze" className="text-gray-300 hover:text-indigo-400 transition-colors">
+                <Link to="/" className="text-gray-300 hover:text-indigo-400 transition-colors">
                   Analyze Resume
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#features" className="text-gray-300 hover:text-indigo-400 transition-colors">
+                <Link to="/features" className="text-gray-300 hover:text-indigo-400 transition-colors">
                   Features
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#pricing" className="text-gray-300 hover:text-indigo-400 transition-colors">
+                <Link to="/pricing" className="text-gray-300 hover:text-indigo-400 transition-colors">
                   Pricing
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#faq" className="text-gray-300 hover:text-indigo-400 transition-colors">
+                <Link to="/faq" className="text-gray-300 hover:text-indigo-400 transition-colors">
                   FAQ
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -79,28 +80,28 @@ const Footer: React.FC = () => {
             <h4 className="text-lg font-semibold mb-4 text-indigo-300">Support</h4>
             <ul className="space-y-2">
               <li>
-                <a href="#help" className="text-gray-300 hover:text-indigo-400 transition-colors">
+                <Link to="/help" className="text-gray-300 hover:text-indigo-400 transition-colors">
                   Help Center
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#privacy" className="text-gray-300 hover:text-indigo-400 transition-colors">
+                <Link to="/privacy" className="text-gray-300 hover:text-indigo-400 transition-colors">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#terms" className="text-gray-300 hover:text-indigo-400 transition-colors">
+                <Link to="/terms" className="text-gray-300 hover:text-indigo-400 transition-colors">
                   Terms of Service
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="mailto:support@mycareerlab.ai"
+                <Link
+                  to="/contact"
                   className="text-gray-300 hover:text-indigo-400 transition-colors flex items-center gap-2"
                 >
                   <Mail className="w-4 h-4" />
                   Contact Us
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
