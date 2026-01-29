@@ -1,109 +1,135 @@
-# ai-resume
-AI Resume Optimizer
+# AI Resume Optimizer - CareerLab AI
 
+An AI-powered resume optimization platform that helps job seekers create ATS-friendly resumes and land interviews.
 
-## What this repo contains
-- `server/` — a small FastAPI backend (Python).
-- `client/` — a React frontend (created with Create React App / TypeScript).
+## 🚀 Quick Start
 
+### From Root Directory
 
-## Prerequisites
-- macOS (these instructions assume macOS but are applicable to Linux with small changes).
-- Python 3 (use `python3`). On macOS Homebrew-managed Python can prevent system-wide `pip` installs; see the Virtual Environment section below.
-- Node.js and npm for the client (you can install via Homebrew: `brew install node`).
-- Homebrew (optional but recommended) — https://brew.sh/
+1. **Install dependencies:**
+   ```bash
+   npm run install:client   # Install React dependencies
+   npm run install:server   # Install Python dependencies
+   ```
 
+2. **Run the application:**
+   ```bash
+   npm start                # Start client only (React app)
+   npm run server           # Start server only (FastAPI backend)
+   npm run dev              # Start both client and server
+   ```
 
-## Quick start (recommended)
-1. Open a terminal and cd into the project root:
+### From Specific Directories
 
-```bash
-cd "$(pwd)/$(dirname "$0")" || cd "/Users/username/project path/ai-resume"
-# or simply:
-cd /Users/username/prject path/ai-resume
-```
-
-2. Create and activate a Python virtual environment for the server (recommended to avoid macOS externally-managed environment issues):
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-3. Install Python dependencies (inside the activated venv). If you don't have a `requirements.txt`, this installs the minimal dependencies the project needs:
-
-```bash
-python3 -m pip install --upgrade pip
-python3 -m pip install fastapi uvicorn
-```
-
-Note: If your system prints the "externally-managed-environment" message, creating and using a virtual environment as shown above will avoid that issue.
-
-4. Start the FastAPI server (from the project root):
-
-```bash
-# preferred (when uvicorn is on PATH inside the venv)
-uvicorn server.main:app --reload
-
-# or, if uvicorn isn't on PATH, run it via python -m
-python3 -m uvicorn server.main:app --reload
-```
-
-The server will be available at: http://127.0.0.1:8000
-Open http://127.0.0.1:8000/docs for the automatic OpenAPI docs (Swagger UI).
-
-
-## Running the React client
-1. Open a new terminal (or use the same venv if you want) and change into the `client` directory:
-
+**Client (React):**
 ```bash
 cd client
-```
-
-2. Install dependencies and start the dev server:
-
-```bash
 npm install
 npm start
 ```
 
-This usually opens http://localhost:3000 in your browser. The client will proxy or call the backend at the address configured in the client (check `client/package.json` or the client source for exact endpoints).
-
-
-## Troubleshooting
-- If `python3` is missing, install Python 3 with Homebrew:
-
+**Server (FastAPI):**
 ```bash
-brew install python
+cd server
+pip install -r requirements.txt
+uvicorn main:app --reload
 ```
 
-- If `pip` prints the "externally-managed-environment" message, use a virtual environment (see above). Alternatively, install apps globally with Homebrew (`brew install xyz`) or use `pipx` for CLI apps.
+## 📂 Project Structure
 
-- If `uvicorn: command not found`, run it with:
-
-```bash
-python3 -m uvicorn server.main:app --reload
+```
+ai-resume/
+├── client/              # React frontend
+│   ├── src/
+│   │   ├── pages/      # Page components
+│   │   ├── components/ # Reusable components
+│   │   ├── contexts/   # React contexts
+│   │   └── services/   # API services
+│   └── package.json
+├── server/              # FastAPI backend
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── services/
+│   │   └── routes/
+│   ├── main.py
+│   └── requirements.txt
+└── package.json        # Root package.json for convenience scripts
 ```
 
-- If Node/npm are missing on macOS:
+## 🌟 Features
 
-```bash
-brew install node
-```
+- **AI-Powered Analysis** - Advanced AI algorithms analyze resumes
+- **ATS Score Optimization** - Detailed scoring and recommendations
+- **Smart Resume Tailoring** - Automatic optimization for job descriptions
+- **Instant Feedback** - Real-time analysis and suggestions
+- **Privacy & Security** - Encrypted processing, no data retention
 
+## 🛠️ Available Commands
 
-## Advanced / optional
-- To create a `requirements.txt` for reproducible installs, after installing packages in the venv run:
+From the **root directory** (`ai-resume/`):
 
-```bash
-python3 -m pip freeze > server/requirements.txt
-```
+| Command | Description |
+|---------|-------------|
+| `npm start` | Start React client on http://localhost:3000 |
+| `npm run server` | Start FastAPI server on http://localhost:8000 |
+| `npm run dev` | Start both client and server concurrently |
+| `npm run client` | Start React client |
+| `npm run install:client` | Install client dependencies |
+| `npm run install:server` | Install server dependencies |
+| `npm run build:client` | Build client for production |
 
-- To stop the server started with `uvicorn` press Ctrl+C in the terminal.
+## 🔧 Environment Setup
 
+Make sure you have:
+- Node.js (v16 or higher)
+- Python (v3.8 or higher)
+- pip (Python package manager)
 
-## Summary
-- Start the backend: activate venv -> `uvicorn server.main:app --reload`
-- Start the frontend: `cd client` -> `npm install && npm start`
+## 👥 Development Team
 
-If you'd like, I can also add a `server/requirements.txt` and a small `Makefile` or npm script to simplify these commands — tell me which you'd prefer.
+- Isaac Narteh
+- Kyle Drummonds
+- Alejandro Ramos
+
+## 📄 License
+
+MIT License
+
+## 🌐 Domain
+
+Production: https://mycareerlab.ai
+
+---
+
+**Note:** Always run `npm start` from the root directory, or `cd client && npm start` if you're in a subdirectory.
+{
+  "name": "ai-resume",
+  "version": "1.0.0",
+  "description": "AI-powered resume optimization platform",
+  "scripts": {
+    "client": "cd client && npm start",
+    "server": "cd server && python -m uvicorn main:app --reload",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "install:client": "cd client && npm install",
+    "install:server": "cd server && pip install -r requirements.txt",
+    "build:client": "cd client && npm run build",
+    "start": "npm run client"
+  },
+  "keywords": [
+    "resume",
+    "ats",
+    "ai",
+    "career",
+    "optimization"
+  ],
+  "authors": [
+    "Isaac Narteh",
+    "Kyle Drummonds",
+    "Alejandro Ramos"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
+
