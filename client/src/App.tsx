@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AuthPage from './components/auth/AuthPage';
 import LoadingScreen from './components/auth/LoadingScreen';
+import LandingPage from './pages/LandingPage';
 import ATSAnalyzerPro from './pages/AtsAnalyzer';
 import Features from './pages/Features';
 import Pricing from './pages/Pricing';
@@ -21,6 +22,9 @@ function AppContent() {
 
   return (
     <Routes>
+      {/* Landing Page */}
+      <Route path="/" element={<LandingPage />} />
+
       {/* Public routes */}
       <Route path="/features" element={<Features />} />
       <Route path="/pricing" element={<Pricing />} />
@@ -32,11 +36,11 @@ function AppContent() {
 
       {/* Protected routes */}
       <Route
-        path="/"
+        path="/app"
         element={isAuthenticated ? <ATSAnalyzerPro /> : <AuthPage />}
       />
 
-      {/* Catch all - redirect to home */}
+      {/* Catch all - redirect to landing */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
