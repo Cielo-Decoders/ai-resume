@@ -3,12 +3,6 @@ import {JobData, AnalysisResults, KeywordAnalysisResult, ActionableKeyword, Opti
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
 
 /**
  * Analyze resume by sending PDF to backend for extraction
@@ -302,9 +296,11 @@ export const optimizeResume = async (
 /**
  * Export functions for use in components
  */
-export default {
+const apiService = {
   extractTextFromResume,
   extractJobDataFromText,
   analyzeKeywords,
   optimizeResume,
 };
+
+export default apiService;

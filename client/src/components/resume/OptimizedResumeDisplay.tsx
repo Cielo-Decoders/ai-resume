@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Download, Check, Sparkles, ChevronDown, ChevronUp, Eye, X } from 'lucide-react';
+import { FileText, Download, Sparkles, ChevronDown, ChevronUp, Eye, X } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { OptimizationResult, ResumeChange, ResumeFormatting } from '../../types';
 
@@ -21,10 +21,8 @@ const DEFAULT_FORMATTING: ResumeFormatting = {
 };
 
 const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result, originalResume, onClose, company }) => {
-  const [copied, setCopied] = useState(false);
   const [showChanges, setShowChanges] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
-  const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'text'>('pdf');
 
   const formatting = result.formatting || DEFAULT_FORMATTING;
   const displayRef = React.useRef<HTMLDivElement>(null);
@@ -34,17 +32,6 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
       displayRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, []);
-
-  const handleCopyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(result.optimizedResume);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error('Failed to copy:', error);
-      alert('Failed to copy to clipboard');
-    }
-  };
 
   const generatePDF = (): jsPDF => {
     const doc = new jsPDF({
