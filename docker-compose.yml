@@ -1,0 +1,71 @@
+version: '3.9'
+
+services:
+  # CareerLab AI Backend Service
+  careerlab-backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: careerlab-ai-backend:1.0.0
+    container_name: careerlab-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # API Keys - should be set in .env file
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # Application settings
+      - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+    volumes:
+      # Mount server code for hot-reload in development
+      - ./server:/app
+      - /app/__pycache__
+      # Persist resume files
+      - resume-data:/app/resume
+    networks:
+      - careerlab-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # CareerLab AI Frontend Service
+  careerlab-frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=http://localhost:8000
+        - REACT_APP_OPENAI_API_KEY=${REACT_APP_OPENAI_API_KEY}
+    image: careerlab-ai-frontend:1.0.0
+    container_name: careerlab-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80
+    depends_on:
+      careerlab-backend:
+        condition: service_healthy
+    networks:
+      - careerlab-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+networks:
+  careerlab-network:
+    driver: bridge
+    name: careerlab-network
+
+volumes:
+  resume-data:
+    name: careerlab-resume-data

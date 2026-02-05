@@ -1,0 +1,38 @@
+# Root level dockerignore
+.git/
+.gitignore
+README.md
+LICENSE
+*.md
+
+# Environment files
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+uvicorn.log
+uvicorn.pid
+uvicec
+uvicecho
+
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Node modules
+node_modules/
+
+# Build artifacts
+build/
+dist/
+
