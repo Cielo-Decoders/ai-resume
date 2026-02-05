@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import AuthPage from './components/auth/AuthPage';
 import LoadingScreen from './components/auth/LoadingScreen';
 import LandingPage from './pages/LandingPage';
 import ATSAnalyzerPro from './pages/AtsAnalyzer';
@@ -14,7 +13,7 @@ import TermsOfService from './pages/TermsOfService';
 import ContactUs from './pages/ContactUs';
 
 function AppContent() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isLoading } = useAuth();
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -34,11 +33,8 @@ function AppContent() {
       <Route path="/terms" element={<TermsOfService />} />
       <Route path="/contact" element={<ContactUs />} />
 
-      {/* Protected routes */}
-      <Route
-        path="/app"
-        element={isAuthenticated ? <ATSAnalyzerPro /> : <AuthPage />}
-      />
+      {/* App route - publicly accessible (no auth required yet) */}
+      <Route path="/app" element={<ATSAnalyzerPro />} />
 
       {/* Catch all - redirect to landing */}
       <Route path="*" element={<Navigate to="/" replace />} />
