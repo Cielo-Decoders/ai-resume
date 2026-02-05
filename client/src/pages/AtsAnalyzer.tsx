@@ -15,7 +15,7 @@ export default function ATSAnalyzer() {
   const [jobDescription, setJobDescription] = useState('');
   const [inputMode, setInputMode] = useState<'paste'>('paste');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [applications, setApplications] = useState<Application[]>([]);
+  const [applications] = useState<Application[]>([]);
   const [baseResume, setBaseResume] = useState<File | null>(null);
   const [scrapingStatus, setScrapingStatus] = useState('');
   const [keywordResults, setKeywordResults] = useState<KeywordAnalysisResult | null>(null);
@@ -27,7 +27,7 @@ export default function ATSAnalyzer() {
   const [company, setCompany] = useState('');
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
-  const [selectedKeywords, setSelectedKeywords] = useState<ActionableKeyword[]>([]);
+  const [, setSelectedKeywords] = useState<ActionableKeyword[]>([]);
   const [clearKeywordSelections, setClearKeywordSelections] = useState(false);
 
   // Ref for scrolling to results section
