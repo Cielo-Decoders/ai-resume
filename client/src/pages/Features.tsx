@@ -43,7 +43,7 @@ const Features: React.FC = () => {
         {/* Back to Home Button */}
         <div className="mb-8">
           <Link
-            to="/"
+            to="/app"
             className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg font-semibold transition-all duration-300 shadow-md hover:shadow-lg group"
           >
             <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
@@ -122,13 +122,13 @@ const Features: React.FC = () => {
 
         {/* CTA */}
         <div className="text-center">
-          <a
-            href="/"
+          <Link
+            to="/app"
             className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-full font-semibold text-lg hover:shadow-2xl transition-all duration-300 hover:scale-105"
           >
             <Sparkles className="w-5 h-5" />
             Try CareerLab AI Now
-          </a>
+          </Link>
         </div>
       </div>
       <Footer />
