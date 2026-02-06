@@ -54,10 +54,10 @@ export default function LandingPage() {
           <div>
             <div className="flex items-center justify-center lg:justify-start mb-4 sm:mb-6">
               <div>
-                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent leading-tight">
+                <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-7xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent leading-tight">
                   CareerLab AI
                 </h1>
-                <p className="text-gray-600 text-base sm:text-lg lg:text-xl mt-2 sm:mt-3 font-medium">
+                <p className="text-gray-600 text-lg sm:text-xl lg:text-xl mt-2 sm:mt-3 font-medium">
                   Your AI-Powered Career Assistant
                 </p>
               </div>
@@ -65,16 +65,16 @@ export default function LandingPage() {
           </div>
 
           <div className="space-y-3 sm:space-y-4">
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800">
+            <h2 className="text-2xl sm:text-2xl lg:text-3xl font-bold text-gray-800">
               Start Your Career Journey
             </h2>
-            <p className="text-sm sm:text-base lg:text-lg text-gray-600">
+            <p className="text-base sm:text-base lg:text-lg text-gray-600 text-center lg:text-left ml-2 lg:ml-0">
               Join thousands of professionals who have landed their dream jobs with our AI-powered platform.
             </p>
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center gap-3 bg-white/60 backdrop-blur-sm rounded-lg p-3">
+            <div className="flex items-center gap-3 bg-white/60 backdrop-blur-sm rounded-lg p-3 max-w-md mx-auto lg:mx-0">
               <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
                 <Star className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
@@ -84,11 +84,11 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-md mx-auto lg:mx-0 ml-6 lg:ml-0">
               {features.map((feature, idx) => (
-                <div key={idx} className="flex items-center gap-2">
+                <div key={idx} className="flex items-center gap-2 justify-start">
                   <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                  <span className="text-gray-700 text-xs sm:text-sm">{feature}</span>
+                  <span className="text-gray-700 text-sm sm:text-sm">{feature}</span>
                 </div>
               ))}
             </div>
