@@ -242,12 +242,12 @@ export default function ATSAnalyzer() {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-3">
-              <div>
+            <div className="flex items-center gap-3 w-full">
+              <div className="w-full text-center md:text-left">
                 <h1 className="text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 bg-clip-text text-transparent drop-shadow-2xl tracking-tight">
                   CareerLab AI
                 </h1>
-                <p className="text-gray-600 text-sm font-medium hidden sm:block tracking-wide">
+                <p className="text-gray-600 text-sm font-medium tracking-wide sm:block">
                     Your AI-Powered Career Assistant
                 </p>
               </div>
@@ -272,8 +272,9 @@ export default function ATSAnalyzer() {
         />
         {activeTab === 'analyze' && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <div className="grid md:grid-cols-2 gap-6 mb-6">
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 md:p-8">
+              {/* Desktop: Side by side headings, Mobile: Hidden (headings with each section) */}
+              <div className="hidden md:grid md:grid-cols-2 gap-6 mb-6">
                 <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
                   <Upload className="w-6 h-6 text-indigo-600" />
                   Upload & Analyze
@@ -283,24 +284,44 @@ export default function ATSAnalyzer() {
                   Job Description
                 </h2>
               </div>
-              <div className="grid md:grid-cols-2 gap-6">
-                <ResumeUpload
-                  resumeFile={resumeFile}
-                  baseResume={baseResume}
-                  onFileUpload={handleFileUpload}
-                />
-                <JobDescriptionInput
-                  jobDescription={jobDescription}
-                  scrapingStatus={scrapingStatus}
-                  onDescriptionChange={setJobDescription}
-                  inputMode={inputMode}
-                  onInputModeChange={setInputMode}
-                />
+
+              {/* Content Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-6">
+                {/* Resume Upload Section */}
+                <div className="space-y-4">
+                  {/* Mobile: Show heading with section */}
+                  <h2 className="md:hidden text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <Upload className="w-5 h-5 text-indigo-600" />
+                    Upload & Analyze
+                  </h2>
+                  <ResumeUpload
+                    resumeFile={resumeFile}
+                    baseResume={baseResume}
+                    onFileUpload={handleFileUpload}
+                  />
+                </div>
+
+                {/* Job Description Section */}
+                <div className="space-y-4">
+                  {/* Mobile: Show heading with section */}
+                  <h2 className="md:hidden text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-indigo-600" />
+                    Job Description
+                  </h2>
+                  <JobDescriptionInput
+                    jobDescription={jobDescription}
+                    scrapingStatus={scrapingStatus}
+                    onDescriptionChange={setJobDescription}
+                    inputMode={inputMode}
+                    onInputModeChange={setInputMode}
+                  />
+                </div>
               </div>
+
               <button
                 onClick={analyzeResume}
                 disabled={isAnalyzing || !resumeFile || !jobDescription}
-                className="mt-6 mx-auto w-auto min-w-[220px] md:min-w-[260px] bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg"
+                className="mt-6 mx-auto w-full sm:w-auto min-w-[220px] md:min-w-[260px] bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg"
               >
                 {isAnalyzing ? (
                   <>
@@ -321,14 +342,14 @@ export default function ATSAnalyzer() {
             {analysisComplete && keywordResults && (
               <div className="space-y-6" ref={resultsRef}>
                 {/* Match Score Card */}
-                <div className="bg-white rounded-xl shadow-lg p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-800">Job Match Score</h3>
-                      <p className="text-gray-500">How well your uploaded resume matches this job description
+                <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div className="flex-1">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-800">Job Match Score</h3>
+                      <p className="text-sm sm:text-base text-gray-500 mt-1">How well your uploaded resume matches this job description
                       based on our AI analysis of your resume and this job description</p>
                     </div>
-                    <div className={`text-4xl font-bold ${
+                    <div className={`text-3xl sm:text-4xl font-bold text-center md:text-right ${
                       keywordResults.matchScore >= 70 ? 'text-green-600' :
                       keywordResults.matchScore >= 50 ? 'text-yellow-600' : 'text-red-600'
                     }`}>
