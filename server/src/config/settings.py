@@ -20,12 +20,15 @@ class Settings:
     debug: bool = os.getenv("DEBUG", "True").lower() == "true"
     log_level: str = os.getenv("LOG_LEVEL", "INFO")
 
-    # CORS configuration
+    # CORS configuration — in production set ALLOWED_ORIGINS as a comma-separated list
+    # e.g. ALLOWED_ORIGINS=https://frontend-abc123-uc.a.run.app,https://mycareerlab.ai
+    _extra_origins: str = os.getenv("ALLOWED_ORIGINS", "")
     allowed_origins: List[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost",
         "http://127.0.0.1",
+        *[o.strip() for o in _extra_origins.split(",") if o.strip()],
     ]
 
     # File upload configuration

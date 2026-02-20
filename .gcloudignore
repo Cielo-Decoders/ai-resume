@@ -1,0 +1,22 @@
+# Files excluded from gcloud uploads (e.g. gcloud builds submit)
+.git/
+.idea/
+
+# Node modules — reinstalled inside Docker
+client/node_modules/
+client/build/
+
+# Python virtual environments — reinstalled inside Docker
+server/venv/
+server/.venv/
+server/__pycache__/
+server/src/**/__pycache__/
+server/resume/
+
+# Secrets — never upload .env files to GCP
+**/.env
+**/.env.local
+
+# Test artifacts
+server/.pytest_cache/
+server/src/test/__pycache__/

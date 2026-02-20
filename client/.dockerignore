@@ -1,0 +1,22 @@
+# Dependencies — reinstalled inside the container
+node_modules/
+
+# Previous build artifacts
+build/
+
+# Tests
+src/**/__tests__/
+src/**/*.test.ts
+src/**/*.test.tsx
+
+# Local environment — REACT_APP_* vars are passed as build args
+.env
+.env.local
+.env.development
+.env.production
+
+# Dev tooling
+.git/
+.gitignore
+*.md
+.idea/

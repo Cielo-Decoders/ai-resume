@@ -1,0 +1,28 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Tests
+src/test/
+pytest.ini
+.pytest_cache/
+
+# Local environment — secrets injected by Cloud Run at runtime
+.env
+
+# Saved resume outputs (runtime-generated, not needed in image)
+resume/
+
+# Dev tooling
+.idea/
+.git/
+.gitignore
+*.md

@@ -24,6 +24,7 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 urllib3==2.6.2
 uvicorn==0.38.0
+python-dotenv==1.1.0
 packaging==25.0
 pdf2image==1.17.0
 pillow==12.0.0
