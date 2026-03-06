@@ -17,7 +17,7 @@ class Settings:
     # Server configuration
     host: str = os.getenv("HOST", "127.0.0.1")
     port: int = int(os.getenv("PORT", "8000"))
-    debug: bool = os.getenv("DEBUG", "True").lower() == "true"
+    debug: bool = os.getenv("DEBUG", "False").lower() == "true"
     log_level: str = os.getenv("LOG_LEVEL", "INFO")
 
     # CORS configuration — in production set ALLOWED_ORIGINS as a comma-separated list
