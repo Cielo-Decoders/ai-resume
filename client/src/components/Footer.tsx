@@ -12,11 +12,11 @@ const Footer: React.FC = () => {
         <div className="mb-6">
           {/* Grid layout - stacked on mobile, single row on large screens */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
-            {/* CareerLab AI Section - Full width on mobile, spans 6 columns on large screens */}
+            {/* CareerDev AI Section - Full width on mobile, spans 6 columns on large screens */}
             <div className="md:col-span-6 ml-[10%] md:ml-0">
               <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
-                <h3 className="text-3xl md:text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-                  CareerLab AI
+                <h3 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                  CareerDev AI
                 </h3>
               </div>
               <p className="text-gray-300 mb-4 text-sm max-w-md">
@@ -120,7 +120,7 @@ const Footer: React.FC = () => {
         <div className="border-t border-white/10 pt-6 ml-[10%] md:ml-0">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-400 text-sm text-center md:text-left">
-              © {currentYear} CareerLab AI. All rights reserved.
+              © {currentYear} CareerDev AI. All rights reserved.
             </p>
             <p className="text-gray-400 text-sm flex items-center gap-1">
               Made with <Heart className="w-4 h-4 text-red-500 fill-current" /> for job seekers worldwide

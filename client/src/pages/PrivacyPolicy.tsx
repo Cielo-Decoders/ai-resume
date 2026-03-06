@@ -33,7 +33,7 @@ const PrivacyPolicy: React.FC = () => {
         <div className="bg-white rounded-2xl p-8 md:p-12 shadow-xl space-y-8">
           <div>
             <p className="text-gray-700 mb-4">
-              At CareerLab AI, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our resume optimization platform.
+              At CareerDev AI, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our resume optimization platform.
             </p>
           </div>
 
@@ -45,7 +45,7 @@ const PrivacyPolicy: React.FC = () => {
             <div className="space-y-4 text-gray-700">
               <div>
                 <h3 className="font-semibold text-gray-800 mb-2">Personal Information</h3>
-                <p>When you use CareerLab AI, we may collect:</p>
+                <p>When you use CareerDev AI, we may collect:</p>
                 <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
                   <li>Name and email address (for account creation)</li>
                   <li>Resume content (when you upload files)</li>
@@ -92,7 +92,7 @@ const PrivacyPolicy: React.FC = () => {
             </h2>
             <div className="text-gray-700 space-y-3">
               <p>
-                <strong>Current Implementation:</strong> Currently, CareerLab AI processes your resume data in real-time without permanent storage in a database. Your resume content is used only for the immediate analysis you request and is not retained after your session ends.
+                <strong>Current Implementation:</strong> Currently, CareerDev AI processes your resume data in real-time without permanent storage in a database. Your resume content is used only for the immediate analysis you request and is not retained after your session ends.
               </p>
               <p>
                 <strong>Future Updates:</strong> As we scale and add features, we may implement database storage for user accounts and resume versions. If this occurs, we will update this policy and notify users accordingly.
@@ -149,7 +149,7 @@ const PrivacyPolicy: React.FC = () => {
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Third-Party Services</h2>
             <div className="text-gray-700 space-y-3">
               <p>
-                CareerLab AI may use third-party services for:
+                CareerDev AI may use third-party services for:
               </p>
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>AI and machine learning processing (OpenAI, Anthropic, etc.)</li>
@@ -181,7 +181,7 @@ const PrivacyPolicy: React.FC = () => {
           <div>
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Children's Privacy</h2>
             <p className="text-gray-700">
-              CareerLab AI is not intended for users under the age of 16. We do not knowingly collect personal information from children. If we become aware that we have collected data from a child without parental consent, we will take steps to delete that information.
+              CareerDev AI is not intended for users under the age of 16. We do not knowingly collect personal information from children. If we become aware that we have collected data from a child without parental consent, we will take steps to delete that information.
             </p>
           </div>
 
@@ -214,7 +214,7 @@ const PrivacyPolicy: React.FC = () => {
           <div className="pt-6 border-t border-gray-200">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Development Team</h2>
             <p className="text-gray-700">
-              CareerLab AI is developed and maintained by Isaac Narteh, Kyle Drummonds, and Alejandro Ramos. We are committed to protecting your privacy and providing a secure, valuable service to help you succeed in your career journey.
+              CareerDev AI is developed and maintained by Isaac Narteh, Kyle Drummonds, and Alejandro Ramos. We are committed to protecting your privacy and providing a secure, valuable service to help you succeed in your career journey.
             </p>
           </div>
         </div>

@@ -186,7 +186,7 @@ const ContactUs: React.FC = () => {
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 shadow-xl text-white">
               <h3 className="text-2xl font-bold mb-4">Development Team</h3>
               <p className="mb-4 text-indigo-100">
-                CareerLab AI is proudly developed by:
+                CareerDev AI is proudly developed by:
               </p>
               <ul className="space-y-2 text-indigo-100">
                 <li className="flex items-center gap-2">

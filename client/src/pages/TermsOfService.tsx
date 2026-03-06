@@ -33,7 +33,7 @@ const TermsOfService: React.FC = () => {
         <div className="bg-white rounded-2xl p-8 md:p-12 shadow-xl space-y-8">
           <div>
             <p className="text-gray-700 mb-4">
-              Welcome to CareerLab AI. By accessing or using our platform, you agree to be bound by these Terms of Service. Please read them carefully.
+              Welcome to CareerDev AI. By accessing or using our platform, you agree to be bound by these Terms of Service. Please read them carefully.
             </p>
           </div>
 
@@ -44,10 +44,10 @@ const TermsOfService: React.FC = () => {
             </h2>
             <div className="text-gray-700 space-y-3">
               <p>
-                By creating an account, accessing, or using CareerLab AI, you agree to comply with and be bound by these Terms of Service and our Privacy Policy. If you do not agree to these terms, please do not use our service.
+                By creating an account, accessing, or using CareerDev AI, you agree to comply with and be bound by these Terms of Service and our Privacy Policy. If you do not agree to these terms, please do not use our service.
               </p>
               <p>
-                We reserve the right to modify these terms at any time. We will notify users of material changes via email or through the platform. Your continued use of CareerLab AI after changes constitutes acceptance of the updated terms.
+                We reserve the right to modify these terms at any time. We will notify users of material changes via email or through the platform. Your continued use of CareerDev AI after changes constitutes acceptance of the updated terms.
               </p>
             </div>
           </div>
@@ -60,7 +60,7 @@ const TermsOfService: React.FC = () => {
             <div className="text-gray-700 space-y-2">
               <p><strong>Eligibility:</strong></p>
               <ul className="list-disc list-inside ml-4 space-y-1">
-                <li>You must be at least 16 years old to use CareerLab AI</li>
+                <li>You must be at least 16 years old to use CareerDev AI</li>
                 <li>You must provide accurate and complete registration information</li>
                 <li>You are responsible for maintaining the confidentiality of your account credentials</li>
                 <li>You are responsible for all activities that occur under your account</li>
@@ -78,7 +78,7 @@ const TermsOfService: React.FC = () => {
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Service Description</h2>
             <div className="text-gray-700 space-y-3">
               <p>
-                CareerLab AI provides AI-powered resume optimization services, including:
+                CareerDev AI provides AI-powered resume optimization services, including:
               </p>
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>ATS (Applicant Tracking System) score analysis</li>
@@ -88,7 +88,7 @@ const TermsOfService: React.FC = () => {
                 <li>Automated resume generation based on job requirements</li>
               </ul>
               <p className="mt-3">
-                Our service is provided "as is" and we make no guarantees about job placement, interview invitations, or employment outcomes. CareerLab AI is a tool to assist in resume preparation, not a guarantee of employment success.
+                Our service is provided "as is" and we make no guarantees about job placement, interview invitations, or employment outcomes. CareerDev AI is a tool to assist in resume preparation, not a guarantee of employment success.
               </p>
             </div>
           </div>
@@ -122,11 +122,11 @@ const TermsOfService: React.FC = () => {
             <div className="text-gray-700 space-y-3">
               <p><strong>Your Content:</strong></p>
               <p>
-                You retain all rights to the content you upload (your resume). By using our service, you grant CareerLab AI a limited license to process, analyze, and optimize your content solely for the purpose of providing our services to you.
+                You retain all rights to the content you upload (your resume). By using our service, you grant CareerDev AI a limited license to process, analyze, and optimize your content solely for the purpose of providing our services to you.
               </p>
               <p className="mt-3"><strong>Our Platform:</strong></p>
               <p>
-                All rights, title, and interest in CareerLab AI (including software, algorithms, design, trademarks, and content) are owned by the development team (Isaac Narteh, Kyle Drummonds, and Alejandro Ramos) and are protected by copyright and other intellectual property laws.
+                All rights, title, and interest in CareerDev AI (including software, algorithms, design, trademarks, and content) are owned by the development team (Isaac Narteh, Kyle Drummonds, and Alejandro Ramos) and are protected by copyright and other intellectual property laws.
               </p>
               <p className="mt-3"><strong>AI-Generated Content:</strong></p>
               <p>
@@ -164,7 +164,7 @@ const TermsOfService: React.FC = () => {
             </h2>
             <div className="text-gray-700 space-y-3">
               <p>
-                TO THE MAXIMUM EXTENT PERMITTED BY LAW, CAREERLAB AI AND ITS DEVELOPERS SHALL NOT BE LIABLE FOR:
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW, CAREERDEV AI AND ITS DEVELOPERS SHALL NOT BE LIABLE FOR:
               </p>
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>Any indirect, incidental, special, consequential, or punitive damages</li>
@@ -184,7 +184,7 @@ const TermsOfService: React.FC = () => {
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Disclaimer of Warranties</h2>
             <div className="text-gray-700 space-y-3">
               <p>
-                CAREERLAB AI IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO:
+                CAREERDEV AI IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO:
               </p>
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>Warranties of merchantability or fitness for a particular purpose</li>
@@ -225,7 +225,7 @@ const TermsOfService: React.FC = () => {
             </h2>
             <div className="text-gray-700">
               <p>
-                You agree to indemnify, defend, and hold harmless CareerLab AI, its developers (Isaac Narteh, Kyle Drummonds, and Alejandro Ramos), and affiliates from any claims, damages, losses, liabilities, and expenses (including legal fees) arising from:
+                You agree to indemnify, defend, and hold harmless CareerDev AI, its developers (Isaac Narteh, Kyle Drummonds, and Alejandro Ramos), and affiliates from any claims, damages, losses, liabilities, and expenses (including legal fees) arising from:
               </p>
               <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
                 <li>Your use or misuse of the service</li>
@@ -243,7 +243,7 @@ const TermsOfService: React.FC = () => {
                 These Terms of Service shall be governed by and construed in accordance with the laws of the United States, without regard to conflict of law provisions.
               </p>
               <p>
-                Any disputes arising from these terms or your use of CareerLab AI shall be resolved through binding arbitration, except where prohibited by law. You agree to waive any right to a jury trial or to participate in a class action.
+                Any disputes arising from these terms or your use of CareerDev AI shall be resolved through binding arbitration, except where prohibited by law. You agree to waive any right to a jury trial or to participate in a class action.
               </p>
             </div>
           </div>
@@ -261,7 +261,7 @@ const TermsOfService: React.FC = () => {
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Entire Agreement</h2>
             <div className="text-gray-700">
               <p>
-                These Terms of Service, together with our Privacy Policy, constitute the entire agreement between you and CareerLab AI regarding the use of our service, superseding any prior agreements.
+                These Terms of Service, together with our Privacy Policy, constitute the entire agreement between you and CareerDev AI regarding the use of our service, superseding any prior agreements.
               </p>
             </div>
           </div>
@@ -280,10 +280,10 @@ const TermsOfService: React.FC = () => {
 
           <div className="pt-6 border-t border-gray-200">
             <p className="text-gray-700">
-              <strong>Development Team:</strong> CareerLab AI is developed and maintained by Isaac Narteh, Kyle Drummonds, and Alejandro Ramos.
+              <strong>Development Team:</strong> CareerDev AI is developed and maintained by Isaac Narteh, Kyle Drummonds, and Alejandro Ramos.
             </p>
             <p className="text-gray-600 mt-3 text-sm">
-              By using CareerLab AI, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
+              By using CareerDev AI, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
             </p>
           </div>
         </div>

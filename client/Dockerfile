@@ -10,13 +10,9 @@ RUN npm ci --legacy-peer-deps
 # Copy source
 COPY . .
 
-# REACT_APP_* variables must be present at BUILD time — they are baked into
-# the JavaScript bundle by Create React App's webpack config.
+# Only the backend URL is needed at build time — no API keys baked in
 ARG REACT_APP_API_URL
-ARG REACT_APP_OPENAI_API_KEY
-
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
-ENV REACT_APP_OPENAI_API_KEY=$REACT_APP_OPENAI_API_KEY
 
 RUN npm run build
 
