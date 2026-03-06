@@ -11,8 +11,33 @@ import PyPDF2
 from pdf2image import convert_from_bytes
 import pytesseract
 from openai import OpenAI
+import httpx
 
 from ..config.settings import settings
+
+
+# =========================================================
+# ---------------- OPENAI CLIENT FACTORY ------------------
+# =========================================================
+
+def _get_openai_client() -> OpenAI:
+    """
+    Return a shared OpenAI client configured with explicit timeouts.
+    This is required for Google Cloud Run (serverless) where default
+    connection settings can cause silent 'Connection error.' failures.
+    API key is stripped to remove any trailing newline injected by Secret Manager.
+    """
+    api_key = (settings.openai_api_key or os.getenv("OPENAI_API_KEY", "")).strip()
+    return OpenAI(
+        api_key=api_key,
+        timeout=httpx.Timeout(
+            connect=10.0,    # seconds to establish connection
+            read=120.0,      # seconds to wait for response data
+            write=10.0,      # seconds to send data
+            pool=10.0,       # seconds to wait for a connection from pool
+        ),
+        max_retries=2,
+    )
 
 
 # =========================================================
@@ -712,14 +737,9 @@ def _get_skill_variations_from_ai(skill: str) -> List[str]:
     Ask AI to identify common variations and abbreviations for a skill.
     Returns list of variations including the original skill.
     """
-    api_key = settings.openai_api_key or os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        # Fallback: return just the skill itself
-        return [skill]
+    client = _get_openai_client()
 
     try:
-        client = OpenAI(api_key=api_key)
-
         prompt = f"""List ALL common variations, abbreviations, and alternative names for this skill/term: "{skill}"
 
 Include:
@@ -838,14 +858,9 @@ async def filter_keywords_with_ai(
     if not missing_phrases:
         return {"actionableKeywords": []}
 
-    api_key = settings.openai_api_key or os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        print("No OpenAI API key found. Using basic keyword filter.")
-        return _basic_keyword_filter(missing_phrases)
+    client = _get_openai_client()
 
     try:
-        client = OpenAI(api_key=api_key)
-
         prompt = f"""
 Analyze these keywords or skills from a job posting for a {job_title or 'professional'} role.
 
@@ -1020,7 +1035,7 @@ async def generate_optimized_resume(
     print(f"Generating new resume with {len(keywords)} keywords")
 
     try:
-        client = OpenAI(api_key=api_key)
+        client = _get_openai_client()
 
         prompt = f"""{SYSTEM_INSTRUCTIONS}
 

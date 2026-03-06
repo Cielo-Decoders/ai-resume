@@ -104,15 +104,11 @@ export default function AuthPage() {
         <div className="space-y-8 text-center lg:text-left">
           <div>
             <div className="flex items-center justify-center lg:justify-start gap-3 mb-6">
-              <div className="relative">
-                <Zap className="w-16 h-16 text-indigo-600" />
-                <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full animate-pulse"></div>
-              </div>
               <div>
                 <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                 CareerLab AI
+                  CareerDev AI
                 </h1>
-                <p className="text-gray-600 text-lg mt-1">
+                <p className="text-gray-600 text-lg mt-1 text-center lg:text-left">
                   Your AI-Powered Career Assistant
                 </p>
               </div>

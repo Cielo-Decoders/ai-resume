@@ -11,8 +11,8 @@ const FAQ: React.FC = () => {
       category: "Getting Started",
       questions: [
         {
-          q: "What is CareerLab AI?",
-          a: "CareerLab AI is an AI-powered resume optimization platform that helps job seekers create ATS-friendly resumes. Our advanced algorithms analyze your resume against specific job descriptions and provide intelligent suggestions to improve your chances of landing interviews."
+          q: "What is CareerDev AI?",
+          a: "CareerDev AI is an AI-powered resume optimization platform that helps job seekers create ATS-friendly resumes. Our advanced algorithms analyze your resume against specific job descriptions and provide intelligent suggestions to improve your chances of landing interviews."
         },
         {
           q: "How does the ATS scoring work?",
@@ -54,7 +54,7 @@ const FAQ: React.FC = () => {
         },
         {
           q: "Do you share my resume with employers?",
-          a: "No, we never share your resume or personal information with anyone. CareerLab AI is purely a tool for you to optimize your own resume. You have complete control over your data."
+          a: "No, we never share your resume or personal information with anyone. CareerDev AI is purely a tool for you to optimize your own resume. You have complete control over your data."
         },
         {
           q: "What happens to my data after analysis?",
@@ -109,7 +109,7 @@ const FAQ: React.FC = () => {
         },
         {
           q: "How often should I update my resume?",
-          a: "You should tailor your resume for each job application. Use CareerLab AI to optimize your resume specifically for each position you're applying to, as different jobs emphasize different skills and requirements."
+          a: "You should tailor your resume for each job application. Use CareerDev AI to optimize your resume specifically for each position you're applying to, as different jobs emphasize different skills and requirements."
         }
       ]
     }
@@ -148,7 +148,7 @@ const FAQ: React.FC = () => {
             Frequently Asked Questions
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mt-4">
-            Find answers to common questions about CareerLab AI
+            Find answers to common questions about CareerDev AI
           </p>
         </div>
 
@@ -213,4 +213,3 @@ const FAQ: React.FC = () => {
 };
 
 export default FAQ;
-

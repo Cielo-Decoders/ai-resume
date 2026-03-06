@@ -54,10 +54,10 @@ export default function LandingPage() {
           <div>
             <div className="flex items-center justify-center lg:justify-start mb-4 sm:mb-6">
               <div>
-                <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-7xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent leading-tight">
-                  CareerLab AI
+                <h1 className="text-5xl sm:text-6xl md:text-7xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent leading-tight">
+                  CareerDev AI
                 </h1>
-                <p className="text-gray-600 text-lg sm:text-xl lg:text-xl mt-2 sm:mt-3 font-medium">
+                <p className="text-gray-600 text-lg sm:text-xl lg:text-xl mt-2 sm:mt-3 font-medium text-center lg:text-left">
                   Your AI-Powered Career Assistant
                 </p>
               </div>

@@ -28,6 +28,11 @@ class Settings:
         "http://127.0.0.1:3000",
         "http://localhost",
         "http://127.0.0.1",
+        # Production Cloud Run frontend URL
+        "https://careerlab-ai-client-451162289267.us-central1.run.app",
+        # Custom domain
+        "https://careerdev.io",
+        "https://www.careerdev.io",
         *[o.strip() for o in _extra_origins.split(",") if o.strip()],
     ]
 
@@ -35,8 +40,8 @@ class Settings:
     allowed_file_types: List[str] = [".pdf", ".doc", ".docx", ".txt"]
     max_file_size: int = 10 * 1024 * 1024  # 10MB in bytes
 
-    # OpenAI configuration
-    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
+    # OpenAI configuration — strip to remove any trailing newline injected by Secret Manager
+    openai_api_key: str = os.getenv("OPENAI_API_KEY", "").strip()
     openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 

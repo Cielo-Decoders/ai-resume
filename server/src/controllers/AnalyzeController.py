@@ -2,6 +2,7 @@
 AnalyzeController module for handling resume analysis endpoints.
 """
 import logging
+import json
 from typing import Dict, Any, List
 from fastapi import HTTPException, UploadFile, File
 from pydantic import BaseModel
@@ -22,6 +23,11 @@ class ResumeOptimizationRequest(BaseModel):
     job_description: str
     selected_keywords: List[Dict[str, str]]
     job_title: str = ""
+
+
+class ExtractJobRequest(BaseModel):
+    """Request model for AI job data extraction."""
+    job_description: str
 
 
 class AnalyzeController:
@@ -237,4 +243,90 @@ class AnalyzeController:
             raise HTTPException(
                 status_code=500,
                 detail=f"Resume optimization failed: {str(e)}"
+            )
+
+    async def extract_job_data(self, request: ExtractJobRequest) -> Dict[str, Any]:
+        """
+        Extract structured job data from a raw job description using OpenAI.
+        Proxies the OpenAI call server-side so the API key is never exposed
+        to the browser and CORS is not an issue.
+        """
+        try:
+            if not request.job_description or len(request.job_description.strip()) < 20:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Job description is required and must contain meaningful content"
+                )
+
+            if not settings.openai_api_key:
+                raise HTTPException(
+                    status_code=500,
+                    detail="OpenAI API key is not configured on the server"
+                )
+
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(api_key=settings.openai_api_key)
+
+            self.logger.info("Extracting job data via server-side OpenAI call...")
+
+            completion = await client.chat.completions.create(
+                model=settings.openai_model,
+                temperature=0.3,
+                max_tokens=2000,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a job description analyzer. Extract structured data from job descriptions and return it as JSON."
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            "Extract the following information from this job description and return ONLY valid JSON "
+                            "(no markdown, no code blocks, just pure JSON):\n"
+                            "{\n"
+                            '  "title": "job title",\n'
+                            '  "company": "company name",\n'
+                            '  "location": "location",\n'
+                            '  "salary": "$XXk - $XXk or description",\n'
+                            '  "requirements": ["requirement 1", "requirement 2"],\n'
+                            '  "responsibilities": ["responsibility 1"],\n'
+                            '  "skills": ["skill 1", "skill 2"],\n'
+                            '  "technologies": ["tech 1", "tech 2"],\n'
+                            '  "tools": ["tool 1", "tool 2"],\n'
+                            '  "qualifications": ["qualification 1"]\n'
+                            "}\n\n"
+                            f"Job Description:\n{request.job_description}"
+                        )
+                    }
+                ]
+            )
+
+            raw = completion.choices[0].message.content.strip()
+            self.logger.info("OpenAI job extraction response received")
+
+            # Strip markdown code fences if present
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+            raw = raw.strip()
+
+            try:
+                job_data = json.loads(raw)
+            except json.JSONDecodeError:
+                self.logger.error(f"Failed to parse OpenAI response as JSON: {raw}")
+                raise HTTPException(
+                    status_code=500,
+                    detail="AI response could not be parsed as JSON"
+                )
+
+            return job_data
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            self.logger.error(f"Job data extraction error: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Job data extraction failed: {str(e)}"
             )

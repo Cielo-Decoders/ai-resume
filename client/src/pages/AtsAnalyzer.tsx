@@ -245,10 +245,10 @@ export default function ATSAnalyzer() {
             <div className="flex items-center gap-3 w-full">
               <div className="w-full text-center md:text-left">
                 <h1 className="text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 bg-clip-text text-transparent drop-shadow-2xl tracking-tight">
-                  CareerLab AI
+                  CareerDev AI
                 </h1>
-                <p className="text-gray-600 text-sm font-medium tracking-wide sm:block">
-                    Your AI-Powered Career Assistant
+                <p className="text-gray-600 text-sm font-medium tracking-wide sm:block mt-1">
+                  Your AI-Powered Career Assistant
                 </p>
               </div>
             </div>

@@ -60,7 +60,7 @@ const Features: React.FC = () => {
             </h1>
           </div>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Discover how CareerLab AI empowers you to create winning resumes that get past ATS systems and land interviews
+            Discover how CareerDev AI empowers you to create winning resumes that get past ATS systems and land interviews
           </p>
         </div>
 
@@ -127,7 +127,7 @@ const Features: React.FC = () => {
             className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-full font-semibold text-lg hover:shadow-2xl transition-all duration-300 hover:scale-105"
           >
             <Sparkles className="w-5 h-5" />
-            Try CareerLab AI Now
+            Try CareerDev AI Now
           </Link>
         </div>
       </div>

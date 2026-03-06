@@ -3,7 +3,7 @@ Route configuration module for organizing API endpoints.
 """
 from fastapi import APIRouter, File, UploadFile
 from ..dependencies import AnalyzeControllerDep
-from ..controllers.AnalyzeController import KeywordAnalysisRequest, ResumeOptimizationRequest
+from ..controllers.AnalyzeController import KeywordAnalysisRequest, ResumeOptimizationRequest, ExtractJobRequest
 
 # Create router for analyze-related endpoints
 analyze_router = APIRouter(prefix="/api", tags=["analyze"])
@@ -79,6 +79,18 @@ async def optimize_resume_endpoint(
         JSON response with optimized resume and optimization details
     """
     return await controller.optimize_resume(request)
+
+
+@analyze_router.post("/extract-job")
+async def extract_job_endpoint(
+    request: ExtractJobRequest,
+    controller: AnalyzeControllerDep = None
+):
+    """
+    Extract structured job data from a raw job description using server-side OpenAI.
+    This avoids exposing the API key in the browser and bypasses CORS restrictions.
+    """
+    return await controller.extract_job_data(request)
 
 
 def register_routes(app):

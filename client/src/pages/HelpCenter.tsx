@@ -12,7 +12,7 @@ const HelpCenter: React.FC = () => {
     },
     {
       title: "Video Tutorials",
-      description: "Watch step-by-step tutorials on using all CareerLab AI features",
+      description: "Watch step-by-step tutorials on using all CareerDev AI features",
       link: "#tutorials"
     },
     {
@@ -66,7 +66,7 @@ const HelpCenter: React.FC = () => {
             Help Center
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mt-4">
-            Everything you need to master CareerLab AI and land your dream job
+            Everything you need to master CareerDev AI and land your dream job
           </p>
         </div>
 
