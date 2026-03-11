@@ -30,11 +30,14 @@ const Features: React.FC = () => {
       description: "Your resume data is processed securely and privately. We never share or store your personal information.",
       highlights: ["Encrypted processing", "No data retention", "GDPR compliant"]
     },
+    // Commented out Career Insights per request
+    /*
     {
       title: "Career Insights",
       description: "Get strategic insights about job market trends and how your resume compares to industry standards.",
       highlights: ["Market analysis", "Competitive benchmarking", "Trend identification"]
     }
+    */
   ];
 
   return (
@@ -69,11 +72,11 @@ const Features: React.FC = () => {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-indigo-200 hover:-translate-y-1"
+              className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-indigo-200 hover:-translate-y-1 flex flex-col h-full"
             >
               <h3 className="text-2xl font-bold text-gray-800 mb-3">{feature.title}</h3>
-              <p className="text-gray-600 mb-4">{feature.description}</p>
-              <ul className="space-y-2">
+              <p className="text-gray-600 mb-4 flex-1">{feature.description}</p>
+              <ul className="mt-4 space-y-2">
                 {feature.highlights.map((highlight, idx) => (
                   <li key={idx} className="flex items-center gap-2 text-sm text-gray-700">
                     <CheckCircle className="w-4 h-4 text-green-500" />

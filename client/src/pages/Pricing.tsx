@@ -163,7 +163,7 @@ const Pricing: React.FC = () => {
         <div className="text-center">
           <p className="text-gray-600 mb-4">Not sure which plan is right for you?</p>
           <a
-            href="mailto:support@mycareerlab.ai"
+            href="mailto:mycareerlabai@gmail.com"
             className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-full font-semibold text-lg hover:shadow-2xl transition-all duration-300 hover:scale-105"
           >
             Contact Us for Help

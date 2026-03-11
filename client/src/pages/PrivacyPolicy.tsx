@@ -44,24 +44,19 @@ const PrivacyPolicy: React.FC = () => {
             </h2>
             <div className="space-y-4 text-gray-700">
               <div>
-                <h3 className="font-semibold text-gray-800 mb-2">Personal Information</h3>
-                <p>When you use CareerDev AI, we may collect:</p>
+                <h3 className="font-semibold text-gray-800 mb-2">What we process</h3>
+                <p>The platform does not require or collect personal account information by default. During an analysis session we only process the inputs you provide for that session:</p>
                 <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
-                  <li>Name and email address (for account creation)</li>
-                  <li>Resume content (when you upload files)</li>
-                  <li>Job descriptions (when you paste them for analysis)</li>
-                  <li>Usage data and preferences</li>
+                  <li>Resume content you upload (used solely for immediate analysis and optimization)</li>
+                  <li>Job descriptions or role text you paste for matching and scoring</li>
+                  <li>User selections such as chosen job-relevant keywords or terms</li>
                 </ul>
+                <p className="mt-2">These inputs are used to generate the optimized resume and suggestions; they are not permanently stored by CareerDev AI in our database as part of normal operation (see "Data Storage and Retention").</p>
               </div>
               <div>
-                <h3 className="font-semibold text-gray-800 mb-2">Automatically Collected Information</h3>
-                <p>We automatically collect certain information when you visit our platform:</p>
-                <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
-                  <li>IP address and browser type</li>
-                  <li>Device information and operating system</li>
-                  <li>Usage patterns and interaction data</li>
-                  <li>Cookies and similar tracking technologies</li>
-                </ul>
+                <h3 className="font-semibold text-gray-800 mb-2">Automatically collected information</h3>
+                <p>We do not collect technical telemetry (such as IP addresses, device/browser identifiers, or usage analytics) as part of normal operation. The platform only processes the inputs you explicitly provide during an analysis session (see "What we process").</p>
+                <p className="mt-2">If our practices change in the future and we begin collecting technical or usage data, we will update this policy and notify users.</p>
               </div>
             </div>
           </div>
@@ -72,16 +67,14 @@ const PrivacyPolicy: React.FC = () => {
               How We Use Your Information
             </h2>
             <div className="text-gray-700 space-y-2">
-              <p>We use the information we collect to:</p>
+              <p>We use only the inputs you provide during an analysis session to deliver the service you request. Specifically:</p>
               <ul className="list-disc list-inside ml-4 space-y-1">
-                <li>Provide and improve our resume optimization services</li>
-                <li>Analyze your resume against job descriptions using AI</li>
-                <li>Generate optimized resume versions</li>
-                <li>Communicate with you about your account and our services</li>
-                <li>Improve our platform and develop new features</li>
-                <li>Ensure security and prevent fraud</li>
-                <li>Comply with legal obligations</li>
+                <li>Perform resume analysis and scoring against the supplied job description.</li>
+                <li>Generate optimized resume text, keyword suggestions, and formatting recommendations returned to you.</li>
+                <li>Enable optional session features you explicitly trigger (for example, saving a generated version) only when you choose to do so.</li>
+                <li>Take actions necessary to comply with legal requirements or respond to abuse or security incidents.</li>
               </ul>
+              <p className="mt-2">We do not use uploaded content for marketing, profiling, or training internal models beyond the third-party processing described elsewhere; we do not sell or share your resume with employers. If you voluntarily provide contact information (for support or account creation), we will use it only to respond to your request and as described elsewhere in this policy.</p>
             </div>
           </div>
 
@@ -92,13 +85,13 @@ const PrivacyPolicy: React.FC = () => {
             </h2>
             <div className="text-gray-700 space-y-3">
               <p>
-                <strong>Current Implementation:</strong> Currently, CareerDev AI processes your resume data in real-time without permanent storage in a database. Your resume content is used only for the immediate analysis you request and is not retained after your session ends.
+                <strong>Current Implementation:</strong> Currently, CareerDev AI processes your resume data in real-time without permanent storage in a database. Your resume content is used only for the immediate analysis you request and is not retained by our systems after your session ends.
+              </p>
+              <p>
+                <strong>Important note about AI processing:</strong> To provide resume optimization, we send resume content and job descriptions to third-party AI service providers (for example, OpenAI) for processing. While we do not store the full resumes in our own databases, the third-party providers we use may process, temporarily retain, or use the data according to their own terms and privacy policies. This means that, in some circumstances, information you submit could be used by those providers to improve or train their models or otherwise be subject to their data handling practices. We recommend that you avoid submitting highly sensitive information (such as social security numbers, financial account numbers, or other confidential data) in your resume or job description text.
               </p>
               <p>
                 <strong>Future Updates:</strong> As we scale and add features, we may implement database storage for user accounts and resume versions. If this occurs, we will update this policy and notify users accordingly.
-              </p>
-              <p>
-                We retain account information (email, name) for as long as your account is active or as needed to provide you services. You can request deletion of your account and data at any time.
               </p>
             </div>
           </div>
@@ -110,16 +103,18 @@ const PrivacyPolicy: React.FC = () => {
             </h2>
             <div className="text-gray-700 space-y-3">
               <p>
-                We implement industry-standard security measures to protect your personal information:
+                We use industry-standard measures to protect data in transit and to limit internal access where needed to operate the service.
               </p>
               <ul className="list-disc list-inside ml-4 space-y-1">
-                <li>Encrypted data transmission using SSL/TLS protocols</li>
-                <li>Secure server infrastructure with regular security updates</li>
-                <li>Access controls and authentication mechanisms</li>
-                <li>Regular security audits and monitoring</li>
+                <li>Encrypted transmission (HTTPS/TLS) when uploading or sending resume content to our service and third‑party processors.</li>
+                <li>Access to processing systems and environments is restricted to authorized personnel only and protected by authentication and role-based access controls.</li>
+                <li>We rely on reputable third‑party AI providers for model processing; those providers maintain their own security and compliance measures which govern how data is handled on their platforms.</li>
               </ul>
               <p className="mt-3">
-                However, no method of transmission over the Internet is 100% secure. While we strive to protect your personal information, we cannot guarantee absolute security.
+                Important: CareerDev AI does not permanently store full resume files as part of normal operation — resumes are processed in real time for the analysis you request. Because we transmit data to third‑party processors, please avoid submitting highly sensitive personal information (such as social security numbers or financial account numbers).
+              </p>
+              <p className="mt-1">
+                While we take reasonable steps to protect data, no system is perfectly secure. If you have specific security or compliance questions, contact us at <a href="mailto:mycareerlabai@gmail.com" className="text-indigo-600">mycareerlabai@gmail.com</a> and we will provide additional details.
               </p>
             </div>
           </div>
@@ -129,6 +124,7 @@ const PrivacyPolicy: React.FC = () => {
               <UserCheck className="w-6 h-6 text-indigo-600" />
               Your Rights and Choices
             </h2>
+            {/*
             <div className="text-gray-700 space-y-2">
               <p>You have the right to:</p>
               <ul className="list-disc list-inside ml-4 space-y-1">
@@ -143,6 +139,7 @@ const PrivacyPolicy: React.FC = () => {
                 To exercise these rights, please contact us at privacy@mycareerlab.ai
               </p>
             </div>
+            */}
           </div>
 
           <div>
@@ -204,19 +201,20 @@ const PrivacyPolicy: React.FC = () => {
             <div className="text-gray-700 space-y-2">
               <p>If you have questions or concerns about this Privacy Policy, please contact us:</p>
               <div className="bg-gray-50 p-4 rounded-lg mt-3">
-                <p><strong>Email:</strong> privacy@mycareerlab.ai</p>
-                <p><strong>Support:</strong> support@mycareerlab.ai</p>
-                <p><strong>Website:</strong> www.mycareerlab.ai</p>
+                <p><strong>Email:</strong> mycareerlabai@gmail.com</p>
+                <p><strong>Support:</strong> mycareerlabai@gmail.com</p>
+                <p><strong>Website:</strong> www.careerdev.io</p>
               </div>
             </div>
           </div>
-
+          {/*
           <div className="pt-6 border-t border-gray-200">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Development Team</h2>
             <p className="text-gray-700">
               CareerDev AI is developed and maintained by Isaac Narteh, Kyle Drummonds, and Alejandro Ramos. We are committed to protecting your privacy and providing a secure, valuable service to help you succeed in your career journey.
             </p>
           </div>
+          */}
         </div>
       </div>
       <Footer />

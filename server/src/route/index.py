@@ -1,12 +1,76 @@
 """
 Route configuration module for organizing API endpoints.
 """
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from fastapi import APIRouter, File, UploadFile
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from ..dependencies import AnalyzeControllerDep
 from ..controllers.AnalyzeController import KeywordAnalysisRequest, ResumeOptimizationRequest, ExtractJobRequest
+from ..config import settings
 
 # Create router for analyze-related endpoints
 analyze_router = APIRouter(prefix="/api", tags=["analyze"])
+
+
+class ContactFormRequest(BaseModel):
+    name: str
+    email: str
+    subject: str
+    message: str
+
+
+@analyze_router.post("/contact")
+async def contact_form_endpoint(body: ContactFormRequest):
+    """
+    Send contact form submission as an email via Gmail SMTP.
+    """
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = f"[CareerDev AI Contact] {body.subject}"
+        msg["From"] = settings.gmail_user
+        msg["To"] = settings.gmail_user
+        msg["Reply-To"] = body.email
+
+        text_body = (
+            f"New message from CareerDev AI Contact Form\n\n"
+            f"Name: {body.name}\n"
+            f"Email: {body.email}\n"
+            f"Subject: {body.subject}\n\n"
+            f"Message:\n{body.message}"
+        )
+        html_body = f"""
+        <html><body style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
+          <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:24px;border-radius:12px 12px 0 0">
+            <h2 style="color:white;margin:0">CareerDev AI — New Contact Message</h2>
+          </div>
+          <div style="background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb">
+            <p><strong>Name:</strong> {body.name}</p>
+            <p><strong>Email:</strong> <a href="mailto:{body.email}">{body.email}</a></p>
+            <p><strong>Subject:</strong> {body.subject}</p>
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0"/>
+            <p><strong>Message:</strong></p>
+            <p style="background:white;padding:16px;border-radius:8px;border:1px solid #e5e7eb">{body.message}</p>
+          </div>
+        </body></html>
+        """
+
+        msg.attach(MIMEText(text_body, "plain"))
+        msg.attach(MIMEText(html_body, "html"))
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(settings.gmail_user, settings.gmail_app_password)
+            server.sendmail(settings.gmail_user, settings.gmail_user, msg.as_string())
+
+        return JSONResponse({"success": True, "message": "Message sent successfully!"})
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "message": f"Failed to send message: {str(e)}"}
+        )
 
 
 @analyze_router.post("/extract-text")

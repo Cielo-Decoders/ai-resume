@@ -26,7 +26,7 @@ const TermsOfService: React.FC = () => {
               Terms of Service
             </h1>
           </div>
-          <p className="text-gray-600">Last Updated: January 28, 2026</p>
+          <p className="text-gray-600">Last Updated: March 11, 2026</p>
         </div>
 
         {/* Content */}
@@ -152,7 +152,7 @@ const TermsOfService: React.FC = () => {
 
               <p className="mt-3"><strong>Refund Policy:</strong></p>
               <p>
-                We offer a 14-day money-back guarantee for new paid subscriptions. To request a refund, contact support@mycareerlab.ai within 14 days of your initial purchase.
+                We offer a 14-day money-back guarantee for new paid subscriptions. To request a refund, contact mycareerlabai@gmail.com within 14 days of your initial purchase.
               </p>
             </div>
           </div>
@@ -202,7 +202,7 @@ const TermsOfService: React.FC = () => {
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Termination</h2>
             <div className="text-gray-700 space-y-3">
               <p><strong>By You:</strong></p>
-              <p>You may terminate your account at any time by contacting support@mycareerlab.ai or through your account settings.</p>
+              <p>You may terminate your account at any time by contacting mycareerlabai@gmail.com or through your account settings.</p>
 
               <p className="mt-3"><strong>By Us:</strong></p>
               <p>We reserve the right to suspend or terminate your account if:</p>
@@ -271,21 +271,13 @@ const TermsOfService: React.FC = () => {
             <div className="text-gray-700 space-y-2">
               <p>If you have questions about these Terms of Service, please contact us:</p>
               <div className="bg-gray-50 p-4 rounded-lg mt-3">
-                <p><strong>Email:</strong> legal@mycareerlab.ai</p>
-                <p><strong>Support:</strong> support@mycareerlab.ai</p>
+                <p><strong>Email:</strong> mycareerlabai@gmail.com</p>
+                <p><strong>Support:</strong> mycareerlabai@gmail.com</p>
                 <p><strong>Website:</strong> www.mycareerlab.ai</p>
               </div>
             </div>
           </div>
 
-          <div className="pt-6 border-t border-gray-200">
-            <p className="text-gray-700">
-              <strong>Development Team:</strong> CareerDev AI is developed and maintained by Isaac Narteh, Kyle Drummonds, and Alejandro Ramos.
-            </p>
-            <p className="text-gray-600 mt-3 text-sm">
-              By using CareerDev AI, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
-            </p>
-          </div>
         </div>
       </div>
       <Footer />
