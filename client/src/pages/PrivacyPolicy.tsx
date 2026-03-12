@@ -45,7 +45,7 @@ const PrivacyPolicy: React.FC = () => {
             <div className="space-y-4 text-gray-700">
               <div>
                 <h3 className="font-semibold text-gray-800 mb-2">What we process</h3>
-                <p>The platform does not require or collect personal account information by default. During an analysis session we only process the inputs you provide for that session:</p>
+                <p>The platform does not require users to create accounts — most functionality is session-based. During an analysis session we only process the inputs you provide for that session:</p>
                 <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
                   <li>Resume content you upload (used solely for immediate analysis and optimization)</li>
                   <li>Job descriptions or role text you paste for matching and scoring</li>
@@ -74,7 +74,7 @@ const PrivacyPolicy: React.FC = () => {
                 <li>Enable optional session features you explicitly trigger (for example, saving a generated version) only when you choose to do so.</li>
                 <li>Take actions necessary to comply with legal requirements or respond to abuse or security incidents.</li>
               </ul>
-              <p className="mt-2">We do not use uploaded content for marketing, profiling, or training internal models beyond the third-party processing described elsewhere; we do not sell or share your resume with employers. If you voluntarily provide contact information (for support or account creation), we will use it only to respond to your request and as described elsewhere in this policy.</p>
+              <p className="mt-2">We do not use uploaded content for marketing, profiling, or training internal models beyond the third-party processing described elsewhere; we do not sell or share your resume with employers. If you voluntarily provide contact information (for support or to enable optional account features), we will use it only to respond to your request and as described elsewhere in this policy.</p>
             </div>
           </div>
 
@@ -91,7 +91,7 @@ const PrivacyPolicy: React.FC = () => {
                 <strong>Important note about AI processing:</strong> To provide resume optimization, we send resume content and job descriptions to third-party AI service providers (for example, OpenAI) for processing. While we do not store the full resumes in our own databases, the third-party providers we use may process, temporarily retain, or use the data according to their own terms and privacy policies. This means that, in some circumstances, information you submit could be used by those providers to improve or train their models or otherwise be subject to their data handling practices. We recommend that you avoid submitting highly sensitive information (such as social security numbers, financial account numbers, or other confidential data) in your resume or job description text.
               </p>
               <p>
-                <strong>Future Updates:</strong> As we scale and add features, we may implement database storage for user accounts and resume versions. If this occurs, we will update this policy and notify users accordingly.
+                <strong>Future Updates:</strong> As we scale and add features, we may implement database storage for optional user accounts and resume versions. If this occurs, we will update this policy and notify users accordingly.
               </p>
             </div>
           </div>

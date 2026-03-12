@@ -44,35 +44,40 @@ const TermsOfService: React.FC = () => {
             </h2>
             <div className="text-gray-700 space-y-3">
               <p>
-                By creating an account, accessing, or using CareerDev AI, you agree to comply with and be bound by these Terms of Service and our Privacy Policy. If you do not agree to these terms, please do not use our service.
+                By accessing or using CareerDev AI — including uploading resume content, running analyses, or using any of the tools on this site — you agree to comply with and be bound by these Terms of Service and our Privacy Policy. CareerDev AI is primarily available without mandatory user accounts; most functionality is session-based and can be used anonymously unless provide contact information for optional features.
               </p>
               <p>
-                We reserve the right to modify these terms at any time. We will notify users of material changes via email or through the platform. Your continued use of CareerDev AI after changes constitutes acceptance of the updated terms.
+                We may update these terms from time to time. We will make the latest version available on this page and update the "Last Updated" date. Your continued use of CareerDev AI after changes constitutes acceptance of the updated terms. If you have provided an email, we may also notify you of material changes via those channels where appropriate.
               </p>
             </div>
           </div>
 
+          {/*
           <div>
             <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
               <Users className="w-6 h-6 text-indigo-600" />
               User Accounts and Eligibility
             </h2>
             <div className="text-gray-700 space-y-2">
-              <p><strong>Eligibility:</strong></p>
+              <p><strong>Accounts are optional:</strong></p>
+              <p>
+                CareerDev AI is designed to work for most users without creating an account. Core functionality (uploading resumes, running analyses, and receiving optimized output) is session-based. Creating an account is optional and is only required if you want to save resume versions, access a history of analyses, or use certain paid features.
+              </p>
+              <p className="mt-2"><strong>If you create an account:</strong></p>
               <ul className="list-disc list-inside ml-4 space-y-1">
-                <li>You must be at least 16 years old to use CareerDev AI</li>
-                <li>You must provide accurate and complete registration information</li>
-                <li>You are responsible for maintaining the confidentiality of your account credentials</li>
-                <li>You are responsible for all activities that occur under your account</li>
+                <li>You must be at least 16 years old to create an account and use account features.</li>
+                <li>Provide accurate and complete registration information when requested.</li>
+                <li>You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.</li>
               </ul>
               <p className="mt-3"><strong>Account Security:</strong></p>
               <ul className="list-disc list-inside ml-4 space-y-1">
-                <li>You must notify us immediately of any unauthorized use of your account</li>
-                <li>We are not liable for any loss or damage from your failure to maintain account security</li>
-                <li>You may not share your account with others or allow others to access your account</li>
+                <li>If you have an account, notify us immediately of any unauthorized use.</li>
+                <li>We are not liable for loss or damage resulting from your failure to maintain account security.</li>
+                <li>Do not share your account or credentials with others.</li>
               </ul>
             </div>
           </div>
+          */}
 
           <div>
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Service Description</h2>
@@ -126,7 +131,7 @@ const TermsOfService: React.FC = () => {
               </p>
               <p className="mt-3"><strong>Our Platform:</strong></p>
               <p>
-                All rights, title, and interest in CareerDev AI (including software, algorithms, design, trademarks, and content) are owned by the development team (Isaac Narteh, Kyle Drummonds, and Alejandro Ramos) and are protected by copyright and other intellectual property laws.
+                All rights, title, and interest in CareerDev AI (including software, algorithms, design, trademarks, and content) are owned by the development team and are protected by copyright and other intellectual property laws.
               </p>
               <p className="mt-3"><strong>AI-Generated Content:</strong></p>
               <p>
@@ -135,6 +140,7 @@ const TermsOfService: React.FC = () => {
             </div>
           </div>
 
+          {/*
           <div>
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Subscription and Payment Terms</h2>
             <div className="text-gray-700 space-y-3">
@@ -156,6 +162,7 @@ const TermsOfService: React.FC = () => {
               </p>
             </div>
           </div>
+          */}
 
           <div>
             <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -174,9 +181,6 @@ const TermsOfService: React.FC = () => {
                 <li>Service interruptions or technical issues</li>
                 <li>Unauthorized access to your account due to your failure to maintain security</li>
               </ul>
-              <p className="mt-3">
-                Our total liability shall not exceed the amount you paid us in the 12 months preceding the claim.
-              </p>
             </div>
           </div>
 
@@ -198,25 +202,27 @@ const TermsOfService: React.FC = () => {
             </div>
           </div>
 
+          {/*
           <div>
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Termination</h2>
             <div className="text-gray-700 space-y-3">
               <p><strong>By You:</strong></p>
-              <p>You may terminate your account at any time by contacting mycareerlabai@gmail.com or through your account settings.</p>
+              <p>If you have an account, you may terminate it at any time by contacting <a href="mailto:mycareerlabai@gmail.com" className="text-indigo-600">mycareerlabai@gmail.com</a> or by using any account self-service options available in your settings.</p>
 
               <p className="mt-3"><strong>By Us:</strong></p>
-              <p>We reserve the right to suspend or terminate your account if:</p>
+              <p>We reserve the right to suspend or terminate accounts or access to features if:</p>
               <ul className="list-disc list-inside ml-4 space-y-1">
-                <li>You violate these Terms of Service</li>
-                <li>You engage in fraudulent or illegal activities</li>
-                <li>Your account poses a security risk</li>
-                <li>You fail to pay applicable fees</li>
+                <li>You materially violate these Terms of Service.</li>
+                <li>You engage in fraudulent or illegal activities.</li>
+                <li>Your account poses a security risk.</li>
+                <li>You fail to pay applicable fees for paid services.</li>
               </ul>
               <p className="mt-3">
-                Upon termination, your right to use the service ceases immediately. We may delete your account data in accordance with our data retention policies.
+                Upon termination of an account, your right to use account-specific features ceases immediately. We may delete associated account data in accordance with our data retention policies; session-based analyses or transient processing performed by third-party providers may not be reversible.
               </p>
             </div>
           </div>
+          */}
 
           <div>
             <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -225,7 +231,7 @@ const TermsOfService: React.FC = () => {
             </h2>
             <div className="text-gray-700">
               <p>
-                You agree to indemnify, defend, and hold harmless CareerDev AI, its developers (Isaac Narteh, Kyle Drummonds, and Alejandro Ramos), and affiliates from any claims, damages, losses, liabilities, and expenses (including legal fees) arising from:
+                You agree to indemnify, defend, and hold harmless CareerDev AI, its developers from any claims, damages, losses, liabilities, and expenses (including legal fees) arising from:
               </p>
               <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
                 <li>Your use or misuse of the service</li>
@@ -272,8 +278,6 @@ const TermsOfService: React.FC = () => {
               <p>If you have questions about these Terms of Service, please contact us:</p>
               <div className="bg-gray-50 p-4 rounded-lg mt-3">
                 <p><strong>Email:</strong> mycareerlabai@gmail.com</p>
-                <p><strong>Support:</strong> mycareerlabai@gmail.com</p>
-                <p><strong>Website:</strong> www.mycareerlab.ai</p>
               </div>
             </div>
           </div>

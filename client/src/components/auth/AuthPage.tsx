@@ -109,7 +109,7 @@ export default function AuthPage() {
                   CareerDev AI
                 </h1>
                 <p className="text-gray-600 text-lg mt-1 text-center lg:text-left">
-                  Your AI-Powered Career Assistant
+                  <em>Your AI-Powered Career Assistant</em>
                 </p>
               </div>
             </div>
@@ -121,8 +121,8 @@ export default function AuthPage() {
             </h2>
             <p className="text-xl text-gray-600">
               {isSignUp
-                ? 'Join thousands of professionals who have landed their dream jobs with our AI-powered platform.'
-                : 'Continue optimizing your career with our advanced tools and insights.'
+                ? 'Transform your resume with AI-powered optimization and get noticed by employers faster.'
+                : 'Access your saved resumes and continue optimizing your career documents.'
               }
             </p>
           </div>
