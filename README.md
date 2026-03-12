@@ -97,7 +97,7 @@ MIT License
 
 ## 🌐 Domain
 
-Production: https://mycareerlab.ai
+Production: https://careerdev.io
 
 ---
 
