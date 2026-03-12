@@ -44,6 +44,10 @@ class Settings:
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "").strip()
     openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
+    # Email configuration for contact form
+    gmail_user: str = os.getenv("GMAIL_USER", "mycareerlabai@gmail.com").strip()
+    gmail_app_password: str = os.getenv("GMAIL_APP_PASSWORD", "").strip()
+
 
 # Create a singleton instance
 settings = Settings()

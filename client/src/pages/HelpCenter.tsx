@@ -37,12 +37,12 @@ const HelpCenter: React.FC = () => {
       content: "When you see the 'Job-Relevant Skills & Terms' section:\n\n1. Review all suggested keywords carefully\n2. Only select skills you actually possess\n3. Prioritize technical skills and industry-specific terms\n4. Include soft skills that genuinely reflect your abilities\n5. Don't add keywords you can't discuss in an interview\n\nOur AI will naturally integrate selected keywords into your resume context."
     },
     {
-      title: "Best Practices for Resume Optimization",
-      content: "• Tailor your resume for each specific job application\n• Use the exact keywords from the job description when they match your experience\n• Keep formatting simple and ATS-friendly\n• Include measurable achievements and results\n• Update your resume regularly with new skills and experiences\n• Proofread carefully before downloading\n• Save different versions for different types of roles"
+      title: "Prepare Your Resume for Optimization",
+      content: "Upload your unoptimized resume so CareerDev AI can analyze and improve it. Quick tips:\n\n• Use a clean PDF for best parsing\n• Keep layout simple — avoid images, tables, and text boxes\n• Use clear section headings (Summary, Experience, Education, Skills)\n• Write concise, achievement-focused bullet points\n• Add job-relevant keywords only if they genuinely apply\n• Remove highly sensitive personal data (SSN, bank details)\n• Keep separate versions for different role types"
     },
     {
       title: "Troubleshooting Common Issues",
-      content: "Upload Issues:\n• Ensure file is PDF, DOC, DOCX, or TXT format\n• Check file size is under 10MB\n• Remove password protection from files\n\nTimeout Errors:\n• Shorten very long job descriptions\n• Try again during off-peak hours\n• Contact support if issue persists\n\nFormatting Problems:\n• Use standard fonts (Arial, Calibri, Times New Roman)\n• Avoid tables, text boxes, and graphics\n• Use simple bullet points and clear section headers"
+      content: "Upload Issues:\n• Preferred format: PDF for best parsing; if uploads fail try pasting plain text into the editor.\n• Remove password protection and large embedded images; keep files under 10MB.\n• If you have DOC/DOCX, convert to PDF before uploading when possible.\n\nTimeouts & Rate Limits:\n• Very large job descriptions or concurrent requests may time out or hit provider limits.\n• Shorten or split long job descriptions and retry after a short wait.\n\nFormatting & Parsing Tips:\n• Use standard fonts (Arial, Calibri, Times New Roman).\n• Avoid tables, text boxes, images, and complex layouts.\n• Use clear section headings and simple bullet points for best results.\n\nIf the issue persists, email support at mycareerlabai@gmail.com with your browser/version, file type and size, and any console/network errors (do not include sensitive personal data)."
     }
   ];
 
@@ -70,7 +70,7 @@ const HelpCenter: React.FC = () => {
           </p>
         </div>
 
-        {/* Quick Access Resources */}
+        {/* Quick Access Resources - commented out per request
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {resources.map((resource, index) => (
             <a
@@ -83,6 +83,7 @@ const HelpCenter: React.FC = () => {
             </a>
           ))}
         </div>
+        */}
 
         {/* Detailed Guides */}
         <div className="mb-16">
@@ -102,24 +103,23 @@ const HelpCenter: React.FC = () => {
         {/* Quick Tips */}
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 mb-16 text-white">
           <h2 className="text-3xl font-bold mb-6">
-            Quick Tips for Success
+            Optimization Quick Tips
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <h4 className="font-semibold mb-2">✨ Always customize for each job</h4>
-              <p className="text-indigo-100">Generic resumes rarely pass ATS systems. Tailor each application.</p>
+              <h4 className="font-semibold mb-2">📤 Upload an unoptimized resume</h4>
+              <p className="text-indigo-100">Start by uploading your current resume — CareerDev AI will analyze and optimize it for you.</p>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">🎯 Focus on relevant experience</h4>
-              <p className="text-indigo-100">Highlight experiences that directly relate to the job requirements.</p>
+              <h4 className="font-semibold mb-2">🧾 Use a clean PDF</h4>
+              <p className="text-indigo-100">PDF gives the most accurate parsing. Remove passwords and large images before uploading.</p>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">📊 Use metrics and numbers</h4>
-              <p className="text-indigo-100">Quantify achievements whenever possible (e.g., "increased sales by 30%").</p>
+              <h4 className="font-semibold mb-2">🎯 Tailor after optimization</h4>
+              <p className="text-indigo-100">Review AI suggestions, keep relevant keywords that match your experience.</p>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">🔍 Mirror job description language</h4>
-              <p className="text-indigo-100">Use the same terminology and keywords as the job posting.</p>
+              <h4 className="font-semibold mb-2">🧹 Keep formatting simple</h4>
             </div>
           </div>
         </div>
@@ -132,7 +132,7 @@ const HelpCenter: React.FC = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
-              href="mailto:support@mycareerlab.ai"
+              href="mailto:mycareerlabai@gmail.com"
               className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-full font-semibold hover:shadow-2xl transition-all duration-300 hover:scale-105"
             >
               <Mail className="w-5 h-5" />

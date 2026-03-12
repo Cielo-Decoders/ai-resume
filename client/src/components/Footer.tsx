@@ -22,35 +22,6 @@ const Footer: React.FC = () => {
               <p className="text-gray-300 mb-4 text-sm max-w-md">
                 Your AI-powered career assistant. Optimize your resume, analyze job matches, and land your dream job with intelligent insights.
               </p>
-              <div className="flex gap-4 mb-6 md:mb-0">
-                <a
-                  href="https://twitter.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 bg-white/10 hover:bg-indigo-600 rounded-full flex items-center justify-center transition-all hover:scale-110"
-                  aria-label="Twitter"
-                >
-                  <Twitter className="w-5 h-5" />
-                </a>
-                <a
-                  href="https://linkedin.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 bg-white/10 hover:bg-indigo-600 rounded-full flex items-center justify-center transition-all hover:scale-110"
-                  aria-label="LinkedIn"
-                >
-                  <Linkedin className="w-5 h-5" />
-                </a>
-                <a
-                  href="https://github.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 bg-white/10 hover:bg-indigo-600 rounded-full flex items-center justify-center transition-all hover:scale-110"
-                  aria-label="GitHub"
-                >
-                  <Github className="w-5 h-5" />
-                </a>
-              </div>
             </div>
 
             {/* Quick Links and Support - 2 columns on mobile, 3 columns each on large screens */}
@@ -69,11 +40,14 @@ const Footer: React.FC = () => {
                       Features
                     </Link>
                   </li>
+                  {/* Pricing link commented out so it doesn't display in the footer */}
+                  { /*
                   <li>
                     <Link to="/pricing" className="text-gray-300 hover:text-indigo-400 transition-colors text-sm">
                       Pricing
                     </Link>
                   </li>
+                  */ }
                   <li>
                     <Link to="/faq" className="text-gray-300 hover:text-indigo-400 transition-colors text-sm">
                       FAQ

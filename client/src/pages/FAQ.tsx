@@ -12,15 +12,31 @@ const FAQ: React.FC = () => {
       questions: [
         {
           q: "What is CareerDev AI?",
-          a: "CareerDev AI is an AI-powered resume optimization platform that helps job seekers create ATS-friendly resumes. Our advanced algorithms analyze your resume against specific job descriptions and provide intelligent suggestions to improve your chances of landing interviews."
+          a: (
+            <div>
+              <div className="mb-1">CareerDev AI is an AI-powered resume optimization tool.</div>
+              <ul className="list-disc list-inside ml-4 text-gray-700">
+                <li>Analyzes your resume vs. a job description and returns an ATS score with concise, actionable suggestions.</li>
+                <li>Offers automated rewrites, keyword recommendations, and formatting fixes to improve match.</li>
+                <li>Processing is done in real time via third-party AI providers; we do not permanently store full resumes.</li>
+              </ul>
+            </div>
+          )
         },
         {
           q: "How does the ATS scoring work?",
-          a: "Our ATS (Applicant Tracking System) scoring analyzes four key areas: Keyword Integration (40 points), Job Requirements Match (30 points), Resume Completeness (20 points), and Formatting Quality (10 points). You receive a total score out of 100 with detailed breakdowns for each category."
+          a: (
+            <ul className="list-disc list-inside ml-4 text-gray-700">
+              <li>Keyword match (40%)</li>
+              <li>Requirements fit (30%)</li>
+              <li>Completeness (20%)</li>
+              <li>Formatting (10%)</li>
+            </ul>
+          )
         },
         {
           q: "What file formats do you support?",
-          a: "We currently support PDF, DOC, DOCX, and TXT file formats for resume uploads. For best results, we recommend using PDF or DOCX formats."
+          a: (<div>We currently support PDF uploads only — PDF is recommended for best parsing accuracy.</div>)
         }
       ]
     },
@@ -29,20 +45,16 @@ const FAQ: React.FC = () => {
       questions: [
         {
           q: "How does the AI optimization work?",
-          a: "Our AI analyzes your resume and the job description to identify missing keywords, skills gaps, and formatting issues. It then suggests specific improvements and can automatically generate an optimized version of your resume that better matches the job requirements while maintaining your authentic voice."
+          a: (<div>We analyze your resume and the job description to suggest keywords, rephrase bullets, and fix formatting for ATS compatibility.</div>)
         },
         {
           q: "Can I optimize my resume for multiple jobs?",
-          a: "Yes! You can analyze and optimize your resume for as many different job descriptions as you want. We recommend tailoring your resume for each specific position you apply to for the best results."
+          a: (<div>Yes — run a separate analysis per job description to tailor your resume to each role.</div>)
         },
         {
           q: "What are Job-Relevant Skills & Terms?",
-          a: "These are keywords, skills, and phrases extracted from the job description that are missing or underrepresented in your resume. You can select which ones to add, and our AI will integrate them naturally into your optimized resume."
+          a: (<div>Keywords and phrases from the job description that the AI extracts and suggests adding to your resume.</div>)
         },
-        {
-          q: "How is my optimized resume saved?",
-          a: "Your optimized resume is saved with a filename format of 'YourName_Date_CompanyName_optimized.txt'. This makes it easy to keep track of different versions for different job applications."
-        }
       ]
     },
     {
@@ -50,49 +62,86 @@ const FAQ: React.FC = () => {
       questions: [
         {
           q: "Is my resume data secure?",
-          a: "Absolutely. We take your privacy seriously. All resume data is processed using encrypted connections, and we don't store your personal information or resume content on our servers permanently. Your data is only used for the analysis you request."
+          a: (
+            <div>
+              <div>Files are transmitted over encrypted connections and processed in real time by third‑party AI providers (e.g., OpenAI).</div>
+              <div className="mt-1">We do not permanently store full resume files in our database, but third parties may retain or use submitted data per their policies.</div>
+              <div className="mt-1 font-semibold">Avoid submitting highly sensitive information.</div>
+            </div>
+          )
         },
         {
           q: "Do you share my resume with employers?",
-          a: "No, we never share your resume or personal information with anyone. CareerDev AI is purely a tool for you to optimize your own resume. You have complete control over your data."
+          a: (<div>No — we don't share your resume with employers; the tool is for your personal use.</div>)
         },
         {
           q: "What happens to my data after analysis?",
-          a: "Currently, we process your resume in real-time and don't store it in a database. Once you close your session, your data is not retained on our servers."
+          a: (<div>We process resumes in real time and do not retain full resume files after the session ends.</div>)
         }
       ]
     },
-    {
-      category: "Pricing & Plans",
-      questions: [
-        {
-          q: "Is there a free trial?",
-          a: "Yes! Our Free plan allows you to analyze up to 3 resumes per month at no cost. This is perfect for trying out our platform and seeing the value it provides."
-        },
-        {
-          q: "What's included in the Pro plan?",
-          a: "The Pro plan includes unlimited resume analyses, advanced ATS scoring breakdowns, AI-powered optimization, multiple resume versions, job description matching, priority support, resume templates, and career insights."
-        },
-        {
-          q: "Can I cancel my subscription anytime?",
-          a: "Yes, you can cancel your subscription at any time with no penalties or cancellation fees. If you cancel, you'll continue to have access until the end of your billing period."
-        }
-      ]
-    },
+//     {
+//       category: "Pricing & Plans",
+//       questions: [
+//         {
+//           q: "Is there a free trial?",
+//           a: "Yes! Our Free plan allows you to analyze up to 3 resumes per month at no cost. This is perfect for trying out our platform and seeing the value it provides."
+//         },
+//         {
+//           q: "What's included in the Pro plan?",
+//           a: "The Pro plan includes unlimited resume analyses, advanced ATS scoring breakdowns, AI-powered optimization, multiple resume versions, job description matching, priority support, resume templates, and career insights."
+//         },
+//         {
+//           q: "Can I cancel my subscription anytime?",
+//           a: "Yes, you can cancel your subscription at any time with no penalties or cancellation fees. If you cancel, you'll continue to have access until the end of your billing period."
+//         }
+//       ]
+//     },
     {
       category: "Technical Support",
       questions: [
         {
           q: "I'm getting a timeout error when analyzing my resume. What should I do?",
-          a: "Timeout errors can occur if the job description is very long or if there's high server traffic. Try breaking down very long job descriptions into key sections, or try again in a few moments. If the problem persists, please contact our support team."
+          a: (
+            <div>
+              <div>Possible causes: large input, temporary service load, network issues, or rate limits.</div>
+              <ol className="list-decimal list-inside ml-4 mt-2 text-gray-700">
+                <li>Shorten or split long job descriptions.</li>
+                <li>Convert resume to clean PDF or plain text.</li>
+                <li>Retry after a short wait or off-peak hours.</li>
+              </ol>
+            </div>
+          )
         },
         {
           q: "Why isn't my resume uploading?",
-          a: "Make sure your file is in a supported format (PDF, DOC, DOCX, or TXT) and is under 10MB in size. Also check that the file isn't corrupted or password-protected."
+          a: (
+            <>
+              <div className="mb-2 font-semibold">Common causes:</div>
+              <ul className="list-disc list-inside ml-4 mb-3 text-gray-700">
+                <li>Unsupported file format</li>
+                <li>Excessive file size</li>
+                <li>File corruption or password protection</li>
+                <li>Browser or network issues</li>
+                <li>Client-side validation error</li>
+              </ul>
+
+              <div className="mb-2 font-semibold">Troubleshooting steps:</div>
+              <ol className="list-decimal list-inside ml-4 space-y-1 text-gray-700">
+                <li>Convert and upload a clean PDF — we recommend PDF for the most accurate parsing.</li>
+                <li>Remove password protection or heavy embedded assets (images, large fonts).</li>
+                <li>Reduce file size — keep files under 10MB where possible.</li>
+                <li>Try pasting your resume as plain text into the resume editor.</li>
+                <li>Clear browser cache or try a different browser.</li>
+              </ol>
+
+              <div className="mt-3 text-gray-700">If the issue persists, email <a href="mailto:mycareerlabai@gmail.com" className="text-indigo-600">mycareerlabai@gmail.com</a> with browser+version, file size, format, and any console/network errors. Do not include sensitive personal data.</div>
+            </>
+          )
         },
         {
           q: "How do I contact support?",
-          a: "You can reach our support team at support@mycareerlab.ai. Pro plan users receive priority support with faster response times."
+          a: (<div>Email support at <a href="mailto:mycareerlabai@gmail.com" className="text-indigo-600">mycareerlabai@gmail.com</a>.</div>)
         }
       ]
     },
@@ -101,15 +150,20 @@ const FAQ: React.FC = () => {
       questions: [
         {
           q: "How can I get the best ATS score?",
-          a: "To maximize your ATS score: (1) Include relevant keywords from the job description naturally in your resume, (2) Ensure your resume is complete with all standard sections, (3) Use clean, simple formatting, and (4) Match your experience to the job requirements as closely as possible."
+          a: (
+            <div>
+              <div className="mb-1">The ATS score is calculated automatically and cannot be changed manually.</div>
+              <ul className="list-disc list-inside ml-4 text-gray-700">
+                <li>Include relevant keywords from the job description.</li>
+                <li>Use clear headings and concise bullet points.</li>
+                <li>Keep formatting simple (no images or complex layouts).</li>
+              </ul>
+            </div>
+          )
         },
         {
           q: "Should I use all suggested keywords?",
-          a: "Not necessarily. Only add keywords that genuinely reflect your skills and experience. Adding irrelevant keywords can backfire during the interview process. Select the skills you actually have and can speak to confidently."
-        },
-        {
-          q: "How often should I update my resume?",
-          a: "You should tailor your resume for each job application. Use CareerDev AI to optimize your resume specifically for each position you're applying to, as different jobs emphasize different skills and requirements."
+          a: (<div>Only add keywords that truthfully reflect your skills and experience.</div>)
         }
       ]
     }
@@ -182,7 +236,7 @@ const FAQ: React.FC = () => {
                       </button>
                       {isOpen && (
                         <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                          <p className="text-gray-700 leading-relaxed">{faq.a}</p>
+                          <div className="text-gray-700 leading-relaxed">{faq.a}</div>
                         </div>
                       )}
                     </div>
@@ -199,12 +253,13 @@ const FAQ: React.FC = () => {
           <p className="mb-6 text-indigo-100">
             Our support team is here to help you succeed
           </p>
-          <a
-            href="mailto:support@mycareerlab.ai"
+          <Link
+            to={{ pathname: '/contact' }}
+            state={{ subject: 'Technical Support', message: 'I need help with an issue I found in the FAQ.' }}
             className="inline-flex items-center gap-2 bg-white text-indigo-600 px-8 py-4 rounded-full font-semibold hover:shadow-2xl transition-all duration-300 hover:scale-105"
           >
             Contact Support
-          </a>
+          </Link>
         </div>
       </div>
       <Footer />

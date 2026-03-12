@@ -215,6 +215,26 @@ export const optimizeResume = async (
 };
 
 /**
+ * Send contact form message via backend API (no email client prompt)
+ */
+export const sendContactMessage = async (data: {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}): Promise<{ success: boolean; message: string }> => {
+  const response = await axios.post(
+    `${API_URL}/api/contact`,
+    data,
+    {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 15000,
+    }
+  );
+  return response.data;
+};
+
+/**
  * Export functions for use in components
  */
 const apiService = {
@@ -222,6 +242,7 @@ const apiService = {
   extractJobDataFromText,
   analyzeKeywords,
   optimizeResume,
+  sendContactMessage,
 };
 
 export default apiService;

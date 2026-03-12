@@ -10,12 +10,12 @@ export default function LandingPage() {
   };
 
   const features = [
-    'AI-powered resume optimization',
-    'Interview preparation assistance',
-    'Salary insights & negotiation',
-    '1000+ freshly posted jobs',
-    'Application tracking system',
-    'ATS compatibility scoring'
+    'AI-powered resume analysis',
+    'ATS compatibility scoring',
+    'Smart resume optimization',
+    'Keyword matching & insights',
+    'Job description analysis',
+    'Instant feedback & suggestions'
   ];
 
   const iconFeatures = [
@@ -34,13 +34,13 @@ export default function LandingPage() {
     {
       icon: Sparkles,
       title: 'Smart Optimization',
-      description: 'AI-powered resume enhancements',
+      description: 'Tailored resume for each job',
       color: 'from-indigo-500 to-purple-500'
     },
     {
       icon: TrendingUp,
-      title: 'Career Growth',
-      description: 'Track applications and insights',
+      title: 'Keyword Insights',
+      description: 'Match job requirements instantly',
       color: 'from-green-500 to-emerald-500'
     }
   ];
@@ -69,7 +69,7 @@ export default function LandingPage() {
               Start Your Career Journey
             </h2>
             <p className="text-base sm:text-base lg:text-lg text-gray-600 text-center lg:text-left ml-2 lg:ml-0">
-              Join thousands of professionals who have landed their dream jobs with our AI-powered platform.
+              Optimize your resume with AI and accelerate your career growth.
             </p>
           </div>
 
@@ -79,8 +79,8 @@ export default function LandingPage() {
                 <Star className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-800 text-sm sm:text-base">95% Success Rate</h3>
-                <p className="text-xs sm:text-sm text-gray-600">Users get 3x more interviews</p>
+                <h3 className="font-semibold text-gray-800 text-sm sm:text-base">AI-Powered Optimization</h3>
+                <p className="text-xs sm:text-sm text-gray-600">Get noticed by top employers</p>
               </div>
             </div>
 
@@ -130,7 +130,7 @@ export default function LandingPage() {
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             <p className="mt-2 sm:mt-3 text-[10px] sm:text-xs text-gray-500">
-              Join thousands of professionals who landed their dream jobs
+              Be among the first to experience AI-powered career advancement
             </p>
           </div>
         </div>

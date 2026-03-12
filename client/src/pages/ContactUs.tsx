@@ -1,7 +1,8 @@
 import React from 'react';
-import { Mail, MessageCircle, Clock, Send, ArrowLeft } from 'lucide-react';
+import { Mail, MessageCircle, Clock, Send, ArrowLeft, CheckCircle, XCircle, X } from 'lucide-react';
 import Footer from '../components/Footer';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { sendContactMessage } from '../services/api';
 
 const ContactUs: React.FC = () => {
   const [formData, setFormData] = React.useState({
@@ -10,25 +11,80 @@ const ContactUs: React.FC = () => {
     subject: '',
     message: ''
   });
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [banner, setBanner] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Read incoming navigation state (e.g., from FAQ link)
+  const location = useLocation();
+  const navState = (location.state || {}) as { subject?: string; message?: string };
+
+  const messageRef = React.useRef<HTMLTextAreaElement | null>(null);
+
+  React.useEffect(() => {
+    // If the route provided subject/message, prefill the form and focus the message field
+    if (navState?.subject || navState?.message) {
+      setFormData(prev => ({
+        ...prev,
+        subject: navState.subject ?? prev.subject,
+        message: navState.message ?? prev.message,
+      }));
+
+      // Delay focus slightly to ensure DOM is ready
+      setTimeout(() => {
+        messageRef.current?.focus();
+      }, 50);
+    }
+  }, [navState?.subject, navState?.message]);
+
+  const showBanner = (type: 'success' | 'error', message: string) => {
+    setBanner({ type, message });
+    // Auto-dismiss after 6 seconds
+    setTimeout(() => setBanner(null), 6000);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Create mailto link with form data
-    const mailtoLink = `mailto:support@mycareerlab.ai?subject=${encodeURIComponent(formData.subject)}&body=${encodeURIComponent(
-      `Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`
-    )}`;
-    window.location.href = mailtoLink;
+    setIsSubmitting(true);
+    try {
+      await sendContactMessage(formData);
+      showBanner('success', '✅ Message sent successfully! We\'ll get back to you within 24 hours.');
+      setFormData({ name: '', email: '', subject: '', message: '' });
+    } catch (err: any) {
+      showBanner('error', err?.response?.data?.message || err?.message || 'Failed to send message. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+
+      {/* Flash Banner */}
+      {banner && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-xl mx-auto px-4 animate-fadeIn`}>
+          <div className={`flex items-center justify-between gap-3 px-5 py-4 rounded-xl shadow-2xl border text-sm font-medium
+            ${banner.type === 'success'
+              ? 'bg-green-50 border-green-300 text-green-800'
+              : 'bg-red-50 border-red-300 text-red-800'
+            }`}>
+            <div className="flex items-center gap-3">
+              {banner.type === 'success'
+                ? <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                : <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              }
+              <span>{banner.message}</span>
+            </div>
+            <button onClick={() => setBanner(null)} className="flex-shrink-0 hover:opacity-70 transition-opacity">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto px-4 py-16 max-w-6xl">
         {/* Back to Home Button */}
         <div className="mb-8">
@@ -125,6 +181,7 @@ const ContactUs: React.FC = () => {
                   value={formData.message}
                   onChange={handleChange}
                   rows={6}
+                  ref={messageRef}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all resize-none"
                   placeholder="Tell us how we can help..."
                 />
@@ -132,10 +189,20 @@ const ContactUs: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-lg font-semibold hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2"
+                disabled={isSubmitting}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-lg font-semibold hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
-                <Send className="w-5 h-5" />
-                Send Message
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-5 h-5" />
+                    Send Message
+                  </>
+                )}
               </button>
             </form>
           </div>
@@ -153,8 +220,8 @@ const ContactUs: React.FC = () => {
                   <div>
                     <h3 className="font-semibold text-gray-800 mb-1">Email Support</h3>
                     <p className="text-gray-600 text-sm mb-2">We typically respond within 24 hours</p>
-                    <a href="mailto:support@mycareerlab.ai" className="text-indigo-600 hover:text-indigo-700 font-medium">
-                      support@mycareerlab.ai
+                    <a href="mailto:mycareerlabai@gmail.com" className="text-indigo-600 hover:text-indigo-700 font-medium">
+                      mycareerlabai@gmail.com
                     </a>
                   </div>
                 </div>
@@ -249,7 +316,7 @@ const ContactUs: React.FC = () => {
               FAQ
             </a>
             <a
-              href="/"
+              href="/app"
               className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full font-semibold hover:shadow-xl transition-all"
             >
               Back to Home
