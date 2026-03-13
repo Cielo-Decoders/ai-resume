@@ -14,7 +14,12 @@ const Footer: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
             {/* CareerDev AI Section - Full width on mobile, spans 6 columns on large screens */}
             <div className="md:col-span-6 ml-[10%] md:ml-0">
-              <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
+              <div className="flex items-center justify-center md:justify-start gap-1 mb-3">
+                <img
+                  src="/Logo3.png"
+                  alt="CareerDev Logo"
+                  className="h-8 md:h-10 w-auto object-contain"
+                />
                 <h3 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
                   CareerDev AI
                 </h3>
