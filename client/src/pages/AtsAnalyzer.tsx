@@ -242,12 +242,17 @@ export default function ATSAnalyzer() {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-3 w-full">
-              <div className="w-full text-center md:text-left">
+            <div className="flex items-center gap-0 w-full justify-center md:justify-start">
+              <img
+                src="/Logo3.png"
+                alt="CareerDev Logo"
+                className="h-12 sm:h-16 lg:h-20 w-auto object-contain"
+              />
+              <div className="flex flex-col mt-4">
                 <h1 className="text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 bg-clip-text text-transparent drop-shadow-2xl tracking-tight">
                   CareerDev AI
                 </h1>
-                <p className="text-gray-600 text-sm font-medium tracking-wide sm:block mt-1">
+                <p className="text-gray-600 text-sm font-medium tracking-wide text-center">
                   Your AI-Powered Career Assistant
                 </p>
               </div>

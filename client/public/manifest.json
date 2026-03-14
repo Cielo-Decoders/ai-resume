@@ -3,17 +3,17 @@
   "name": "CareerLab AI - Your AI-Powered Career Assistant",
   "icons": [
     {
-      "src": "CareerDev_Fav.ico",
+      "src": "CareerDevFavicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
     },
     {
-      "src": "CareerDev_Logo1.png",
+      "src": "Logo4.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "CareerDev_Logo1.png",
+      "src": "Logo4.png",
       "type": "image/png",
       "sizes": "512x512"
     }
