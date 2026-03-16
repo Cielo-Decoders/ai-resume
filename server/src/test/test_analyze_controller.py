@@ -24,10 +24,10 @@ from src.controllers.AnalyzeController import (
 # ─────────────────────────────────────────────────────────────────────────────
 def make_upload_file(
     filename: str = "resume.pdf",
-    content: bytes = b"PDF content that is not empty",
+    content: bytes = b"%PDF-1.4 mock pdf content",
     size_override: int | None = None,
 ) -> MagicMock:
-    """Create a mock UploadFile."""
+    """Create a mock UploadFile with realistic magic bytes."""
     mock_file = MagicMock()
     mock_file.filename = filename
     actual_content = b"x" * size_override if size_override else content

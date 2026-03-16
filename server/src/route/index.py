@@ -4,12 +4,13 @@ Route configuration module for organizing API endpoints.
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from ..dependencies import AnalyzeControllerDep
 from ..controllers.AnalyzeController import KeywordAnalysisRequest, ResumeOptimizationRequest, ExtractJobRequest
 from ..config import settings
+from ..limiter import limiter
 
 # Create router for analyze-related endpoints
 analyze_router = APIRouter(prefix="/api", tags=["analyze"])
@@ -74,94 +75,58 @@ async def contact_form_endpoint(body: ContactFormRequest):
 
 
 @analyze_router.post("/extract-text")
+@limiter.limit("10/minute")
 async def extract_text_endpoint(
+    request: Request,
     resume: UploadFile = File(...),
     controller: AnalyzeControllerDep = None
 ):
-    """
-    Extract text from PDF resume for debugging/testing.
-    
-    Args:
-        resume (UploadFile): The uploaded PDF file
-        controller (AnalyzeController): Injected controller instance
-        
-    Returns:
-        JSON response with extracted text information
-    """
+    """Extract text from an uploaded PDF resume."""
     return await controller.extract_text_from_resume(resume)
 
 
 @analyze_router.get("/health")
 async def health_check_endpoint(controller: AnalyzeControllerDep = None):
-    """
-    Health check endpoint for the analyze service.
-    
-    Args:
-        controller (AnalyzeController): Injected controller instance
-    
-    Returns:
-        JSON response with service health status
-    """
+    """Health check endpoint for the analyze service."""
     return await controller.get_health_status()
 
 
 @analyze_router.post("/analyze-keywords")
+@limiter.limit("20/minute")
 async def analyze_keywords_endpoint(
-    request: KeywordAnalysisRequest,
+    request: Request,
+    body: KeywordAnalysisRequest,
     controller: AnalyzeControllerDep = None
 ):
-    """
-    Analyze resume text against job data to find missing keywords.
-    
-    Args:
-        request (KeywordAnalysisRequest): Contains resume_text and job_data
-        controller (AnalyzeController): Injected controller instance
-        
-    Returns:
-        JSON response with keyword analysis results
-    """
-    return await controller.analyze_keywords(request)
+    """Analyze resume text against job data to find missing keywords."""
+    return await controller.analyze_keywords(body)
 
 
 @analyze_router.post("/optimize-resume")
+@limiter.limit("5/minute")
 async def optimize_resume_endpoint(
-    request: ResumeOptimizationRequest,
+    request: Request,
+    body: ResumeOptimizationRequest,
     controller: AnalyzeControllerDep = None
 ):
-    """
-    Generate an optimized resume based on selected keywords.
-    
-    Takes the user's original resume, job description, and selected keywords
-    to create an ATS-optimized version that incorporates the chosen keywords.
-    
-    Args:
-        request (ResumeOptimizationRequest): Contains original_resume_text,
-            job_description, selected_keywords, and optional job_title
-        controller (AnalyzeController): Injected controller instance
-        
-    Returns:
-        JSON response with optimized resume and optimization details
-    """
-    return await controller.optimize_resume(request)
+    """Generate an ATS-optimized resume based on selected keywords."""
+    return await controller.optimize_resume(body)
 
 
 @analyze_router.post("/extract-job")
+@limiter.limit("20/minute")
 async def extract_job_endpoint(
-    request: ExtractJobRequest,
+    request: Request,
+    body: ExtractJobRequest,
     controller: AnalyzeControllerDep = None
 ):
     """
     Extract structured job data from a raw job description using server-side OpenAI.
     This avoids exposing the API key in the browser and bypasses CORS restrictions.
     """
-    return await controller.extract_job_data(request)
+    return await controller.extract_job_data(body)
 
 
 def register_routes(app):
-    """
-    Register all route modules with the FastAPI app.
-    
-    Args:
-        app: FastAPI application instance
-    """
+    """Register all route modules with the FastAPI app."""
     app.include_router(analyze_router)

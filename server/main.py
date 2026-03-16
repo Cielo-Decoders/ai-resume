@@ -33,11 +33,31 @@ if parent_env.exists() and not env_path.exists():
     print(f"✓ Loaded environment variables from {parent_env}")
 
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from src.config import settings
+from src.limiter import limiter
 from src.route.index import register_routes
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add HTTP security headers to every response."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'none'; frame-ancestors 'none'"
+        )
+        return response
 
 
 # Verify API key is loaded
@@ -69,23 +89,34 @@ def create_app() -> FastAPI:
         yield
         logger.info("ATS Resume Analyzer API shutting down...")
 
+    # Disable API docs in production to avoid exposing schema to attackers
+    docs_url = "/api/docs" if settings.debug else None
+    redoc_url = "/api/redoc" if settings.debug else None
+
     # Initialize FastAPI app with metadata
     app = FastAPI(
         title=settings.app_name,
         description="API for analyzing resumes and extracting text content",
         version=settings.app_version,
-        docs_url="/api/docs",
-        redoc_url="/api/redoc",
+        docs_url=docs_url,
+        redoc_url=redoc_url,
         lifespan=lifespan
     )
     
+    # Attach rate limiter state and error handler
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    # Add security headers to all responses
+    app.add_middleware(SecurityHeadersMiddleware)
+
     # Configure CORS middleware
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type", "Authorization"],
     )
     
     # Register all routes
