@@ -21,16 +21,14 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent / ".env"
 if env_path.exists():
     load_dotenv(env_path)
-    print(f"✓ Loaded environment variables from {env_path}")
 else:
-    print(f"⚠ .env file not found at {env_path}")
+    pass  # Silent failure - don't expose file paths
 
 
 # Also check for .env in parent directory
 parent_env = Path(__file__).parent.parent / ".env"
 if parent_env.exists() and not env_path.exists():
     load_dotenv(parent_env)
-    print(f"✓ Loaded environment variables from {parent_env}")
 
 
 from fastapi import FastAPI, Request
@@ -60,11 +58,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
-# Verify API key is loaded
-if settings.openai_api_key:
-    print(f"✓ OpenAI API key configured (first 20 chars): {settings.openai_api_key[:20]}...")
-else:
-    print("⚠ WARNING: OpenAI API key not configured!")
+# Verify API key is loaded - removed security-sensitive logging
+if not settings.openai_api_key:
+    logger.warning("OpenAI API key not configured")
 
 
 # Configure logging

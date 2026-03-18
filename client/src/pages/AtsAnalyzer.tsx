@@ -80,13 +80,11 @@ export default function ATSAnalyzer() {
       setScrapingStatus('Extracting job details with AI...');
       try {
         jobData = await extractJobDataFromText(jobDescription);
-        console.log('Job data extracted:', jobData);
         // Store job title for optimization
         setJobTitle(jobData.title || '');
         // Store company name for optimization
         setCompany(jobData.company || '');
       } catch (error) {
-        console.error('AI extraction failed:', error);
         alert('Failed to extract job data. Please try again.');
         setScrapingStatus('');
         setIsAnalyzing(false);
@@ -101,15 +99,10 @@ export default function ATSAnalyzer() {
     // Step 2: Extract text from resume PDF
     try {
       setScrapingStatus('Extracting text from your resume...');
-      console.log('Starting resume analysis with actual PDF content...');
       const aiResults = await extractTextFromResume(resumeFile!);
-      console.log('AI analysis complete with real data:', aiResults);
 
       // Use fullText if available, otherwise fall back to text
       extractedResumeText = aiResults.fullText || aiResults.text || '';
-
-      console.log('Full extracted resume length:', extractedResumeText.length);
-      console.log('Resume line count:', extractedResumeText.split('\n').length);
 
       if (!extractedResumeText || extractedResumeText.length < 50) {
         throw new Error('Could not extract meaningful text from the resume');
@@ -117,10 +110,7 @@ export default function ATSAnalyzer() {
       
       // Store FULL resume text for optimization
       setResumeText(extractedResumeText);
-      console.log('Stored resume text length:', extractedResumeText.length);
     } catch (error: any) {
-      console.error('AI analysis failed:', error);
-
       if (error.message && (error.message.includes('PDF') || error.message.includes('extract'))) {
         setScrapingStatus('');
         setIsAnalyzing(false);
@@ -137,11 +127,9 @@ export default function ATSAnalyzer() {
     try {
       setScrapingStatus('Analyzing keywords and matching skills...');
       const keywordAnalysis = await analyzeKeywords(extractedResumeText, jobData);
-      console.log('Keyword analysis complete:', keywordAnalysis);
       setKeywordResults(keywordAnalysis);
       setAnalysisComplete(true);
     } catch (error: any) {
-      console.error('Keyword analysis failed:', error);
       alert(`Keyword analysis failed: ${error.message}`);
     }
 
@@ -149,7 +137,6 @@ export default function ATSAnalyzer() {
     setIsAnalyzing(false);
 
   } catch (error) {
-    console.error('Job description retrieval failed:', error);
     alert('Failed to retrieve job description. Please try again.');
     setScrapingStatus('');
     setIsAnalyzing(false);
@@ -158,10 +145,6 @@ export default function ATSAnalyzer() {
 
   // Handle resume optimization with selected keywords
   const handleOptimizeResume = async (keywords: ActionableKeyword[]) => {
-    console.log('=== OPTIMIZATION DEBUG ===');
-    console.log('resumeText state:', resumeText ? `${resumeText.substring(0, 100)}...` : 'EMPTY!');
-    console.log('resumeText length:', resumeText.length);
-
     if (!resumeText || resumeText.length < 50) {
       alert('Resume text not available. Please analyze your resume first by clicking the "Analyze" button.');
       return;
@@ -183,9 +166,6 @@ export default function ATSAnalyzer() {
     setClearKeywordSelections(false); // Reset the clear flag
 
     try {
-      console.log('Starting resume optimization with keywords:', keywords);
-      console.log('Sending resume text (first 200 chars):', resumeText.substring(0, 200));
-
       const result = await optimizeResume(
         resumeText,
         jobDescription,
@@ -197,13 +177,10 @@ export default function ATSAnalyzer() {
         setOptimizationResult(result);
         // Trigger keyword selections to be cleared
         setClearKeywordSelections(true);
-        console.log('Resume optimization successful:', result);
-        console.log('Optimized resume preview:', result.optimizedResume.substring(0, 200));
       } else {
         alert(`Optimization failed: ${result.message}`);
       }
     } catch (error: any) {
-      console.error('Resume optimization failed:', error);
       alert(`Failed to optimize resume: ${error.message}`);
     } finally {
       setIsOptimizing(false);
@@ -388,7 +365,6 @@ export default function ATSAnalyzer() {
                   jobTitle={jobTitle}
                   company={company}
                   onKeywordsSelected={(selected) => {
-                    console.log('Selected keywords for optimization:', selected);
                     setSelectedKeywords(selected);
                   }}
                   onOptimizeResume={handleOptimizeResume}

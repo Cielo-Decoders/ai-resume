@@ -50,7 +50,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           setUser(JSON.parse(savedUser));
         } catch (error) {
-          console.error('Error parsing saved user:', error);
           localStorage.removeItem('ats_user');
         }
       }
