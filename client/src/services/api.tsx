@@ -24,12 +24,9 @@ export const extractTextFromResume = async (
     if (!response.data) {
       throw new Error('No response from server');
     }
-    console.log('Analysis results:', response.data);
 
     return response.data;
   } catch (error: any) {
-    console.error('Backend analysis failed:', error);
-
     if (error.response?.data?.error) {
       throw new Error(error.response.data.error);
     }
@@ -48,8 +45,6 @@ export const extractTextFromResume = async (
  */
 export const extractJobDataFromText = async (jobDescription: string): Promise<JobData> => {
   try {
-    console.log('Extracting job data from text using AI...');
-
     const response = await axios.post(
       `${API_URL}/api/extract-job`,
       { job_description: jobDescription },
@@ -63,11 +58,8 @@ export const extractJobDataFromText = async (jobDescription: string): Promise<Jo
       throw new Error('No response from server');
     }
 
-    console.log('Successfully extracted job data:', response.data);
     return response.data;
   } catch (error: any) {
-    console.error('Job data extraction failed:', error);
-
     if (error.response?.data?.detail) {
       throw new Error(error.response.data.detail);
     }
@@ -89,10 +81,6 @@ export const analyzeKeywords = async (
   jobData: JobData
 ): Promise<KeywordAnalysisResult> => {
   try {
-    console.log('Analyzing keywords...');
-    console.log('Resume text length:', resumeText.length);
-    console.log('Job data:', jobData);
-
     const response = await axios.post(
       `${API_URL}/api/analyze-keywords`,
       {
@@ -111,11 +99,8 @@ export const analyzeKeywords = async (
       throw new Error('No response from server');
     }
 
-    console.log('Keyword analysis results:', response.data);
     return response.data;
   } catch (error: any) {
-    console.error('Keyword analysis failed:', error);
-
     if (error.response?.data?.detail) {
       throw new Error(error.response.data.detail);
     }
@@ -134,20 +119,12 @@ export const optimizeResume = async (
   jobTitle: string = ''
 ): Promise<OptimizationResult> => {
   try {
-    console.log('Resume text length:', originalResumeText.length);
-    console.log('Job description length:', jobDescription.length);
-    console.log('Selected keywords count:', selectedKeywords.length);
-    console.log('Selected keywords:', selectedKeywords.map(k => k.keyword));
-    console.log('Job title:', jobTitle);
-
     // CRITICAL: Format keywords exactly as backend expects
     const formattedKeywords = selectedKeywords.map(k => ({
       keyword: k.keyword,
       category: k.category || 'Skill',
       priority: k.priority || 'medium'
     }));
-
-    console.log('Formatted keywords:', formattedKeywords);
 
     const requestBody = {
       original_resume_text: originalResumeText,
@@ -156,8 +133,6 @@ export const optimizeResume = async (
       job_title: jobTitle,
       formatting_info: null
     };
-
-    console.log('Sending request to backend...');
 
     const response = await axios.post(
       `${API_URL}/api/optimize-resume`,
@@ -174,12 +149,6 @@ export const optimizeResume = async (
       throw new Error('No response from server');
     }
 
-    console.log('=== OPTIMIZATION RESPONSE ===');
-    console.log('Success:', response.data.success);
-    console.log('Message:', response.data.message);
-    console.log('Optimized resume length:', response.data.optimizedResume?.length);
-    console.log('Metadata:', response.data.metadata);
-
     // Validate response
     if (!response.data.success) {
       throw new Error(response.data.message || 'Optimization failed');
@@ -191,9 +160,6 @@ export const optimizeResume = async (
 
     return response.data;
   } catch (error: any) {
-    console.error('=== OPTIMIZATION ERROR ===');
-    console.error('Error:', error);
-
     if (error.response?.data?.detail) {
       throw new Error(error.response.data.detail);
     }

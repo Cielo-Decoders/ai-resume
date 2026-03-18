@@ -230,7 +230,6 @@ async def extract_text_from_pdf(pdf_buffer: bytes) -> Dict[str, Any]:
 
         # Fallback to OCR if extraction failed
         if len(extracted_text.strip()) < 50:
-            print("Primary extraction yielded minimal text. Attempting OCR...")
             ocr_text = await extract_text_with_ocr(pdf_buffer)
             if len(ocr_text) > len(extracted_text):
                 extracted_text = _normalize_extracted_text(ocr_text)
@@ -248,7 +247,6 @@ async def extract_text_from_pdf(pdf_buffer: bytes) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        print(f"PDF extraction error: {e}. Falling back to OCR...")
         ocr_text = await extract_text_with_ocr(pdf_buffer)
         ocr_text = _normalize_extracted_text(ocr_text)
         ocr_text = normalize_bullet_points(ocr_text)
@@ -269,7 +267,6 @@ async def extract_text_with_ocr(pdf_buffer: bytes) -> str:
     text = ""
 
     for i, image in enumerate(images[:5]):
-        print(f"OCR processing page {i+1}...")
         text += pytesseract.image_to_string(image, config='--psm 6') + "\n"
 
     return normalize_bullet_points(text)
@@ -319,25 +316,14 @@ def clean_encoding_artifacts(text: str) -> str:
     Remove problematic encoding artifacts like %Ï that cause formatting issues
     while preserving proper line breaks and structure.
     """
-    if isinstance(text, str):
-        print(f"Input first 300 chars:\n{text[:300]}")
-    else:
-        print(f"Input value (non-string): {str(text)[:300]}")
-    print("=" * 80)
-
     # Ensure text is a string
     if isinstance(text, dict):
-        print("WARNING: Input is dict, converting to string")
         text = str(text)
     elif not isinstance(text, str):
-        print(f"WARNING: Input is {type(text)}, converting to string")
         text = str(text) if text else ""
 
     if not text:
-        print("WARNING: Empty text after conversion")
         return text
-
-    original_length = len(text)
 
     # Remove ALL variations of the problematic characters
     text = re.sub(r'%[ÏïĪīÎîØø]', '', text)
@@ -346,17 +332,17 @@ def clean_encoding_artifacts(text: str) -> str:
     text = re.sub(r'[ÏïĪīÎîØø]\s*%', '', text)
 
     # Fix common encoding issues
-    text = text.replace('â€¢', '•')  # Fix bullet points
-    text = text.replace('â€"', '–')  # Fix em dashes
-    text = text.replace('â€™', "'")  # Fix apostrophes
-    text = text.replace('â€œ', '"')  # Fix quotes
-    text = text.replace('â€', '"')   # Fix quotes
+    text = text.replace('â€¢', '•')
+    text = text.replace('â€"', '–')
+    text = text.replace('â€™', "'")
+    text = text.replace('â€œ', '"')
+    text = text.replace('â€', '"')
 
     # Clean up multiple spaces but preserve line structure
-    text = re.sub(r'[ \t]+', ' ', text)  # Multiple spaces/tabs to single space
-    text = re.sub(r' *\n+ *', '\n', text)  # Clean line breaks but keep them
+    text = re.sub(r'[ \t]+', ' ', text)
+    text = re.sub(r' *\n+ *', '\n', text)
 
-    # Fix bullet point issues - ensure proper bullet formatting
+    # Fix bullet point issues
     text = re.sub(r'^\s*[•●]\s*%[ÏïĪīÎîØø]?\s*', '• ', text, flags=re.MULTILINE)
     text = re.sub(r'^\s*%[ÏïĪīÎîØø]\s*', '• ', text, flags=re.MULTILINE)
 
@@ -364,20 +350,18 @@ def clean_encoding_artifacts(text: str) -> str:
     text = re.sub(r'PROFESSIONAL\s+EXPERIENCES', 'PROFESSIONAL EXPERIENCES', text)
     text = re.sub(r'TECHNICAL\s+PROJECTS', 'TECHNICAL PROJECTS', text)
 
-    # Ensure proper section formatting - add line breaks before section headers
+    # Ensure proper section formatting
     section_headers = ['EDUCATION', 'TECHNICAL SKILLS', 'PROFESSIONAL EXPERIENCES',
                       'TECHNICAL PROJECTS', 'PROJECTS', 'LEADERSHIP', 'CERTIFICATIONS']
 
     for header in section_headers:
         text = re.sub(f'([^\n]){header}', f'\\1\n\n{header}', text)
 
-    # Ensure bullet points start on new lines and are properly formatted
+    # Ensure bullet points start on new lines
     text = re.sub(r'([^\n])•', r'\1\n•', text)
     text = re.sub(r'([^\n])●', r'\1\n●', text)
 
-    final_text = text.strip()
-
-    return final_text
+    return text.strip()
 
 
 def _normalize_extracted_text(text: str) -> str:
@@ -518,10 +502,8 @@ def save_extracted_text_to_file(text: str) -> Optional[str]:
         )
         tmp.write(text)
         tmp.close()
-        print(f"Extracted text saved to: {tmp.name}")
         return tmp.name
     except Exception as e:
-        print(f"Failed to save extracted text: {e}")
         return None
 
 def save_extracted_text_to_project_base(text: str) -> None:
@@ -533,9 +515,8 @@ def save_extracted_text_to_project_base(text: str) -> None:
         base.mkdir(exist_ok=True)
         path = base / "baseResume.txt"
         path.write_text(text, encoding="utf-8")
-        print(f"Base resume saved to: {path}")
     except Exception as e:
-        print(f"Failed to save base resume: {e}")
+        pass
 
 
 def save_optimized_resume_to_file(text: str) -> Optional[str]:
@@ -547,10 +528,8 @@ def save_optimized_resume_to_file(text: str) -> Optional[str]:
         base.mkdir(exist_ok=True)
         path = base / "optimizedResume.txt"
         path.write_text(text, encoding="utf-8")
-        print(f"Optimized resume saved to: {path}")
         return str(path)
     except Exception as e:
-        print(f"Failed to save optimized resume: {e}")
         return None
 
 
@@ -864,7 +843,7 @@ async def filter_keywords_with_ai(
         prompt = f"""
 Analyze these keywords or skills from a job posting for a {job_title or 'professional'} role.
 
-TASK: Filter ONLY keywords or skills that can be incorporated into an existing resume through rewording experience bullets.
+TASK: Filter ONLY keywords that can be incorporated into an existing resume through rewording experience bullets.
 
 INCLUDE (Actionable):
 ✓ Skills (e.g., "data analysis", "project management")
