@@ -1,4 +1,4 @@
-# AI Resume Optimizer - CareerLab AI
+# AI Resume Optimizer - CareerDev AI
 
 An AI-powered resume optimization platform that helps job seekers create ATS-friendly resumes and land interviews.
 
@@ -132,4 +132,3 @@ Production: https://careerdev.io
     "concurrently": "^8.2.2"
   }
 }
-

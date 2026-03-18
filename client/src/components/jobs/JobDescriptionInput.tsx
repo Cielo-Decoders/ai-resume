@@ -30,8 +30,8 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
         <textarea
           value={jobDescription}
           onChange={(e) => onDescriptionChange(e.target.value)}
-          placeholder="Paste the complete job description here...\n\nInclude:\n• Job title\n• Company name\n• Requirements\n• Responsibilities\n• Skills\n• Qualifications\n\nOur AI will automatically extract and structure this information!"
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+          placeholder="Paste the complete job description here...&#10;&#10;Include:&#10;• Job title&#10;• Company name&#10;• Requirements&#10;• Responsibilities&#10;• Skills&#10;• Qualifications"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none placeholder:text-gray-400 placeholder:text-sm"
           rows={12}
         />
       )}

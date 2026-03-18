@@ -16,6 +16,40 @@ code {
     monospace;
 }
 
+/* Placeholder text styling */
+::placeholder {
+  color: #9ca3af;
+  opacity: 1;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+::-webkit-input-placeholder {
+  color: #9ca3af;
+  opacity: 1;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+::-moz-placeholder {
+  color: #9ca3af;
+  opacity: 1;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+:-ms-input-placeholder {
+  color: #9ca3af;
+  opacity: 1;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+textarea::placeholder {
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
 /* Custom animations for loading overlay */
 @keyframes fadeIn {
   from {

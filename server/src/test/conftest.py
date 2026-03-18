@@ -1,5 +1,5 @@
 """
-Shared pytest fixtures for the CareerLab AI server test suite.
+Shared pytest fixtures for the CareerDev AI server test suite.
 """
 import sys
 import os
