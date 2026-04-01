@@ -145,7 +145,7 @@ export default function LandingPage() {
               onClick={handleGetStarted}
               className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3.5 px-6 rounded-xl font-bold text-base hover:from-indigo-700 hover:to-purple-700 focus:ring-4 focus:ring-indigo-200 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
             >
-              Get Started Free Now
+              Get Started Now
               <ArrowRight className="w-5 h-5" />
             </button>
 
