@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, Star, Check, Zap, Sparkles, CheckCircle, X } from 'lucide-react';
+import { AlertCircle, Star, Check, Zap, Sparkles, CheckCircle, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { ActionableKeyword } from '../../types';
 
 interface KeywordAnalysisProps {
@@ -27,6 +27,8 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
 }) => {
   const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set());
   const [showOptimizeModal, setShowOptimizeModal] = useState(false);
+  const [showAllMissing, setShowAllMissing] = useState(false);
+  const [showAllMatched, setShowAllMatched] = useState(false);
   const buttonSectionRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     if (clearSelections) {
@@ -129,7 +131,7 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
                     Optimize Your Resume
                   </h3>
                   {(jobTitle || company) && (
-                    <div className="text-lg font-bold italic mt-2 space-y-0" style={{ color: '#FE7F2D' }}>
+                    <div className="text-lg font-bold italic mt-2 space-y-0 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                       {jobTitle && company && (
                         <p>
                           for <span>{jobTitle}</span> at <span>{company}</span>
@@ -220,50 +222,106 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
       )}
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-red-500" />
-            Missing from Your Resume
-          </h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-500" />
+              Missing from Your Resume
+            </h3>
+            {missingKeywords.length > 0 && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">
+                {missingKeywords.length}
+              </span>
+            )}
+          </div>
 
-          <p className="text-gray-500 mb-3">
+          <p className="text-gray-500 mb-3 text-sm">
             These skills appear in the job description but are not found in your resume. Adding these relevant skills would significantly improve how well your resume matches this role.
           </p>
 
-          <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
-            {missingKeywords.map((keyword, idx) => (
-              <span
-                key={idx}
-                className="px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-semibold"
-              >
-                {keyword}
-              </span>
-            ))}
-          </div>
-          {missingKeywords.length === 0 && (
+          {missingKeywords.length > 0 ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {(showAllMissing ? missingKeywords : missingKeywords.slice(0, 8)).map((keyword, idx) => (
+                  <span
+                    key={idx}
+                    className="px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-semibold"
+                  >
+                    {keyword}
+                  </span>
+                ))}
+              </div>
+              {missingKeywords.length > 8 && (
+                <button
+                  onClick={() => setShowAllMissing(!showAllMissing)}
+                  className="mt-3 flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+                >
+                  {showAllMissing ? (
+                    <>
+                      <ChevronUp className="w-4 h-4" />
+                      Show less
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-4 h-4" />
+                      Show all {missingKeywords.length} keywords
+                    </>
+                  )}
+                </button>
+              )}
+            </>
+          ) : (
             <p className="text-gray-500 text-sm">No missing keywords found!</p>
           )}
         </div>
 
 
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <Star className="w-5 h-5 text-green-500" />
-            Already in Your Resume
-          </h3>
-          <p className="text-gray-500 mb-3">
-            These job-description terms already appear in your resume.
-            </p>
-          <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
-            {suggestedKeywords.map((keyword, idx) => (
-              <span
-                key={idx}
-                className="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-semibold"
-              >
-                {keyword}
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <Star className="w-5 h-5 text-green-500" />
+              Already in Your Resume
+            </h3>
+            {suggestedKeywords.length > 0 && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                {suggestedKeywords.length}
               </span>
-            ))}
+            )}
           </div>
-          {suggestedKeywords.length === 0 && (
+          <p className="text-gray-500 mb-3 text-sm">
+            These job-description terms already appear in your resume.
+          </p>
+          {suggestedKeywords.length > 0 ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {(showAllMatched ? suggestedKeywords : suggestedKeywords.slice(0, 8)).map((keyword, idx) => (
+                  <span
+                    key={idx}
+                    className="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-semibold"
+                  >
+                    {keyword}
+                  </span>
+                ))}
+              </div>
+              {suggestedKeywords.length > 8 && (
+                <button
+                  onClick={() => setShowAllMatched(!showAllMatched)}
+                  className="mt-3 flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+                >
+                  {showAllMatched ? (
+                    <>
+                      <ChevronUp className="w-4 h-4" />
+                      Show less
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-4 h-4" />
+                      Show all {suggestedKeywords.length} keywords
+                    </>
+                  )}
+                </button>
+              )}
+            </>
+          ) : (
             <p className="text-gray-500 text-sm">No matching terms found.</p>
           )}
         </div>

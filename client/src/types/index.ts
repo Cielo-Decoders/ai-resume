@@ -165,6 +165,25 @@ export interface CoverLetterResult {
   wordCount: number;
 }
 
+export interface RedFlag {
+  id: string;
+  title: string;
+  severity: 'high' | 'medium' | 'low';
+  reason: string;
+  evidence: string;
+}
+
+export interface RedFlagResult {
+  success: boolean;
+  score: number;
+  verdict: string;
+  overallRisk: 'low' | 'medium' | 'high';
+  summary: string;
+  flags: RedFlag[];
+  positives: string[];
+  questionsToAsk: string[];
+}
+
 export interface JobListing {
   id: number;
   url: string;

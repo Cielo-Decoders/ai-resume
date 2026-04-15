@@ -1207,6 +1207,298 @@ OUTPUT (valid JSON only, no markdown):
 
 
 # =========================================================
+# ---------------- RED FLAG SCANNER -----------------------
+# =========================================================
+
+# Rule-based red flag patterns (cheap, deterministic, no API call)
+_RED_FLAG_RULES: List[Dict[str, Any]] = [
+    {
+        "id": "missing_salary",
+        "title": "No salary or compensation mentioned",
+        "severity": "medium",
+        "reason": "Legitimate employers increasingly disclose pay ranges. Absence may signal below-market compensation.",
+        "patterns": [],  # special logic: flag when NO salary-related terms found
+        "detect": "absence",
+        "absence_terms": [
+            r"\$\d", r"salary", r"compensation", r"pay\s*range", r"per\s*(hour|year|annum)",
+            r"\d+k\s*[-–]\s*\d+k", r"competitive\s+pay", r"base\s+pay", r"hourly\s+rate",
+        ],
+    },
+    {
+        "id": "scope_creep",
+        "title": "Role spans too many unrelated functions",
+        "severity": "high",
+        "reason": "When a single role covers engineering, support, QA, and operations it often means an understaffed team where one person does everything.",
+        "detect": "threshold",
+        "threshold": 4,
+        "buckets": {
+            "engineering": [r"develop", r"engineer", r"architect", r"code", r"programming"],
+            "support": [r"customer\s+support", r"help\s*desk", r"troubleshoot.*customer", r"client.*issue"],
+            "qa": [r"test.*quality", r"quality\s+assurance", r"\bQA\b", r"write.*test"],
+            "design": [r"UI\s*/?\s*UX", r"user\s+interface", r"figma", r"design.*mockup"],
+            "ops": [r"deploy", r"infrastructure", r"devops", r"CI\s*/?\s*CD", r"monitor.*production"],
+            "product": [r"product\s+manag", r"roadmap", r"stakeholder.*priorit"],
+            "marketing": [r"SEO", r"content.*market", r"social\s+media", r"brand"],
+            "sales": [r"sales.*target", r"revenue.*generat", r"prospect", r"close.*deal"],
+        },
+    },
+    {
+        "id": "buzzword_culture",
+        "title": "Excessive buzzword culture signals",
+        "severity": "low",
+        "reason": "Terms like 'rockstar', 'ninja', or 'guru' can indicate an immature hiring process or unrealistic expectations.",
+        "detect": "any",
+        "patterns": [
+            r"\brockstar\b", r"\bninja\b", r"\bguru\b", r"\bunicorn\b",
+            r"\bhustl", r"\bgrind\b", r"work\s+hard.*play\s+hard",
+        ],
+    },
+    {
+        "id": "unrealistic_experience",
+        "title": "Unrealistic experience requirements for the level",
+        "severity": "high",
+        "reason": "Requiring 5+ years of experience for an entry-level or junior title is a common red flag that suggests the employer wants senior work at junior pay.",
+        "detect": "mismatch",
+        "junior_patterns": [r"\bjunior\b", r"\bentry[\s-]*level\b", r"\bintern\b", r"\bassociate\b"],
+        "high_exp_patterns": [r"[5-9]\+?\s*years", r"\b[1-9]\d\+?\s*years", r"10\+?\s*years"],
+    },
+    {
+        "id": "vague_responsibilities",
+        "title": "Vague or generic responsibilities",
+        "severity": "medium",
+        "reason": "Phrases like 'wear many hats' or 'whatever it takes' often mean the role is poorly defined and the workload is unpredictable.",
+        "detect": "any",
+        "patterns": [
+            r"wear\s+many\s+hats", r"whatever\s+it\s+takes", r"other\s+duties\s+as\s+assigned",
+            r"self[\s-]*starter", r"must\s+thrive\s+under\s+pressure",
+            r"comfortable\s+with\s+ambiguity",
+        ],
+    },
+    {
+        "id": "unpaid_signals",
+        "title": "Possible unpaid or exploitative arrangement",
+        "severity": "high",
+        "reason": "Mentions of unpaid trials, equity-only compensation, or 'passion projects' can signal exploitation.",
+        "detect": "any",
+        "patterns": [
+            r"unpaid\s+(trial|test|period|internship)",
+            r"equity[\s-]*only", r"sweat\s+equity",
+            r"volunteer\s+(position|role|opportunity)",
+            r"no\s+monetary\s+compensation",
+        ],
+    },
+    {
+        "id": "excessive_qualifications",
+        "title": "Excessive qualification list",
+        "severity": "medium",
+        "reason": "Listing 15+ requirements often means the employer hasn't prioritized what truly matters, or is trying to justify a low offer by demanding everything.",
+        "detect": "count",
+        "count_pattern": r"(?:^|\n)\s*[-•●▪]\s+",
+        "threshold": 20,
+    },
+    {
+        "id": "urgency_pressure",
+        "title": "Unusual urgency language",
+        "severity": "low",
+        "reason": "Phrases like 'ASAP', 'immediately', or 'we need someone yesterday' can indicate poor planning or high turnover.",
+        "detect": "any",
+        "patterns": [
+            r"\bASAP\b", r"start\s+immediately", r"need.*yesterday",
+            r"urgent\s+(hire|opening|need)", r"fill.*position.*immediately",
+        ],
+    },
+]
+
+
+def _run_rule_based_scan(job_description: str) -> List[Dict[str, Any]]:
+    """Run deterministic rule-based red flag checks. No API calls."""
+    flags = []
+    text = job_description
+    text_lower = text.lower()
+
+    for rule in _RED_FLAG_RULES:
+        detected = False
+        evidence = ""
+
+        if rule["detect"] == "absence":
+            found_any = False
+            for term_pat in rule["absence_terms"]:
+                if re.search(term_pat, text_lower):
+                    found_any = True
+                    break
+            if not found_any:
+                detected = True
+                evidence = "No salary, compensation, or pay range mentioned anywhere in the posting."
+
+        elif rule["detect"] == "any":
+            for pat in rule["patterns"]:
+                m = re.search(pat, text_lower)
+                if m:
+                    detected = True
+                    start = max(0, m.start() - 30)
+                    end = min(len(text), m.end() + 30)
+                    evidence = "..." + text[start:end].strip() + "..."
+                    break
+
+        elif rule["detect"] == "threshold":
+            hit_buckets = []
+            for bucket_name, patterns in rule["buckets"].items():
+                for pat in patterns:
+                    if re.search(pat, text_lower):
+                        hit_buckets.append(bucket_name)
+                        break
+            if len(hit_buckets) >= rule["threshold"]:
+                detected = True
+                evidence = f"Role spans {len(hit_buckets)} distinct functions: {', '.join(hit_buckets)}"
+
+        elif rule["detect"] == "mismatch":
+            is_junior = any(re.search(p, text_lower) for p in rule["junior_patterns"])
+            has_high_exp = any(re.search(p, text_lower) for p in rule["high_exp_patterns"])
+            if is_junior and has_high_exp:
+                detected = True
+                evidence = "Junior/entry-level title combined with 5+ years experience requirement."
+
+        elif rule["detect"] == "count":
+            matches = re.findall(rule["count_pattern"], text)
+            if len(matches) >= rule["threshold"]:
+                detected = True
+                evidence = f"Found {len(matches)} bullet-point requirements in the listing."
+
+        if detected:
+            flags.append({
+                "id": rule["id"],
+                "title": rule["title"],
+                "severity": rule["severity"],
+                "reason": rule["reason"],
+                "evidence": evidence,
+            })
+
+    return flags
+
+
+async def scan_job_red_flags(job_description: str) -> Dict[str, Any]:
+    """
+    Scan a job description for red flags using hybrid approach:
+    1. Fast rule-based checks (deterministic, free)
+    2. AI-powered analysis for nuanced concerns
+    Returns structured risk assessment.
+    """
+    # Phase 1: Rule-based scan
+    rule_flags = _run_rule_based_scan(job_description)
+
+    # Phase 2: AI analysis for nuance
+    ai_result = await _ai_red_flag_analysis(job_description)
+
+    # Merge: rule-based flags first, then AI flags (deduplicated by id)
+    seen_ids = {f["id"] for f in rule_flags}
+    all_flags = list(rule_flags)
+    for af in ai_result.get("flags", []):
+        if af.get("id", af.get("title", "")) not in seen_ids:
+            all_flags.append(af)
+            seen_ids.add(af.get("id", af.get("title", "")))
+
+    # Score: start at 100, subtract based on severity
+    score = 100
+    for f in all_flags:
+        sev = f.get("severity", "low")
+        if sev == "high":
+            score -= 20
+        elif sev == "medium":
+            score -= 10
+        elif sev == "low":
+            score -= 5
+    score = max(0, min(100, score))
+
+    # Verdict
+    if score >= 80:
+        verdict = "Looks Good"
+        overall_risk = "low"
+    elif score >= 55:
+        verdict = "Proceed With Caution"
+        overall_risk = "medium"
+    else:
+        verdict = "High Risk"
+        overall_risk = "high"
+
+    return {
+        "success": True,
+        "score": score,
+        "verdict": verdict,
+        "overallRisk": overall_risk,
+        "summary": ai_result.get("summary", ""),
+        "flags": all_flags,
+        "positives": ai_result.get("positives", []),
+        "questionsToAsk": ai_result.get("questionsToAsk", []),
+    }
+
+
+async def _ai_red_flag_analysis(job_description: str) -> Dict[str, Any]:
+    """Use AI to detect nuanced red flags and generate positives + recruiter questions."""
+    try:
+        client = _get_openai_client()
+
+        prompt = f"""Analyze this job description for red flags and positive signals.
+
+JOB DESCRIPTION:
+{job_description[:6000]}
+
+Return ONLY valid JSON (no markdown fences):
+{{
+  "summary": "1-2 sentence overall assessment of this posting's quality and legitimacy",
+  "flags": [
+    {{
+      "id": "unique_short_id",
+      "title": "Short title of concern",
+      "severity": "high|medium|low",
+      "reason": "Why this is a concern",
+      "evidence": "Exact quote or paraphrased evidence from the posting"
+    }}
+  ],
+  "positives": ["Positive signal 1", "Positive signal 2"],
+  "questionsToAsk": ["Smart question to ask the recruiter 1", "Question 2", "Question 3"]
+}}
+
+ANALYSIS RULES:
+- Only flag genuinely concerning patterns, NOT normal job requirements
+- severity: high = likely problematic, medium = worth noting, low = minor concern
+- Include 2-5 flags maximum (only real issues)
+- Include 2-4 positives (genuine strengths of the posting)
+- Include 3-5 smart questions the candidate should ask about flagged concerns
+- Do NOT flag standard items like "team player", "communication skills", or normal tech stacks
+- DO flag: compensation red flags, scope creep, unrealistic expectations, high-turnover signals, discriminatory language, vague role definitions"""
+
+        response = client.chat.completions.create(
+            model=settings.openai_model or "gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a career advisor who helps job seekers evaluate opportunities objectively. "
+                        "You are balanced — you highlight both concerns and positives. "
+                        "You never manufacture issues where none exist."
+                    )
+                },
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=1500,
+        )
+
+        content = response.choices[0].message.content.strip()
+        content = re.sub(r"^```(?:json)?|```$", "", content, flags=re.MULTILINE).strip()
+        result = json.loads(content)
+
+        if not isinstance(result, dict):
+            return {"flags": [], "positives": [], "questionsToAsk": [], "summary": ""}
+
+        return result
+
+    except Exception as e:
+        print(f"AI red flag analysis error: {e}")
+        return {"flags": [], "positives": [], "questionsToAsk": [], "summary": "Could not complete AI analysis."}
+
+
+# =========================================================
 # ---------------- COVER LETTER GENERATION ----------------
 # =========================================================
 

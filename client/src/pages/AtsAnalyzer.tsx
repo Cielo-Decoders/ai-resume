@@ -6,10 +6,12 @@ import ResumeUpload from '../components/resume/ResumeUpload';
 import KeywordAnalysis from '../components/resume/KeywordAnalysis';
 import OptimizedResumeDisplay from '../components/resume/OptimizedResumeDisplay';
 import CoverLetterDisplay from '../components/resume/CoverLetterDisplay';
-import {Application, JobData, KeywordAnalysisResult, ActionableKeyword, OptimizationResult } from '../types/index';
-import {extractJobDataFromText, extractTextFromResume, analyzeKeywords, optimizeResume} from '../services/api';
+import MatchScoreCard from '../components/resume/MatchScoreCard';
+import {Application, JobData, KeywordAnalysisResult, ActionableKeyword, OptimizationResult, RedFlagResult } from '../types/index';
+import {extractJobDataFromText, extractTextFromResume, analyzeKeywords, optimizeResume, scanJobRedFlags} from '../services/api';
 import JobDescriptionInput from '../components/jobs/JobDescriptionInput';
 import JobListings from '../components/jobs/JobListings';
+import RedFlagScanner from '../components/jobs/RedFlagScanner';
 import Footer from '../components/Footer';
 
 export default function ATSAnalyzer() {
@@ -51,6 +53,7 @@ export default function ATSAnalyzer() {
   const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
   const [, setSelectedKeywords] = useState<ActionableKeyword[]>([]);
   const [clearKeywordSelections, setClearKeywordSelections] = useState(false);
+  const [redFlagResult, setRedFlagResult] = useState<RedFlagResult | null>(null);
 
   // Ref for scrolling to results section
   const resultsRef = React.useRef<HTMLDivElement>(null);
@@ -92,20 +95,29 @@ export default function ATSAnalyzer() {
   setKeywordResults(null);
   setAnalysisComplete(false);
   setOptimizationResult(null); // Reset optimization result
+  setRedFlagResult(null); // Reset red flag result
 
   try {
     let jobData: JobData;
     let extractedResumeText: string = '';
 
-    // Step 1: Extract job data from description
+    // Step 1: Extract job data from description + run red flag scan in parallel
     if (inputMode === 'paste') {
       setScrapingStatus('Extracting job details with AI...');
       try {
-        jobData = await extractJobDataFromText(jobDescription);
+        const [jobDataResult, redFlagScanResult] = await Promise.all([
+          extractJobDataFromText(jobDescription),
+          scanJobRedFlags(jobDescription).catch(() => null),
+        ]);
+        jobData = jobDataResult;
         // Store job title for optimization
         setJobTitle(jobData.title || '');
         // Store company name for optimization
         setCompany(jobData.company || '');
+        // Store red flag results
+        if (redFlagScanResult) {
+          setRedFlagResult(redFlagScanResult);
+        }
       } catch (error) {
         alert('Failed to extract job data. Please try again.');
         setScrapingStatus('');
@@ -358,35 +370,16 @@ export default function ATSAnalyzer() {
             {/* Keyword Analysis Results */}
             {analysisComplete && keywordResults && (
               <div className="space-y-6" ref={resultsRef}>
+                {/* Red Flag Scanner — shown at top of results */}
+                {redFlagResult && (
+                  <RedFlagScanner
+                    result={redFlagResult}
+                    onDismiss={() => setRedFlagResult(null)}
+                  />
+                )}
+
                 {/* Match Score Card */}
-                <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="flex-1">
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-800">Job Match Score</h3>
-                      <p className="text-sm sm:text-base text-gray-500 mt-1">How well your uploaded resume matches this job description
-                      based on our AI analysis of your resume and this job description</p>
-                    </div>
-                    <div className={`text-3xl sm:text-4xl font-bold text-center md:text-right ${
-                      keywordResults.matchScore >= 70 ? 'text-green-600' :
-                      keywordResults.matchScore >= 50 ? 'text-yellow-600' : 'text-red-600'
-                    }`}>
-                      {keywordResults.matchScore}%
-                    </div>
-                  </div>
-                  {keywordResults.suggestions && keywordResults.suggestions.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <h4 className="font-semibold text-gray-700 mb-2">Suggestions:</h4>
-                      <ul className="space-y-1">
-                        {keywordResults.suggestions.map((suggestion, idx) => (
-                          <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
-                            <span className="text-indigo-500">•</span>
-                            {suggestion}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
+                <MatchScoreCard result={keywordResults} />
 
                 {/* Missing and Matching Keywords */}
                 <KeywordAnalysis

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {JobData, AnalysisResults, KeywordAnalysisResult, ActionableKeyword, OptimizationResult, CoverLetterResult } from '../types/index';
+import {JobData, AnalysisResults, KeywordAnalysisResult, ActionableKeyword, OptimizationResult, CoverLetterResult, RedFlagResult } from '../types/index';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -255,6 +255,40 @@ export const generateCoverLetter = async (
 /**
  * Export functions for use in components
  */
+/**
+ * Scan a job description for red flags and risk assessment
+ */
+export const scanJobRedFlags = async (
+  jobDescription: string
+): Promise<RedFlagResult> => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/api/scan-red-flags`,
+      { job_description: jobDescription },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 30000,
+      }
+    );
+
+    if (!response.data) {
+      throw new Error('No response from server');
+    }
+
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Red flag scan timed out. Please try again.');
+    }
+
+    throw new Error(error.message || 'Failed to scan job description. Please try again.');
+  }
+};
+
 const apiService = {
   extractTextFromResume,
   extractJobDataFromText,
@@ -262,6 +296,7 @@ const apiService = {
   optimizeResume,
   sendContactMessage,
   generateCoverLetter,
+  scanJobRedFlags,
 };
 
 export default apiService;

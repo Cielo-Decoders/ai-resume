@@ -183,7 +183,7 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
       {/* Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 text-white p-6 flex items-center justify-between hover:brightness-105 transition-all"
+        className="w-full bg-gradient-to-r from-indigo-800 via-purple-800 to-indigo-900 text-white p-6 flex items-center justify-between hover:brightness-105 transition-all"
       >
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -192,7 +192,7 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
           </div>
           <div className="text-left">
             <h2 className="text-2xl font-bold">AI Cover Letter Generator</h2>
-            <p className="text-emerald-100 text-sm">
+            <p className="text-indigo-100 text-sm">
               {result ? 'Your cover letter is ready' : 'Craft the perfect cover letter in seconds'}
             </p>
           </div>
@@ -258,7 +258,7 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
             <button
               onClick={handleGenerate}
               disabled={isGenerating}
-              className="w-full py-4 rounded-xl font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 text-lg"
+              className="px-8 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 text-base mx-auto"
             >
               {isGenerating ? (
                 <>
@@ -371,7 +371,7 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
                 </button>
                 <button
                   onClick={handleDownloadPDF}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-700 hover:to-teal-700 transition-colors font-medium text-sm shadow-md"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-colors font-medium text-sm shadow-md"
                 >
                   <Download className="w-4 h-4" />
                   Download PDF
@@ -406,7 +406,7 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
           <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                <FileText className="w-6 h-6 text-emerald-600" />
+                <FileText className="w-6 h-6 text-indigo-600" />
                 Cover Letter Preview
               </h3>
               <button
@@ -450,7 +450,7 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
                   handleDownloadPDF();
                   setShowPreview(false);
                 }}
-                className="flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+                className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
               >
                 <Download className="w-4 h-4" />
                 Download PDF

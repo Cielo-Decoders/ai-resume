@@ -38,7 +38,7 @@ const Pricing: React.FC = () => {
       ],
       cta: "Start Pro Trial",
       popular: true,
-      gradient: "from-purple-500 to-pink-500"
+      gradient: "from-indigo-600 to-purple-600"
     },
     {
       name: "Enterprise",
@@ -98,7 +98,7 @@ const Pricing: React.FC = () => {
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                  <span className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
                     Most Popular
                   </span>
                 </div>
@@ -117,7 +117,7 @@ const Pricing: React.FC = () => {
               <button
                 className={`w-full py-3 rounded-full font-semibold mb-6 transition-all duration-300 ${
                   plan.popular
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-xl hover:scale-105'
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-xl hover:scale-105'
                     : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                 }`}
               >
