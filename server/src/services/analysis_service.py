@@ -1206,6 +1206,104 @@ OUTPUT (valid JSON only, no markdown):
         return {"success": False, "optimizedResume": "", "message": f"Generation failed: {str(e)}"}
 
 
+# =========================================================
+# ---------------- COVER LETTER GENERATION ----------------
+# =========================================================
+
+COVER_LETTER_TONES = {
+    "professional": "Write in a polished, formal tone suitable for corporate environments. Use confident, precise language.",
+    "conversational": "Write in a warm, approachable tone that still maintains professionalism. Use first-person naturally and show personality.",
+    "enthusiastic": "Write with genuine excitement and energy about the opportunity. Show passion while remaining professional.",
+    "executive": "Write in a commanding, strategic tone suitable for senior leadership roles. Emphasize vision and impact.",
+}
+
+async def generate_cover_letter(
+    resume_text: str,
+    job_description: str,
+    job_title: str = "",
+    company: str = "",
+    tone: str = "professional",
+) -> Dict[str, Any]:
+    """
+    Generate a tailored cover letter based on the user's resume and the target job.
+    """
+    api_key = (settings.openai_api_key or os.getenv("OPENAI_API_KEY", "")).strip()
+    if not api_key:
+        return {"success": False, "coverLetter": "", "message": "OpenAI API key missing."}
+
+    tone_instruction = COVER_LETTER_TONES.get(tone, COVER_LETTER_TONES["professional"])
+
+    try:
+        client = _get_openai_client()
+
+        prompt = f"""Generate a compelling, tailored cover letter for this candidate.
+
+CANDIDATE'S RESUME:
+{resume_text[:8000]}
+
+TARGET POSITION: {job_title or "Not specified"}
+TARGET COMPANY: {company or "Not specified"}
+
+JOB DESCRIPTION:
+{job_description[:4000]}
+
+TONE: {tone}
+{tone_instruction}
+
+REQUIREMENTS:
+1. Use ONLY real information from the candidate's resume — do NOT fabricate achievements, companies, or dates
+2. Open with a strong, specific hook — avoid generic "I am writing to apply" openers
+3. Connect the candidate's actual experience to the job requirements with concrete examples
+4. Show knowledge of the company and why the candidate is specifically interested
+5. Keep it to 3-4 paragraphs, approximately 250-350 words
+6. End with a confident call-to-action
+7. Return ONLY the cover letter text — no subject lines, no "Dear Hiring Manager" alternatives list
+8. Start with "Dear Hiring Manager," (or use the company name if available)
+9. Sign off with just the candidate's name extracted from the resume
+
+OUTPUT: Return ONLY the plain text cover letter, nothing else."""
+
+        response = client.chat.completions.create(
+            model=settings.openai_model or "gpt-4o",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an expert career coach who writes exceptional, personalized cover letters. "
+                        "You never use filler phrases like 'I believe I would be a great fit' or 'I am excited to apply'. "
+                        "Instead, you craft letters that read like they were written by a confident professional "
+                        "who knows their worth and can articulate exactly why they're the right person for the role. "
+                        "You always use specific examples from the candidate's actual resume."
+                    )
+                },
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=2000,
+        )
+
+        cover_letter = response.choices[0].message.content.strip()
+
+        if not cover_letter:
+            return {"success": False, "coverLetter": "", "message": "AI returned empty response."}
+
+        word_count = len(cover_letter.split())
+
+        return {
+            "success": True,
+            "message": "Cover letter generated successfully",
+            "coverLetter": cover_letter,
+            "tone": tone,
+            "wordCount": word_count,
+        }
+
+    except Exception as e:
+        import traceback
+        print(f"Cover letter generation error: {e}")
+        print(f"Error traceback: {traceback.format_exc()}")
+        return {"success": False, "coverLetter": "", "message": f"Generation failed: {str(e)}"}
+
+
 def verify_keyword_integration(optimized_text: str, keywords: List[str]) -> Dict[str, Any]:
     """
     Verify that selected keywords were actually integrated into the resume.

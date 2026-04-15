@@ -8,7 +8,7 @@ from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from ..dependencies import AnalyzeControllerDep
-from ..controllers.AnalyzeController import KeywordAnalysisRequest, ResumeOptimizationRequest, ExtractJobRequest
+from ..controllers.AnalyzeController import KeywordAnalysisRequest, ResumeOptimizationRequest, ExtractJobRequest, CoverLetterRequest
 from ..config import settings
 from ..limiter import limiter
 
@@ -125,6 +125,17 @@ async def extract_job_endpoint(
     This avoids exposing the API key in the browser and bypasses CORS restrictions.
     """
     return await controller.extract_job_data(body)
+
+
+@analyze_router.post("/generate-cover-letter")
+@limiter.limit("5/minute")
+async def generate_cover_letter_endpoint(
+    request: Request,
+    body: CoverLetterRequest,
+    controller: AnalyzeControllerDep = None
+):
+    """Generate a tailored cover letter based on resume and job description."""
+    return await controller.generate_cover_letter_endpoint(body)
 
 
 def register_routes(app):

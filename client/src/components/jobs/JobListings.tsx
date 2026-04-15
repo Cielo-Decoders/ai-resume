@@ -127,16 +127,19 @@ const JobListings: React.FC<JobListingsProps> = ({ onUseDescription }) => {
           <p className="text-gray-500 font-medium">No jobs found. Try adjusting your search or category.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-6xl mx-auto">
-          {jobs.map((job) => (
-            <JobCard
-              key={job.id}
-              job={job}
-              onClick={setSelectedJob}
-              onUseDescription={onUseDescription || (() => {})}
-            />
-          ))}
-        </div>
+        <>
+          <p className="text-sm text-gray-400 font-medium">{jobs.length} positions found</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {jobs.map((job) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                onClick={setSelectedJob}
+                onUseDescription={onUseDescription || (() => {})}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
