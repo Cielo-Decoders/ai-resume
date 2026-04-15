@@ -534,6 +534,71 @@ def save_optimized_resume_to_file(text: str) -> Optional[str]:
 
 
 # =========================================================
+# ------- SMART JD CONDENSER (prevent timeout) -----------
+# =========================================================
+
+_JD_SECTION_PATTERNS = re.compile(
+    r'(?:^|\n)\s*'
+    r'(?:required|preferred|minimum|desired|must[\s-]have|nice[\s-]to[\s-]have|'
+    r'qualifications?|requirements?|skills?|responsibilities|what you.?ll|'
+    r'who you are|about the role|about you|tech[\s-]?stack|tools?|competenc)'
+    r'[^\n]{0,60}',
+    re.IGNORECASE,
+)
+
+_MAX_JD_CHARS_FOR_AI = 6_000  # ~1 500 tokens – plenty for extraction
+
+
+def _condense_job_description(raw_jd: str) -> str:
+    """
+    Return a shorter version of a job description that keeps only the
+    sections most relevant for keyword extraction (requirements, skills,
+    qualifications, tools).
+
+    If the JD is already short enough it is returned unchanged.
+    """
+    if len(raw_jd) <= _MAX_JD_CHARS_FOR_AI:
+        return raw_jd
+
+    lines = raw_jd.split('\n')
+
+    # ── Pass 1: find section boundaries ──────────────────────
+    keep_ranges: list[tuple[int, int]] = []
+    in_relevant = False
+    start = 0
+
+    for i, line in enumerate(lines):
+        if _JD_SECTION_PATTERNS.search(line):
+            if not in_relevant:
+                start = i
+                in_relevant = True
+        elif in_relevant and line.strip() == '':
+            # Blank line might be a paragraph break, keep going for a bit
+            pass
+        elif in_relevant and re.match(r'^[A-Z][A-Za-z\s]{2,40}:?\s*$', line.strip()):
+            # New section header that isn't relevant → close range
+            keep_ranges.append((start, i))
+            in_relevant = False
+
+    if in_relevant:
+        keep_ranges.append((start, len(lines)))
+
+    # ── Pass 2: merge kept lines ──────────────────────────────
+    if keep_ranges:
+        kept_lines: list[str] = []
+        for s, e in keep_ranges:
+            kept_lines.extend(lines[s:e])
+        condensed = '\n'.join(kept_lines).strip()
+        # If we extracted meaningful content, use it
+        if len(condensed) >= 200:
+            return condensed[:_MAX_JD_CHARS_FOR_AI]
+
+    # Fallback: take the first + last chunks (title area + requirements usually at end)
+    half = _MAX_JD_CHARS_FOR_AI // 2
+    return (raw_jd[:half] + '\n...\n' + raw_jd[-half:]).strip()
+
+
+# =========================================================
 # ---------------- RESUME ANALYSIS ------------------------
 # =========================================================
 
@@ -575,6 +640,10 @@ async def analyze_resume_against_job(resume_text: str, job_data: Dict) -> Dict[s
     # Normalize resume text for better matching
     resume_normalized = re.sub(r'[^\w\s]', ' ', resume_lower)  # Remove punctuation
     resume_words = set(resume_normalized.split())
+
+    # Batch-load skill variations for ALL job phrases in one call
+    # This replaces N serial OpenAI calls with a single batch call
+    _batch_load_skill_variations(job_phrases)
 
     for phrase in job_phrases:
         phrase_lower = phrase.lower()
@@ -639,18 +708,23 @@ async def analyze_resume_against_job(resume_text: str, job_data: Dict) -> Dict[s
 def _check_skill_variations(skill: str, resume_text: str) -> bool:
     """
     Check for common skill variations and abbreviations across all professions.
-    Uses AI to dynamically identify variations for any skill in any industry.
-    Results are cached for performance.
+    Uses a hardcoded lookup only — AI batch lookup happens separately.
     """
-    # Common hardcoded variations for performance (most frequently used)
     common_variations = {
         # Tech
-        'javascript': ['js'], 'typescript': ['ts'], 'python': ['py'],
+        'javascript': ['js', 'ecmascript'], 'typescript': ['ts'], 'python': ['py'],
         'kubernetes': ['k8s'], 'artificial intelligence': ['ai'], 'machine learning': ['ml'],
+        'continuous integration': ['ci'], 'continuous delivery': ['cd'], 'ci/cd': ['cicd'],
+        'amazon web services': ['aws'], 'google cloud platform': ['gcp'],
+        'microsoft azure': ['azure'], 'structured query language': ['sql'],
+        'nosql': ['mongodb', 'dynamodb', 'cassandra'], 'react.js': ['react', 'reactjs'],
+        'node.js': ['node', 'nodejs'], 'vue.js': ['vue', 'vuejs'],
+        'next.js': ['next', 'nextjs'], 'angular.js': ['angular', 'angularjs'],
 
         # Business
         'search engine optimization': ['seo'], 'customer relationship management': ['crm'],
         'return on investment': ['roi'], 'key performance indicator': ['kpi', 'kpis'],
+        'enterprise resource planning': ['erp'], 'business intelligence': ['bi'],
 
         # Finance
         'generally accepted accounting principles': ['gaap'], 'profit and loss': ['p&l'],
@@ -663,109 +737,82 @@ def _check_skill_variations(skill: str, resume_text: str) -> bool:
     }
 
     skill_lower = skill.lower().strip()
+    resume_lower = resume_text.lower()
 
     # Quick check: common variations first (no API call needed)
     if skill_lower in common_variations:
         for variant in common_variations[skill_lower]:
             pattern = r'\b' + re.escape(variant) + r'\b'
-            if re.search(pattern, resume_text):
+            if re.search(pattern, resume_lower):
                 return True
 
     # Reverse lookup for common variations
     for full_form, abbrevs in common_variations.items():
         if skill_lower in abbrevs:
             pattern = r'\b' + re.escape(full_form) + r'\b'
-            if re.search(pattern, resume_text):
+            if re.search(pattern, resume_lower):
                 return True
 
-    # If not in common variations, use AI to check for variations dynamically
-    return _check_skill_variations_with_ai(skill_lower, resume_text)
+    # Check the batch cache (populated by _batch_check_skill_variations)
+    if skill_lower in _skill_variations_cache:
+        for variant in _skill_variations_cache[skill_lower]:
+            pattern = r'\b' + re.escape(variant.lower()) + r'\b'
+            if re.search(pattern, resume_lower):
+                return True
+
+    return False
 
 
 # Cache for AI-detected skill variations
 _skill_variations_cache: Dict[str, List[str]] = {}
 
 
-def _check_skill_variations_with_ai(skill: str, resume_text: str) -> bool:
+def _batch_load_skill_variations(skills: List[str]) -> None:
     """
-    Use AI to dynamically detect skill variations and abbreviations.
-    Works for any skill in any profession. Results are cached.
+    Batch-fetch variations for multiple skills in ONE OpenAI call.
+    Replaces the old per-skill serial approach that caused timeouts.
     """
-    skill_lower = skill.lower().strip()
+    # Filter to only skills not already cached
+    uncached = [s for s in skills if s.lower().strip() not in _skill_variations_cache]
+    if not uncached:
+        return
 
-    # Check if we've already looked up variations for this skill
-    if skill_lower not in _skill_variations_cache:
-        # Get variations from AI
-        variations = _get_skill_variations_from_ai(skill_lower)
-        _skill_variations_cache[skill_lower] = variations
-    else:
-        variations = _skill_variations_cache[skill_lower]
+    # Limit batch size to keep prompt reasonable
+    batch = uncached[:30]
 
-    # Check if any variation exists in resume
-    resume_lower = resume_text.lower()
-    for variant in variations:
-        pattern = r'\b' + re.escape(variant.lower()) + r'\b'
-        if re.search(pattern, resume_lower):
-            return True
-
-    return False
-
-
-def _get_skill_variations_from_ai(skill: str) -> List[str]:
-    """
-    Ask AI to identify common variations and abbreviations for a skill.
-    Returns list of variations including the original skill.
-    """
     client = _get_openai_client()
-
     try:
-        prompt = f"""List ALL common variations, abbreviations, and alternative names for this skill/term: "{skill}"
-
-Include:
-- Common abbreviations (e.g., "JavaScript" → "JS")
-- Alternative names (e.g., "Machine Learning" → "ML", "AI")
-- Industry-specific terms
-- Plural/singular forms if relevant
-
-Return ONLY a JSON array of strings. No explanations.
-
-Example for "JavaScript": ["javascript", "js", "ecmascript", "node.js", "nodejs"]
-Example for "Search Engine Optimization": ["search engine optimization", "seo"]
-
-Skill: "{skill}"
-"""
+        prompt = (
+            "For each skill below, list its common abbreviations and alternative names.\n"
+            "Return ONLY a JSON object mapping each skill to an array of variations.\n"
+            "Example: {\"javascript\": [\"js\", \"ecmascript\"], \"machine learning\": [\"ml\"]}\n\n"
+            "Skills:\n" + "\n".join(f"- {s}" for s in batch)
+        )
 
         response = client.chat.completions.create(
             model=settings.openai_model or "gpt-4o-mini",
             messages=[
-                {
-                    "role": "system",
-                    "content": "You are a skill variation expert. Return ONLY a JSON array of strings with no markdown formatting."
-                },
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "Return ONLY valid JSON, no markdown."},
+                {"role": "user", "content": prompt},
             ],
             temperature=0.0,
-            max_tokens=200
+            max_tokens=1000,
         )
 
         content = response.choices[0].message.content.strip()
         content = re.sub(r"^```(?:json)?|```$", "", content, flags=re.MULTILINE).strip()
+        mapping = json.loads(content)
 
-        variations = json.loads(content)
-
-        # Ensure it's a list and includes the original skill
-        if isinstance(variations, list):
-            # Add original skill if not present
-            if skill.lower() not in [v.lower() for v in variations]:
-                variations.append(skill)
-            return variations
-        else:
-            return [skill]
+        if isinstance(mapping, dict):
+            for skill, variants in mapping.items():
+                if isinstance(variants, list):
+                    _skill_variations_cache[skill.lower().strip()] = variants
 
     except Exception as e:
-        print(f"AI skill variation lookup error for '{skill}': {e}")
-        # Fallback: return just the skill itself
-        return [skill]
+        print(f"Batch skill variation lookup error: {e}")
+        # On failure, cache empty lists so we don't retry
+        for s in batch:
+            _skill_variations_cache[s.lower().strip()] = []
 
 
 # =========================================================
@@ -1728,3 +1775,160 @@ def calculate_ats_score(
     final_score = max(0, min(100, round(score)))
 
     return final_score
+
+
+# =========================================================
+# ----------- MOCK INTERVIEW GENERATION -------------------
+# =========================================================
+
+async def generate_interview_questions(
+    job_description: str,
+    resume_text: str,
+    count: int = 5,
+) -> Dict[str, Any]:
+    """
+    Generate role-specific mock interview questions based on the job
+    description and candidate resume.
+    """
+    api_key = (settings.openai_api_key or os.getenv("OPENAI_API_KEY", "")).strip()
+    if not api_key:
+        return {"success": False, "questions": [], "message": "OpenAI API key missing."}
+
+    try:
+        client = _get_openai_client()
+
+        prompt = f"""You are a senior hiring manager conducting interviews.
+Based on the job description and the candidate's resume below, generate exactly {count} interview questions.
+
+JOB DESCRIPTION:
+{job_description[:5000]}
+
+CANDIDATE RESUME:
+{resume_text[:5000]}
+
+RULES:
+- Mix question types: behavioral, technical, situational, and role-specific
+- Target gaps between the resume and job requirements
+- Also probe strengths the candidate can leverage
+- Order questions from easier to harder to simulate a real interview flow
+- Each question must have a clear "context" explaining why you'd ask it
+
+Return ONLY valid JSON (no markdown fences):
+[
+  {{
+    "id": 1,
+    "type": "behavioral|technical|situational|role-specific",
+    "question": "The full interview question",
+    "context": "Why this question matters for this role",
+    "difficulty": "easy|medium|hard"
+  }}
+]"""
+
+        response = client.chat.completions.create(
+            model=settings.openai_model or "gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a seasoned hiring manager who conducts structured, insightful interviews. "
+                        "Your questions are specific to the role and candidate — never generic. "
+                        "You probe for real competence, not rehearsed answers."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.6,
+            max_tokens=2000,
+        )
+
+        content = response.choices[0].message.content.strip()
+        content = re.sub(r"^```(?:json)?|```$", "", content, flags=re.MULTILINE).strip()
+        questions = json.loads(content)
+
+        if not isinstance(questions, list):
+            return {"success": False, "questions": [], "message": "Unexpected AI response format."}
+
+        return {"success": True, "questions": questions}
+
+    except Exception as e:
+        print(f"Interview question generation error: {e}")
+        return {"success": False, "questions": [], "message": f"Generation failed: {str(e)}"}
+
+
+async def evaluate_interview_answer(
+    question: str,
+    answer: str,
+    job_description: str,
+) -> Dict[str, Any]:
+    """
+    Evaluate a candidate's interview answer for relevance, completeness,
+    and overall quality.
+    """
+    api_key = (settings.openai_api_key or os.getenv("OPENAI_API_KEY", "")).strip()
+    if not api_key:
+        return {"success": False, "feedback": None, "message": "OpenAI API key missing."}
+
+    try:
+        client = _get_openai_client()
+
+        prompt = f"""You are an experienced interview coach evaluating a candidate's answer.
+
+INTERVIEW QUESTION:
+{question}
+
+CANDIDATE'S ANSWER:
+{answer[:3000]}
+
+JOB CONTEXT:
+{job_description[:3000]}
+
+Score the answer on three dimensions (0-100 each):
+1. relevance — Does the answer actually address the question asked?
+2. completeness — Does it provide enough depth, examples, and the STAR method where applicable?
+3. overall score — Holistic quality considering clarity, confidence, and impact
+
+Provide:
+- 2-3 specific strengths of the answer
+- 2-3 concrete improvements
+- A sample strong answer (150-200 words) the candidate can learn from
+
+Return ONLY valid JSON (no markdown fences):
+{{
+  "score": <overall 0-100>,
+  "relevance": <0-100>,
+  "completeness": <0-100>,
+  "strengths": ["strength 1", "strength 2"],
+  "improvements": ["improvement 1", "improvement 2"],
+  "sampleAnswer": "A well-structured sample answer..."
+}}"""
+
+        response = client.chat.completions.create(
+            model=settings.openai_model or "gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a supportive but honest interview coach. "
+                        "You give constructive feedback that helps candidates improve. "
+                        "You never score too generously — an average answer gets 50-60, "
+                        "a good one 70-80, and only exceptional answers score 85+."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.4,
+            max_tokens=1500,
+        )
+
+        content = response.choices[0].message.content.strip()
+        content = re.sub(r"^```(?:json)?|```$", "", content, flags=re.MULTILINE).strip()
+        feedback = json.loads(content)
+
+        if not isinstance(feedback, dict):
+            return {"success": False, "feedback": None, "message": "Unexpected AI response format."}
+
+        return {"success": True, "feedback": feedback}
+
+    except Exception as e:
+        print(f"Interview answer evaluation error: {e}")
+        return {"success": False, "feedback": None, "message": f"Evaluation failed: {str(e)}"}

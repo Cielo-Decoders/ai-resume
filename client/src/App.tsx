@@ -50,6 +50,7 @@ function AppContent() {
         <Route path="/app/jobs" element={<ATSAnalyzerPro />} />
         <Route path="/app/analysis" element={<ATSAnalyzerPro />} />
         <Route path="/app/coverletter" element={<ATSAnalyzerPro />} />
+        <Route path="/app/interview" element={<ATSAnalyzerPro />} />
 
         {/* Catch all - redirect to landing */}
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,0 +1,71 @@
+Liliane Azabe
+Berea, KY | azabelili2016@gmail.com | (606) 386 - 6520 | GitHub | LinkedIn
+EDUCATION
+Berea College, Berea, KY
+B.A. Computer and Information Science, Minor: Health Studies, Expected: May 2025
+•GPA: 3.8 / 4.0
+•Honors:
+•Wharton Dean's SUMR scholar, University of Pennsylvania
+•Dean's List (2021 - Present)
+•Berea College Full Ride Scholarship ($140,250)
+•Relevant Courses: Data Structures and Algorithms, Database Systems, Software Engineering, Business Analytics, Information
+Security, Web Development, Human Centered Computing, Discrete Math, Statistics, Macroeconomics, Customer Decision
+Making.
+•Clubs/Affiliation: Girls Who Code (GWC), Rewriting the Code (RTC), National Society of Black Engineers (NSBE),
+CodePath, Women in Cybersecurity (WiCyS), Society of Women in Engineering (SWE), ColorStack.
+TECHNICAL SKILLS
+Languages: Python, C++, SQL, R, Java, JavaScript
+Technologies: React, JSON, PostGres, MySQL, Tableau, PowerBi, Spring Boot, REST API, Microsoft Power Platforms, SharePoint,
+Git Version Control, PowerShell, Microsoft Office applications (suite), Excel, Google Suite, Trello, PyTorch,
+TensorFlow
+Tools:Debugging, Data Integration, Business Consulting, Security Monitoring (CCTV camera, Genetec, Lenel, C-Cure)
+EXPERIENCE
+Software Engineer Intern, Bloomberg Tech Lab
+Feb 2025 - Feb 2025
+Bloomberg, New York, New York
+•Selected as one of the 36 software engineers from 400 applicants to attend a three-day intensive tech lab at Bloomberg
+Engineering's global headquarters.
+•Collaborated with Bloomberg Engineers and peers to build a Python-based portfolio manager using Object-Oriented
+Programming (OOP) principles, enhancing API design and implementation.
+•Attended interactive sessions focused on technical interview skills and tech talks, gaining insights into unit testing techniques
+and machine learning models.
+Corporate Security Intern, Occidental Petroleum (OXY)
+May 2024 - Aug 2024
+Houston, TX
+•Standardized and built a comprehensive daily reporting application for the security department using PowerApps, enhancing
+data accuracy and collection into a relational database by 80% compared to previous methods.
+•Integrated reported data from 7 office locations into a unified data repository while ensuring optimized data visualization on
+dashboards using PowerBi, which enhanced business intelligence for better recommendations.
+•Automated workflow processes to enable specialized handling of specific reported items using PowerAutomate, significantly
+streamlining operations from 5% to 80%.
+Software Developer Intern, Berea College
+June 2023 - May 2024
+Berea, KY
+•Developed a full-stack web application in Flask (Python) which serves 1900+ students and faculty to administer programs and
+events using an agile methodology, focusing on building maintainable and testable code bases.
+•Advanced in implementing front-end interfaces using technologies such as jQuery, JavaScript, Bootstrap, and back-end
+integration with Jinja in a Linux environment.
+•Collaborated in an agile team, using tools like VS Code Live Share to design, test, and debug applications as a team, driving
+consensus on technical direction.
+Research Intern, Wharton School of UPenn
+May 2022 - Aug 2022
+Philadelphia, PA
+•Awarded a $30,000 Wharton Dean's Scholarship for leading research on validating AI algorithms for chest X-rays in Nigeria,
+contributing to the development of machine learning models.
+•Designed 5 predictive models using R which analyzed smoking cessation symptoms, benefiting over 500 smokers in their
+recovery journey through data mining and pattern recognition techniques.
+•Improved research efficiency by 2 months, integrating data manipulation and visualization tools for testing and publication.
+TECHNICAL
+PROJECTS
+Security REST API, Berea College
+Oct 2024 - Present
+•Implemented and managed a secure REST API in Flask, with authentication features ensuring adherence to industry standards
+and data protection for robust access control, focusing on API design.
+Keylogger Detector, Berea College
+Sept 2024 - Dec 2024
+•Designed and launched a JavaScript application targeting keylogger detection, which decreased manual keylogger monitoring
+efforts by 25 hours monthly, allowing the security team to focus on higher-priority threats and incident resolution.
+LEADERSHIP
+•Co-founder & Recruitment Officer, Women in Cybersecurity (WiCyS), Berea Chapter: Organized events to promote diversity
+in cybersecurity and engaged students in hands-on learning.
+•Public Relations Officer, Girls Who Code: Coordinated outreach and events to encourage diversity in STEM and tech.

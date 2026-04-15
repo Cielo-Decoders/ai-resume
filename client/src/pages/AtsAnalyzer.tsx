@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, CheckCircle, FileText, Mail } from 'lucide-react';
+import { Upload, CheckCircle, FileText, Mail, Mic } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import TabNavigation from '../components/tabs/TabNavigation';
 import ResumeUpload from '../components/resume/ResumeUpload';
@@ -12,6 +12,7 @@ import {extractJobDataFromText, extractTextFromResume, analyzeKeywords, optimize
 import JobDescriptionInput from '../components/jobs/JobDescriptionInput';
 import JobListings from '../components/jobs/JobListings';
 import RedFlagScanner from '../components/jobs/RedFlagScanner';
+import InterviewerQuestions from '../components/questions/InterviewerQuestions';
 import Footer from '../components/Footer';
 
 export default function ATSAnalyzer() {
@@ -21,6 +22,7 @@ export default function ATSAnalyzer() {
   const getTabFromPath = (pathname: string) => {
     if (pathname === '/app/analysis') return 'analyze';
     if (pathname === '/app/coverletter') return 'cover-letter';
+    if (pathname === '/app/interview') return 'interview';
     return 'jobs';
   };
 
@@ -28,11 +30,13 @@ export default function ATSAnalyzer() {
 
   const handleSetActiveTab = (tab: string) => {
     setActiveTab(tab);
-    const path =
-      tab === 'analyze' ? '/app/analysis' :
-      tab === 'cover-letter' ? '/app/coverletter' :
-      '/app/jobs';
-    navigate(path, { replace: true });
+    const paths: Record<string, string> = {
+      analyze: '/app/analysis',
+      'cover-letter': '/app/coverletter',
+      interview: '/app/interview',
+      jobs: '/app/jobs',
+    };
+    navigate(paths[tab] || '/app/jobs', { replace: true });
   };
 
   useEffect(() => {
@@ -107,7 +111,13 @@ export default function ATSAnalyzer() {
 
     // Step 1: Extract job data from description + run red flag scan in parallel
     if (inputMode === 'paste') {
-      setScrapingStatus('Extracting job details with AI...');
+      const jdLength = jobDescription.length;
+      const isLongJd = jdLength > 3000;
+      setScrapingStatus(
+        isLongJd
+          ? 'Extracting job details with AI (long description detected — condensing for speed)...'
+          : 'Extracting job details with AI...'
+      );
       try {
         const [jobDataResult, redFlagScanResult] = await Promise.all([
           extractJobDataFromText(jobDescription),
@@ -163,7 +173,7 @@ export default function ATSAnalyzer() {
 
     // Step 3: Analyze keywords - compare resume against job description
     try {
-      setScrapingStatus('Analyzing keywords and matching skills...');
+      setScrapingStatus('Analyzing keywords and matching skills — this may take a moment for detailed descriptions...');
       const keywordAnalysis = await analyzeKeywords(extractedResumeText, jobData);
       setKeywordResults(keywordAnalysis);
       setAnalysisComplete(true);
@@ -248,7 +258,11 @@ export default function ATSAnalyzer() {
                 <div className="bg-gradient-to-r from-indigo-600 to-purple-600 h-full rounded-full animate-progress"></div>
               </div>
 
-              <p className="text-sm text-gray-500">This may take a few moments...</p>
+              <p className="text-sm text-gray-500">
+                {scrapingStatus.includes('keyword') || scrapingStatus.includes('matching')
+                  ? 'AI is comparing your resume against the job — longer descriptions take a bit more time'
+                  : 'This may take a few moments...'}
+              </p>
             </div>
           </div>
         </div>
@@ -451,6 +465,30 @@ export default function ATSAnalyzer() {
                   <Upload className="w-4 h-4" />
                   Go to Analyze &amp; Optimize
                 </button>
+              </div>
+            )}
+          </div>
+        )}
+        {activeTab === 'interview' && (
+          <div className="space-y-6">
+            {resumeText && jobDescription ? (
+              <InterviewerQuestions
+                resumeText={resumeText}
+                jobDescription={jobDescription}
+                jobTitle={jobTitle}
+                company={company}
+              />
+            ) : (
+              <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+                <Mic className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+                <h3 className="text-xl font-bold text-gray-700 mb-2">Upload & Analyze First</h3>
+                <p className="text-gray-500 text-sm max-w-md mx-auto mb-4">
+                  To start a mock interview, first upload your resume and paste a job description in the{' '}
+                  <button onClick={() => handleSetActiveTab('analyze')} className="text-indigo-600 font-semibold hover:underline">
+                    Analyze & Optimize
+                  </button>{' '}
+                  tab. The AI needs both to generate tailored interview questions.
+                </p>
               </div>
             )}
           </div>

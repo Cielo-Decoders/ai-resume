@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, Briefcase, Mail, type LucideIcon } from 'lucide-react';
+import { Target, Briefcase, Mail, Mic, type LucideIcon } from 'lucide-react';
 
 interface TabNavigationProps {
   activeTab: string;
@@ -16,6 +16,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
     { id: 'jobs', label: 'Job Listings', subtitle: 'Discover matching opportunities', icon: Briefcase },
     { id: 'analyze', label: 'Analyze & Optimize', subtitle: 'ATS scoring & resume tailoring', icon: Target, badge: applicationsCount },
     { id: 'cover-letter', label: 'Cover Letter', subtitle: 'AI-crafted cover letters', icon: Mail },
+    { id: 'interview', label: 'Mock Interview', subtitle: 'Practice with AI-powered questions', icon: Mic },
   ];
 
   return (
