@@ -157,6 +157,14 @@ export interface OptimizationResult {
   formatting?: ResumeFormatting;
 }
 
+export interface CoverLetterResult {
+  success: boolean;
+  message: string;
+  coverLetter: string;
+  tone: string;
+  wordCount: number;
+}
+
 export interface JobListing {
   id: number;
   url: string;

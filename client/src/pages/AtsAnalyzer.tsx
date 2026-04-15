@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, CheckCircle, FileText } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import TabNavigation from '../components/tabs/TabNavigation';
 import ResumeUpload from '../components/resume/ResumeUpload';
 import KeywordAnalysis from '../components/resume/KeywordAnalysis';
 import OptimizedResumeDisplay from '../components/resume/OptimizedResumeDisplay';
+import CoverLetterDisplay from '../components/resume/CoverLetterDisplay';
 import {Application, JobData, KeywordAnalysisResult, ActionableKeyword, OptimizationResult } from '../types/index';
 import {extractJobDataFromText, extractTextFromResume, analyzeKeywords, optimizeResume} from '../services/api';
 import JobDescriptionInput from '../components/jobs/JobDescriptionInput';
@@ -11,7 +13,25 @@ import JobListings from '../components/jobs/JobListings';
 import Footer from '../components/Footer';
 
 export default function ATSAnalyzer() {
-  const [activeTab, setActiveTab] = useState('jobs');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const getTabFromPath = (pathname: string) => {
+    if (pathname === '/app/analysis') return 'analyze';
+    return 'jobs';
+  };
+
+  const [activeTab, setActiveTab] = useState(() => getTabFromPath(location.pathname));
+
+  const handleSetActiveTab = (tab: string) => {
+    setActiveTab(tab);
+    const path = tab === 'analyze' ? '/app/analysis' : '/app/jobs';
+    navigate(path, { replace: true });
+  };
+
+  useEffect(() => {
+    setActiveTab(getTabFromPath(location.pathname));
+  }, [location.pathname]);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState('');
   const [inputMode, setInputMode] = useState<'paste'>('paste');
@@ -26,6 +46,7 @@ export default function ATSAnalyzer() {
   const [resumeText, setResumeText] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [company, setCompany] = useState('');
+  const [jobUrl, setJobUrl] = useState('');
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
   const [, setSelectedKeywords] = useState<ActionableKeyword[]>([]);
@@ -250,7 +271,7 @@ export default function ATSAnalyzer() {
         </div>
         <TabNavigation
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={handleSetActiveTab}
           applicationsCount={applications.length}
         />
         {activeTab === 'jobs' && (
@@ -259,7 +280,10 @@ export default function ATSAnalyzer() {
               // Strip HTML tags to get plain text description
               const plainText = job.description.replace(/<[^>]*>/g, '\n').replace(/\n{2,}/g, '\n').trim();
               setJobDescription(plainText);
-              setActiveTab('analyze');
+              setJobUrl(job.url || '');
+              setCompany(job.company_name || '');
+              setJobTitle(job.title || '');
+              handleSetActiveTab('analyze');
             }}
           />
         )}
@@ -390,6 +414,18 @@ export default function ATSAnalyzer() {
                     originalResume={resumeText}
                     onClose={() => setOptimizationResult(null)}
                     company={company}
+                    jobUrl={jobUrl}
+                  />
+                )}
+
+                {/* Cover Letter Generator — appears after resume optimization */}
+                {optimizationResult && optimizationResult.success && resumeText && jobDescription && (
+                  <CoverLetterDisplay
+                    resumeText={resumeText}
+                    jobDescription={jobDescription}
+                    jobTitle={jobTitle}
+                    company={company}
+                    jobUrl={jobUrl}
                   />
                 )}
               </div>

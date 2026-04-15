@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Download, Sparkles, ChevronDown, ChevronUp, Eye, X } from 'lucide-react';
+import { FileText, Download, Sparkles, ChevronDown, ChevronUp, Eye, X, ExternalLink } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { OptimizationResult, ResumeChange, ResumeFormatting } from '../../types';
 
@@ -8,6 +8,7 @@ interface OptimizedResumeDisplayProps {
   originalResume?: string;
   onClose?: () => void;
   company?: string;
+  jobUrl?: string;
 }
 
 // Default formatting settings matching user's resume style
@@ -20,7 +21,7 @@ const DEFAULT_FORMATTING: ResumeFormatting = {
   margins: { top: 12.7, bottom: 12.7, left: 12.7, right: 12.7 }
 };
 
-const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result, originalResume, onClose, company }) => {
+const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result, originalResume, onClose, company, jobUrl }) => {
   const [showChanges, setShowChanges] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -725,6 +726,18 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
             <Download className="w-5 h-5" />
             Download PDF
           </button>
+
+          {jobUrl && (
+            <a
+              href={jobUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium shadow-md"
+            >
+              <ExternalLink className="w-5 h-5" />
+              Apply for This Job
+            </a>
+          )}
         </div>
       </div>
 

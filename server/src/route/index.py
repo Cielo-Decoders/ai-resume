@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from ..dependencies import AnalyzeControllerDep
-from ..controllers.AnalyzeController import KeywordAnalysisRequest, ResumeOptimizationRequest, ExtractJobRequest
+from ..controllers.AnalyzeController import KeywordAnalysisRequest, ResumeOptimizationRequest, ExtractJobRequest, CoverLetterRequest
 from ..config import settings
 from ..limiter import limiter
 
@@ -157,6 +157,17 @@ async def job_proxy_endpoint(source: str, request: Request):
         )
     except Exception as exc:
         return JSONResponse(status_code=502, content={"error": "Failed to fetch job data"})
+
+
+@analyze_router.post("/generate-cover-letter")
+@limiter.limit("5/minute")
+async def generate_cover_letter_endpoint(
+    request: Request,
+    body: CoverLetterRequest,
+    controller: AnalyzeControllerDep = None
+):
+    """Generate a tailored cover letter based on resume and job description."""
+    return await controller.generate_cover_letter_endpoint(body)
 
 
 def register_routes(app):
