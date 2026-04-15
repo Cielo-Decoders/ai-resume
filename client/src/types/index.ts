@@ -209,3 +209,32 @@ export interface JobListing {
   description: string;
   source?: string;
 }
+
+export interface InterviewQuestion {
+  id: number;
+  type: 'behavioral' | 'technical' | 'situational' | 'role-specific';
+  question: string;
+  context: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
+export interface AnswerFeedback {
+  score: number;
+  relevance: number;
+  completeness: number;
+  strengths: string[];
+  improvements: string[];
+  sampleAnswer: string;
+}
+
+export interface MockInterviewResult {
+  success: boolean;
+  questions: InterviewQuestion[];
+  message?: string;
+}
+
+export interface AnswerEvaluationResult {
+  success: boolean;
+  feedback: AnswerFeedback;
+  message?: string;
+}
