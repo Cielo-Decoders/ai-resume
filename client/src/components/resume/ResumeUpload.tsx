@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Upload } from 'lucide-react';
 
 interface ResumeUploadProps {
@@ -12,6 +12,41 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({
   baseResume,
   onFileUpload,
 }) => {
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+
+      const file = e.dataTransfer.files?.[0];
+      if (file && file.type === 'application/pdf') {
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        const input = document.getElementById('resume-upload') as HTMLInputElement;
+        if (input) {
+          input.files = dataTransfer.files;
+          const event = new Event('change', { bubbles: true });
+          input.dispatchEvent(event);
+        }
+      }
+    },
+    []
+  );
+
   return (
     <div className="mt-6">
       <label
@@ -21,7 +56,16 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({
       >
         {baseResume ? 'Base Resume Loaded ✓' : 'Upload Base Resume (PDF)'}
       </label>
-      <div className="border-2 border-dashed border-gray-300 rounded-lg py-20 px-8 text-center hover:border-indigo-500 transition-colors cursor-pointer">
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`border-2 border-dashed rounded-lg py-20 px-8 text-center transition-colors cursor-pointer ${
+          isDragging
+            ? 'border-indigo-500 bg-indigo-50'
+            : 'border-gray-300 hover:border-indigo-500'
+        }`}
+      >
         <input
           type="file"
           accept=".pdf"
@@ -30,7 +74,7 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({
           id="resume-upload"
         />
         <label htmlFor="resume-upload" className="cursor-pointer">
-          <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+          <Upload className={`w-12 h-12 mx-auto mb-3 ${isDragging ? 'text-indigo-500' : 'text-gray-400'}`} />
           <p className="text-gray-600 font-medium">
             {resumeFile ? resumeFile.name : 'Click to upload or drag & drop'}
           </p>
