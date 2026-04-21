@@ -78,6 +78,11 @@ const JobCard: React.FC<JobCardProps> = ({ job, onClick }) => {
               </span>
             )}
           </div>
+          {job.source && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 ml-auto flex-shrink-0">
+              {job.source}
+            </span>
+          )}
         </div>
       </div>
     </div>
