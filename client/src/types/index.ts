@@ -170,4 +170,5 @@ export interface JobListing {
   candidate_required_location: string;
   salary: string;
   description: string;
+  source?: string;
 }

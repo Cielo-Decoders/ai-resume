@@ -37,7 +37,7 @@ const JobListings: React.FC<JobListingsProps> = ({ onUseDescription }) => {
     setLoading(true);
     setError(null);
     try {
-      const category = activeCategory === 'All' ? undefined : activeCategory.toLowerCase().replace(/ \/ /g, '-').replace(/ /g, '-');
+      const category = activeCategory === 'All' ? undefined : activeCategory;
       const results = await fetchJobListings(searchTerm || undefined, category, 30);
       const sorted = [...results].sort((a, b) => {
         const dateA = a.publication_date ? new Date(a.publication_date).getTime() : 0;
@@ -130,7 +130,7 @@ const JobListings: React.FC<JobListingsProps> = ({ onUseDescription }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-6xl mx-auto">
           {jobs.map((job) => (
             <JobCard
-              key={job.id}
+              key={`${job.source}-${job.id}`}
               job={job}
               onClick={setSelectedJob}
               onUseDescription={onUseDescription || (() => {})}
