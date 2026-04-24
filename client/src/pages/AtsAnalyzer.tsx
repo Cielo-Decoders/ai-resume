@@ -7,10 +7,11 @@ import OptimizedResumeDisplay from '../components/resume/OptimizedResumeDisplay'
 import {Application, JobData, KeywordAnalysisResult, ActionableKeyword, OptimizationResult } from '../types/index';
 import {extractJobDataFromText, extractTextFromResume, analyzeKeywords, optimizeResume} from '../services/api';
 import JobDescriptionInput from '../components/jobs/JobDescriptionInput';
+import JobListings from '../components/jobs/JobListings';
 import Footer from '../components/Footer';
 
 export default function ATSAnalyzer() {
-  const [activeTab, setActiveTab] = useState('analyze');
+  const [activeTab, setActiveTab] = useState('jobs');
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState('');
   const [inputMode, setInputMode] = useState<'paste'>('paste');
@@ -252,6 +253,16 @@ export default function ATSAnalyzer() {
           setActiveTab={setActiveTab}
           applicationsCount={applications.length}
         />
+        {activeTab === 'jobs' && (
+          <JobListings
+            onUseDescription={(job) => {
+              // Strip HTML tags to get plain text description
+              const plainText = job.description.replace(/<[^>]*>/g, '\n').replace(/\n{2,}/g, '\n').trim();
+              setJobDescription(plainText);
+              setActiveTab('analyze');
+            }}
+          />
+        )}
         {activeTab === 'analyze' && (
           <div className="space-y-6">
             <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 md:p-8">

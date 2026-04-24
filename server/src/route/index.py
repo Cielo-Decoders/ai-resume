@@ -4,6 +4,7 @@ Route configuration module for organizing API endpoints.
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import httpx
 from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -11,6 +12,12 @@ from ..dependencies import AnalyzeControllerDep
 from ..controllers.AnalyzeController import KeywordAnalysisRequest, ResumeOptimizationRequest, ExtractJobRequest
 from ..config import settings
 from ..limiter import limiter
+
+# Trusted external job board proxy targets (server-side only, no API key required)
+_JOB_PROXY_TARGETS = {
+    "working-nomads": "https://www.workingnomads.com/api/exposed_jobs/",
+    "himalayas": "https://himalayas.app/jobs/api",
+}
 
 # Create router for analyze-related endpoints
 analyze_router = APIRouter(prefix="/api", tags=["analyze"])
@@ -125,6 +132,31 @@ async def extract_job_endpoint(
     This avoids exposing the API key in the browser and bypasses CORS restrictions.
     """
     return await controller.extract_job_data(body)
+
+
+@analyze_router.get("/jobs/{source}")
+@limiter.limit("60/minute")
+async def job_proxy_endpoint(source: str, request: Request):
+    """
+    Server-side proxy for external job APIs that lack CORS headers.
+    Only proxies pre-approved, trusted job board sources.
+    """
+    target_url = _JOB_PROXY_TARGETS.get(source)
+    if not target_url:
+        return JSONResponse(status_code=404, content={"error": "Unknown job source"})
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(target_url, headers={"Accept": "application/json"})
+            resp.raise_for_status()
+            return resp.json()
+    except httpx.HTTPStatusError as exc:
+        return JSONResponse(
+            status_code=502,
+            content={"error": f"Upstream error: {exc.response.status_code}"},
+        )
+    except Exception as exc:
+        return JSONResponse(status_code=502, content={"error": "Failed to fetch job data"})
 
 
 def register_routes(app):
