@@ -4,6 +4,7 @@ import { JobListing } from '../../types/index';
 
 interface JobCardProps {
   job: JobListing;
+  regionLabel?: string;
   onClick: (job: JobListing) => void;
   onUseDescription: (job: JobListing) => void;
 }
@@ -26,7 +27,7 @@ function formatRelativeDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-const JobCard: React.FC<JobCardProps> = ({ job, onClick }) => {
+const JobCard: React.FC<JobCardProps> = ({ job, regionLabel, onClick }) => {
   return (
     <div
       className="w-full text-left bg-white rounded-xl shadow-md hover:shadow-[0_8px_30px_rgba(79,70,229,0.15)] transition-all duration-300 ease-out p-5 border border-gray-200 hover:border-indigo-300 hover:-translate-y-1 group cursor-pointer"
@@ -81,6 +82,11 @@ const JobCard: React.FC<JobCardProps> = ({ job, onClick }) => {
           {job.source && (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 ml-auto flex-shrink-0">
               {job.source}
+            </span>
+          )}
+          {regionLabel && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-50 text-cyan-700 ml-2 flex-shrink-0">
+              {regionLabel}
             </span>
           )}
         </div>

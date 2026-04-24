@@ -114,6 +114,15 @@ const JobDetail: React.FC<JobDetailProps> = ({ job, onBack, onUseDescription }) 
 
         {/* Action Buttons */}
         <div className="mt-6 flex flex-wrap gap-3">
+          {onUseDescription && (
+            <button
+              onClick={() => onUseDescription(job)}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl"
+            >
+              <Sparkles className="w-4 h-4" />
+              Optimize My Resume
+            </button>
+          )}
           {job.url && (
             <a
               href={job.url}
@@ -124,15 +133,6 @@ const JobDetail: React.FC<JobDetailProps> = ({ job, onBack, onUseDescription }) 
               <ExternalLink className="w-4 h-4" />
               Apply Now
             </a>
-          )}
-          {onUseDescription && (
-            <button
-              onClick={() => onUseDescription(job)}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl"
-            >
-              <Sparkles className="w-4 h-4" />
-              Optimize My Resume
-            </button>
           )}
         </div>
       </div>
