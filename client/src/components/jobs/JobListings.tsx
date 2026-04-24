@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Search, Loader2 } from 'lucide-react';
 import { JobListing } from '../../types/index';
 import { fetchJobListings } from '../../services/jobApi';
@@ -19,7 +19,59 @@ const CATEGORIES = [
   'QA',
   'Writing',
   'Human Resources',
+  'Healthcare',
+  'Education',
+  'Government / Public Service',
+  'Legal',
+  'Operations',
+  'Manufacturing',
+  'Logistics',
+  'Hospitality / Tourism',
+  'Agriculture',
+  'Construction',
+  'Energy / Utilities',
 ];
+
+const REGIONS = ['All Regions', 'USA', 'Canada', 'Europe', 'Asia', 'Africa', 'Remote'] as const;
+type RegionFilter = typeof REGIONS[number];
+
+function detectRegion(job: JobListing): RegionFilter {
+  const text = `${job.candidate_required_location || ''} ${job.source || ''}`.toLowerCase();
+
+  if (
+    /(united states|usa|\bus\b|new york|california|texas|chicago|boston|seattle|miami|atlanta|los angeles|san francisco)/.test(text)
+  ) {
+    return 'USA';
+  }
+
+  if (/(canada|toronto|vancouver|montreal|ottawa|calgary|edmonton)/.test(text)) {
+    return 'Canada';
+  }
+
+  if (
+    /(europe|\beu\b|united kingdom|uk|germany|france|spain|italy|netherlands|sweden|denmark|norway|finland|ireland|portugal|poland|switzerland|austria|belgium|czech)/.test(text)
+  ) {
+    return 'Europe';
+  }
+
+  if (
+    /(asia|india|singapore|japan|china|south korea|korea|malaysia|thailand|indonesia|philippines|vietnam|pakistan|bangladesh|uae|dubai|qatar|saudi)/.test(text)
+  ) {
+    return 'Asia';
+  }
+
+  if (
+    /(africa|nigeria|kenya|south africa|ghana|uganda|rwanda|tanzania|egypt|morocco|tunisia|ethiopia)/.test(text)
+  ) {
+    return 'Africa';
+  }
+
+  if (/(remote|anywhere|worldwide|global)/.test(text)) {
+    return 'Remote';
+  }
+
+  return 'Remote';
+}
 
 interface JobListingsProps {
   onUseDescription?: (job: JobListing) => void;
@@ -31,6 +83,7 @@ const JobListings: React.FC<JobListingsProps> = ({ onUseDescription }) => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
+  const [activeRegion, setActiveRegion] = useState<RegionFilter>('All Regions');
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
 
   const loadJobs = useCallback(async () => {
@@ -61,6 +114,11 @@ const JobListings: React.FC<JobListingsProps> = ({ onUseDescription }) => {
     loadJobs();
   };
 
+  const filteredJobs = useMemo(() => {
+    if (activeRegion === 'All Regions') return jobs;
+    return jobs.filter((job) => detectRegion(job) === activeRegion);
+  }, [jobs, activeRegion]);
+
   if (selectedJob) {
     return <JobDetail job={selectedJob} onBack={() => setSelectedJob(null)} onUseDescription={onUseDescription} />;
   }
@@ -89,8 +147,13 @@ const JobListings: React.FC<JobListingsProps> = ({ onUseDescription }) => {
         </form>
       </div>
 
+      <div className="flex items-center gap-2 pt-1 max-w-6xl mx-auto">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Category Filters</h3>
+        <div className="h-px flex-1 bg-gray-200" />
+      </div>
+
       {/* Category Filters */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 max-w-6xl mx-auto">
         {CATEGORIES.map((cat) => (
           <button
             key={cat}
@@ -102,6 +165,28 @@ const JobListings: React.FC<JobListingsProps> = ({ onUseDescription }) => {
             }`}
           >
             {cat}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-2 pt-1 max-w-6xl mx-auto">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Region Filters</h3>
+        <div className="h-px flex-1 bg-gray-200" />
+      </div>
+
+      {/* Region Filters */}
+      <div className="flex flex-wrap gap-2 max-w-6xl mx-auto">
+        {REGIONS.map((region) => (
+          <button
+            key={region}
+            onClick={() => setActiveRegion(region)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+              activeRegion === region
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+            }`}
+          >
+            {region}
           </button>
         ))}
       </div>
@@ -122,16 +207,17 @@ const JobListings: React.FC<JobListingsProps> = ({ onUseDescription }) => {
             Try Again
           </button>
         </div>
-      ) : jobs.length === 0 ? (
+      ) : filteredJobs.length === 0 ? (
         <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-          <p className="text-gray-500 font-medium">No jobs found. Try adjusting your search or category.</p>
+          <p className="text-gray-500 font-medium">No jobs found. Try adjusting your search, category, or region.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-6xl mx-auto">
-          {jobs.map((job) => (
+          {filteredJobs.map((job) => (
             <JobCard
               key={`${job.source}-${job.id}`}
               job={job}
+              regionLabel={detectRegion(job)}
               onClick={setSelectedJob}
               onUseDescription={onUseDescription || (() => {})}
             />
