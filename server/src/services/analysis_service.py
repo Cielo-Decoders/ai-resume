@@ -1785,6 +1785,7 @@ async def generate_interview_questions(
     job_description: str,
     resume_text: str,
     count: int = 5,
+    persona: str = "professional",
 ) -> Dict[str, Any]:
     """
     Generate role-specific mock interview questions based on the job
@@ -1794,11 +1795,35 @@ async def generate_interview_questions(
     if not api_key:
         return {"success": False, "questions": [], "message": "OpenAI API key missing."}
 
+    _PERSONA_SYSTEM = {
+        "professional": (
+            "You are a seasoned hiring manager who conducts structured, insightful interviews. "
+            "Your questions are specific to the role and candidate — never generic. "
+            "You probe for real competence, not rehearsed answers."
+        ),
+        "tech_lead": (
+            "You are a senior technical lead conducting a rigorous technical interview. "
+            "Focus heavily on system design, engineering depth, and problem-solving precision. "
+            "Ask questions that reveal how the candidate thinks about hard technical problems."
+        ),
+        "pressure_test": (
+            "You are an experienced interviewer known for your challenging, direct style. "
+            "Ask probing questions that test how candidates handle ambiguity, pressure, and difficult trade-offs. "
+            "Challenge assumptions and separate good from great candidates."
+        ),
+    }
+    _PERSONA_RULES = {
+        "professional": "Mix question types evenly. Order from easier to harder.",
+        "tech_lead": "Weight towards technical and role-specific questions (at least 60%). Include at least one system design or architecture question.",
+        "pressure_test": "Lean towards medium-to-hard difficulty. Include at least one question that challenges an assumption or gap in the candidate's resume.",
+    }
+
     try:
         client = _get_openai_client()
+        system_msg = _PERSONA_SYSTEM.get(persona, _PERSONA_SYSTEM["professional"])
+        extra_rules = _PERSONA_RULES.get(persona, _PERSONA_RULES["professional"])
 
-        prompt = f"""You are a senior hiring manager conducting interviews.
-Based on the job description and the candidate's resume below, generate exactly {count} interview questions.
+        prompt = f"""Based on the job description and the candidate's resume below, generate exactly {count} interview questions.
 
 JOB DESCRIPTION:
 {job_description[:5000]}
@@ -1807,10 +1832,10 @@ CANDIDATE RESUME:
 {resume_text[:5000]}
 
 RULES:
+- {extra_rules}
 - Mix question types: behavioral, technical, situational, and role-specific
 - Target gaps between the resume and job requirements
 - Also probe strengths the candidate can leverage
-- Order questions from easier to harder to simulate a real interview flow
 - Each question must have a clear "context" explaining why you'd ask it
 
 Return ONLY valid JSON (no markdown fences):
@@ -1827,14 +1852,7 @@ Return ONLY valid JSON (no markdown fences):
         response = client.chat.completions.create(
             model=settings.openai_model or "gpt-4o-mini",
             messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a seasoned hiring manager who conducts structured, insightful interviews. "
-                        "Your questions are specific to the role and candidate — never generic. "
-                        "You probe for real competence, not rehearsed answers."
-                    ),
-                },
+                {"role": "system", "content": system_msg},
                 {"role": "user", "content": prompt},
             ],
             temperature=0.6,
@@ -1891,6 +1909,8 @@ Provide:
 - 2-3 specific strengths of the answer
 - 2-3 concrete improvements
 - A sample strong answer (150-200 words) the candidate can learn from
+- starAnalysis: For behavioral/situational questions, evaluate each STAR component (true if clearly present, false if missing). For technical or role-specific questions, set all STAR fields to null.
+- followUpQuestion: One concise, probing follow-up question that digs deeper into either the weakest part of their answer or an interesting point they raised.
 
 Return ONLY valid JSON (no markdown fences):
 {{
@@ -1899,7 +1919,14 @@ Return ONLY valid JSON (no markdown fences):
   "completeness": <0-100>,
   "strengths": ["strength 1", "strength 2"],
   "improvements": ["improvement 1", "improvement 2"],
-  "sampleAnswer": "A well-structured sample answer..."
+  "sampleAnswer": "A well-structured sample answer...",
+  "starAnalysis": {{
+    "situation": true,
+    "task": false,
+    "action": true,
+    "result": null
+  }},
+  "followUpQuestion": "One probing follow-up question based on their answer"
 }}"""
 
         response = client.chat.completions.create(
