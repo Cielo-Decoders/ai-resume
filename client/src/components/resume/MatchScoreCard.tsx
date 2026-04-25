@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  Target, ChevronDown, ChevronUp, CheckCircle, XCircle,
+  Target, CheckCircle, XCircle,
   TrendingUp, Lightbulb, BarChart3, Layers, Zap
 } from 'lucide-react';
 import { KeywordAnalysisResult } from '../../types';
@@ -65,39 +65,25 @@ interface AccordionSectionProps {
   iconColor: string;
   badge?: string;
   badgeColor?: string;
-  defaultOpen?: boolean;
   children: React.ReactNode;
 }
 
 const AccordionSection: React.FC<AccordionSectionProps> = ({
-  title, icon: Icon, iconColor, badge, badgeColor, defaultOpen = false, children
+  title, icon: Icon, iconColor, badge, badgeColor, children
 }) => {
-  const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="rounded-lg border border-gray-200 overflow-hidden transition-all">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full text-left p-3.5 flex items-center gap-3 hover:bg-gray-50 transition-colors"
-      >
+    <section className="rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="p-4 flex items-center gap-3 border-b border-gray-100">
         <Icon className={`w-5 h-5 ${iconColor} flex-shrink-0`} />
-        <span className="font-semibold text-gray-800 text-sm flex-1">{title}</span>
+        <h4 className="text-xl font-bold text-gray-800 flex-1">{title}</h4>
         {badge && (
-          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${badgeColor}`}>
+          <span className={`px-2.5 py-1 rounded-full text-sm font-bold ${badgeColor}`}>
             {badge}
           </span>
         )}
-        {open ? (
-          <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
-        )}
-      </button>
-      {open && (
-        <div className="px-3.5 pb-3.5 border-t border-gray-100">
-          {children}
-        </div>
-      )}
-    </div>
+      </div>
+      <div className="p-4">{children}</div>
+    </section>
   );
 };
 
@@ -120,7 +106,7 @@ const MatchScoreCard: React.FC<MatchScoreCardProps> = ({ result }) => {
     <div className="bg-white rounded-xl shadow-lg overflow-hidden">
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-800 via-purple-800 to-indigo-900 text-white p-5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-white/20">
               <Target className="w-6 h-6" />
@@ -130,7 +116,7 @@ const MatchScoreCard: React.FC<MatchScoreCardProps> = ({ result }) => {
               <p className="text-white/80 text-sm">AI keyword analysis of your resume vs. this role</p>
             </div>
           </div>
-          <div className={`flex flex-col items-center justify-center w-20 h-20 rounded-full bg-white/20 ring-2 ${scoreColors.ring}`}>
+          <div className={`self-start sm:self-auto flex flex-col items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/20 ring-2 ${scoreColors.ring}`}>
             <span className="text-xl font-bold leading-none">{result.matchScore}%</span>
           </div>
         </div>
@@ -143,7 +129,7 @@ const MatchScoreCard: React.FC<MatchScoreCardProps> = ({ result }) => {
           <span className={`font-bold ${config.scoreColor}`}>{config.label}</span>
           <span className="text-gray-600 text-sm hidden sm:inline">— {config.description}</span>
         </div>
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className={`px-2 py-0.5 rounded-full font-medium ${config.badgeColor}`}>
             {result.matchScore}%
           </span>
@@ -171,7 +157,6 @@ const MatchScoreCard: React.FC<MatchScoreCardProps> = ({ result }) => {
           title="How Your Score Was Calculated"
           icon={BarChart3}
           iconColor="text-indigo-600"
-          defaultOpen={true}
         >
           <div className="mt-3 space-y-3">
             <p className="text-sm text-gray-600">
@@ -189,12 +174,6 @@ const MatchScoreCard: React.FC<MatchScoreCardProps> = ({ result }) => {
               <div className="flex items-center justify-between text-sm border-t border-gray-200 pt-2">
                 <span className="text-gray-600">Total keywords extracted from job</span>
                 <span className="font-bold text-gray-800">{total}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm border-t border-gray-200 pt-2">
-                <span className="text-gray-700 font-medium">Formula</span>
-                <span className="font-mono text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
-                  ({matchedCount} / {total}) × 100 = {result.matchScore}%
-                </span>
               </div>
             </div>
             {/* Visual bar */}
@@ -230,9 +209,9 @@ const MatchScoreCard: React.FC<MatchScoreCardProps> = ({ result }) => {
                 {matchingPhrases.map((kw, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"
                   >
-                    <CheckCircle className="w-3 h-3" />
+                    <CheckCircle className="w-4 h-4" />
                     {kw}
                   </span>
                 ))}
@@ -258,9 +237,9 @@ const MatchScoreCard: React.FC<MatchScoreCardProps> = ({ result }) => {
                 {missingPhrases.map((kw, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-red-50 text-red-700 border border-red-200"
                   >
-                    <XCircle className="w-3 h-3" />
+                    <XCircle className="w-4 h-4" />
                     {kw}
                   </span>
                 ))}
@@ -286,12 +265,12 @@ const MatchScoreCard: React.FC<MatchScoreCardProps> = ({ result }) => {
                 <div>
                   <div className="flex items-center gap-2 mb-1.5">
                     <div className="w-2 h-2 rounded-full bg-red-500" />
-                    <span className="text-xs font-bold uppercase text-red-700">High Priority</span>
-                    <span className="text-xs text-gray-400">— Must include</span>
+                    <span className="text-sm font-bold uppercase text-red-700">High Priority</span>
+                    <span className="text-sm text-gray-400">— Must include</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {highPriority.map((kw, idx) => (
-                      <span key={idx} className="px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+                      <span key={idx} className="px-4 py-2 rounded-full text-sm font-semibold bg-red-50 text-red-700 border border-red-200">
                         {kw.keyword}
                       </span>
                     ))}
@@ -302,12 +281,12 @@ const MatchScoreCard: React.FC<MatchScoreCardProps> = ({ result }) => {
                 <div>
                   <div className="flex items-center gap-2 mb-1.5">
                     <div className="w-2 h-2 rounded-full bg-amber-500" />
-                    <span className="text-xs font-bold uppercase text-amber-700">Medium Priority</span>
-                    <span className="text-xs text-gray-400">— Strongly recommended</span>
+                    <span className="text-sm font-bold uppercase text-amber-700">Medium Priority</span>
+                    <span className="text-sm text-gray-400">— Strongly recommended</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {mediumPriority.map((kw, idx) => (
-                      <span key={idx} className="px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                      <span key={idx} className="px-4 py-2 rounded-full text-sm font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                         {kw.keyword}
                       </span>
                     ))}
@@ -318,12 +297,12 @@ const MatchScoreCard: React.FC<MatchScoreCardProps> = ({ result }) => {
                 <div>
                   <div className="flex items-center gap-2 mb-1.5">
                     <div className="w-2 h-2 rounded-full bg-blue-500" />
-                    <span className="text-xs font-bold uppercase text-blue-700">Low Priority</span>
-                    <span className="text-xs text-gray-400">— Nice to have</span>
+                    <span className="text-sm font-bold uppercase text-blue-700">Low Priority</span>
+                    <span className="text-sm text-gray-400">— Nice to have</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {lowPriority.map((kw, idx) => (
-                      <span key={idx} className="px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                      <span key={idx} className="px-4 py-2 rounded-full text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                         {kw.keyword}
                       </span>
                     ))}

@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 const TermsOfService: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
-      <div className="container mx-auto px-4 py-16 max-w-4xl">
+      <div className="container mx-auto px-4 py-10 sm:py-16 max-w-4xl">
         {/* Back to Home Button */}
         <div className="mb-8">
           <Link
@@ -19,10 +19,10 @@ const TermsOfService: React.FC = () => {
         </div>
 
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 sm:mb-16">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Scale className="w-10 h-10 text-indigo-600" />
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            <Scale className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-600" />
+            <h1 className="text-3xl sm:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               Terms of Service
             </h1>
           </div>
@@ -30,7 +30,7 @@ const TermsOfService: React.FC = () => {
         </div>
 
         {/* Content */}
-        <div className="bg-white rounded-2xl p-8 md:p-12 shadow-xl space-y-8">
+        <div className="bg-white rounded-2xl p-5 sm:p-8 md:p-12 shadow-xl space-y-8">
           <div>
             <p className="text-gray-700 mb-4">
               Welcome to CareerDev AI. By accessing or using our platform, you agree to be bound by these Terms of Service. Please read them carefully.
@@ -38,8 +38,8 @@ const TermsOfService: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <FileText className="w-6 h-6 text-indigo-600" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
               Acceptance of Terms
             </h2>
             <div className="text-gray-700 space-y-3">
@@ -80,7 +80,7 @@ const TermsOfService: React.FC = () => {
           */}
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Service Description</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Service Description</h2>
             <div className="text-gray-700 space-y-3">
               <p>
                 CareerDev AI provides AI-powered resume optimization services, including:
@@ -99,7 +99,7 @@ const TermsOfService: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">User Responsibilities and Acceptable Use</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">User Responsibilities and Acceptable Use</h2>
             <div className="text-gray-700 space-y-3">
               <p><strong>You agree to:</strong></p>
               <ul className="list-disc list-inside ml-4 space-y-1">
@@ -123,7 +123,7 @@ const TermsOfService: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Intellectual Property Rights</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Intellectual Property Rights</h2>
             <div className="text-gray-700 space-y-3">
               <p><strong>Your Content:</strong></p>
               <p>
@@ -165,8 +165,8 @@ const TermsOfService: React.FC = () => {
           */}
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <Shield className="w-6 h-6 text-indigo-600" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
               Limitation of Liability
             </h2>
             <div className="text-gray-700 space-y-3">
@@ -185,7 +185,7 @@ const TermsOfService: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Disclaimer of Warranties</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Disclaimer of Warranties</h2>
             <div className="text-gray-700 space-y-3">
               <p>
                 CAREERDEV AI IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO:
@@ -225,8 +225,8 @@ const TermsOfService: React.FC = () => {
           */}
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <AlertCircle className="w-6 h-6 text-indigo-600" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
               Indemnification
             </h2>
             <div className="text-gray-700">
@@ -243,7 +243,7 @@ const TermsOfService: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Governing Law and Disputes</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Governing Law and Disputes</h2>
             <div className="text-gray-700 space-y-3">
               <p>
                 These Terms of Service shall be governed by and construed in accordance with the laws of the United States, without regard to conflict of law provisions.
@@ -255,7 +255,7 @@ const TermsOfService: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Severability</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Severability</h2>
             <div className="text-gray-700">
               <p>
                 If any provision of these Terms of Service is found to be unenforceable or invalid, that provision will be limited or eliminated to the minimum extent necessary, and the remaining provisions will remain in full force and effect.
@@ -264,7 +264,7 @@ const TermsOfService: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Entire Agreement</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Entire Agreement</h2>
             <div className="text-gray-700">
               <p>
                 These Terms of Service, together with our Privacy Policy, constitute the entire agreement between you and CareerDev AI regarding the use of our service, superseding any prior agreements.
@@ -273,7 +273,7 @@ const TermsOfService: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Contact Information</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Contact Information</h2>
             <div className="text-gray-700 space-y-2">
               <p>If you have questions about these Terms of Service, please contact us:</p>
               <div className="bg-gray-50 p-4 rounded-lg mt-3">

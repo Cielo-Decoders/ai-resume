@@ -151,10 +151,20 @@ export interface OptimizationResult {
   message: string;
   optimizedResume: string;
   resumeSections?: ResumeSection[];
-  changes: ResumeChange[];
+  changes?: ResumeChange[];
   atsScore: number;
   tips?: string[];
   formatting?: ResumeFormatting;
+  keywordVerification?: {
+    integrated: string[];
+    missing: string[];
+    integrationRate: number;
+  };
+  metadata?: {
+    keywordsRequested: number;
+    keywordsIntegrated: number;
+    sectionsModified: number;
+  };
 }
 
 export interface CoverLetterResult {

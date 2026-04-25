@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, CheckCircle, FileText } from 'lucide-react';
+import { Upload, CheckCircle, FileText, Mail } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import TabNavigation from '../components/tabs/TabNavigation';
 import ResumeUpload from '../components/resume/ResumeUpload';
@@ -20,6 +20,7 @@ export default function ATSAnalyzer() {
 
   const getTabFromPath = (pathname: string) => {
     if (pathname === '/app/analysis') return 'analyze';
+    if (pathname === '/app/coverletter') return 'cover-letter';
     return 'jobs';
   };
 
@@ -27,7 +28,10 @@ export default function ATSAnalyzer() {
 
   const handleSetActiveTab = (tab: string) => {
     setActiveTab(tab);
-    const path = tab === 'analyze' ? '/app/analysis' : '/app/jobs';
+    const path =
+      tab === 'analyze' ? '/app/analysis' :
+      tab === 'cover-letter' ? '/app/coverletter' :
+      '/app/jobs';
     navigate(path, { replace: true });
   };
 
@@ -260,7 +264,7 @@ export default function ATSAnalyzer() {
                 className="h-12 sm:h-16 lg:h-20 w-auto object-contain"
               />
               <div className="flex flex-col mt-4">
-                <h1 className="text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 bg-clip-text text-transparent drop-shadow-2xl tracking-tight">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 bg-clip-text text-transparent drop-shadow-2xl tracking-tight">
                   CareerDev AI
                 </h1>
                 <p className="text-gray-600 text-sm font-medium tracking-wide text-center">
@@ -270,7 +274,7 @@ export default function ATSAnalyzer() {
             </div>
           </div>
           <div className="text-center">
-            <p className="text-gray-600 text-lg mb-4">
+            <p className="text-gray-600 text-base sm:text-lg mb-4">
               AI-Powered Resume Optimization for Career Success
             </p>
             {baseResume && (
@@ -350,7 +354,7 @@ export default function ATSAnalyzer() {
               <button
                 onClick={analyzeResume}
                 disabled={isAnalyzing || !resumeFile || !jobDescription}
-                className="mt-6 mx-auto w-full sm:w-auto min-w-[220px] md:min-w-[260px] bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg"
+                className="mt-6 mx-auto w-full sm:w-auto min-w-0 sm:min-w-[220px] md:min-w-[260px] bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg"
               >
                 {isAnalyzing ? (
                   <>
@@ -383,12 +387,6 @@ export default function ATSAnalyzer() {
 
                 {/* Missing and Matching Keywords */}
                 <KeywordAnalysis
-                  missingKeywords={(keywordResults.missingPhrases && keywordResults.missingPhrases.length > 0)
-                    ? keywordResults.missingPhrases
-                    : (keywordResults.missingKeywords || []).slice(0, 15)}
-                  suggestedKeywords={(keywordResults.matchingPhrases && keywordResults.matchingPhrases.length > 0)
-                    ? keywordResults.matchingPhrases
-                    : (keywordResults.matchingKeywords || []).slice(0, 15)}
                   actionableKeywords={keywordResults.actionableKeywords || []}
                   jobTitle={jobTitle}
                   company={company}
@@ -411,16 +409,48 @@ export default function ATSAnalyzer() {
                   />
                 )}
 
-                {/* Cover Letter Generator — appears after resume optimization */}
-                {optimizationResult && optimizationResult.success && resumeText && jobDescription && (
-                  <CoverLetterDisplay
-                    resumeText={resumeText}
-                    jobDescription={jobDescription}
-                    jobTitle={jobTitle}
-                    company={company}
-                    jobUrl={jobUrl}
-                  />
+                {/* CTA: go to Cover Letter tab */}
+                {optimizationResult && optimizationResult.success && (
+                  <div className="flex justify-center pt-2">
+                    <button
+                      onClick={() => handleSetActiveTab('cover-letter')}
+                      className="inline-flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all"
+                    >
+                      <Mail className="w-5 h-5" />
+                      Create Cover Letter
+                    </button>
+                  </div>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+        {activeTab === 'cover-letter' && (
+          <div className="space-y-6">
+            {resumeText && jobDescription ? (
+              <CoverLetterDisplay
+                resumeText={resumeText}
+                jobDescription={jobDescription}
+                jobTitle={jobTitle}
+                company={company}
+                jobUrl={jobUrl}
+              />
+            ) : (
+              <div className="bg-white rounded-xl shadow-lg p-10 text-center space-y-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-50 mb-2">
+                  <Mail className="w-8 h-8 text-indigo-400" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-800">No resume analysed yet</h3>
+                <p className="text-gray-500 max-w-md mx-auto">
+                  First analyse your resume and optimise it in the <strong>Analyze &amp; Optimize</strong> tab, then come back here to generate a tailored cover letter.
+                </p>
+                <button
+                  onClick={() => handleSetActiveTab('analyze')}
+                  className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                  Go to Analyze &amp; Optimize
+                </button>
               </div>
             )}
           </div>

@@ -60,7 +60,7 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-lg py-20 px-8 text-center transition-colors cursor-pointer ${
+        className={`border-2 border-dashed rounded-lg py-10 sm:py-20 px-4 sm:px-8 text-center transition-colors cursor-pointer ${
           isDragging
             ? 'border-indigo-500 bg-indigo-50'
             : 'border-gray-300 hover:border-indigo-500'

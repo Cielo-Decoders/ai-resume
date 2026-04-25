@@ -213,7 +213,9 @@ const JobListings: React.FC<JobListingsProps> = ({ onUseDescription }) => {
         </div>
       ) : (
         <>
-          <p className="text-sm text-gray-400 font-medium">{filteredJobs.length} positions found</p>
+          <p className="max-w-6xl mx-auto text-sm text-gray-400 font-bold italic">
+            {filteredJobs.length} positions found
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-6xl mx-auto">
             {filteredJobs.map((job) => (
               <JobCard

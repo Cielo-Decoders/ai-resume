@@ -693,8 +693,15 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
 
   const scoreColors = getScoreColors(result.atsScore);
   const scoreLabel = getScoreLabel(result.atsScore);
-  const totalKeywordsAdded = result.changes?.reduce((sum, c) => sum + (c.keywordsAdded?.length || 0), 0) || 0;
-  const sectionsModified = result.changes?.length || 0;
+  const totalKeywordsAdded =
+    result.metadata?.keywordsIntegrated ??
+    result.keywordVerification?.integrated?.length ??
+    result.changes?.reduce((sum, c) => sum + (c.keywordsAdded?.length || 0), 0) ??
+    0;
+  const sectionsModified =
+    result.metadata?.sectionsModified ??
+    result.changes?.length ??
+    0;
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden" ref={displayRef}>
@@ -710,8 +717,8 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
               <p className="text-white/80 text-sm">Your ATS-optimized resume is ready</p>
             </div>
           </div>
-          <div className={`flex flex-col items-center justify-center w-20 h-20 rounded-full bg-white/20 ring-2 ${scoreColors.ring}`}>
-            <span className="text-xl font-bold leading-none">{result.atsScore}%</span>
+          <div className={`flex flex-col items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/20 ring-2 ${scoreColors.ring}`}>
+            <span className="text-lg sm:text-xl font-bold leading-none">{result.atsScore}%</span>
             <span className="text-[10px] uppercase tracking-wider opacity-80">ATS</span>
           </div>
         </div>
@@ -853,25 +860,6 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
           </AccordionSection>
         )}
 
-        {/* Optimization Tips */}
-        {result.tips && result.tips.length > 0 && (
-          <AccordionSection
-            title="Optimization Tips"
-            icon={Lightbulb}
-            iconColor="text-amber-500"
-            badge={`${result.tips.length}`}
-            badgeColor="bg-amber-100 text-amber-700"
-          >
-            <div className="mt-3 space-y-2">
-              {result.tips.map((tip, idx) => (
-                <div key={idx} className="flex items-start gap-2.5 text-sm text-gray-700">
-                  <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                  <span>{tip}</span>
-                </div>
-              ))}
-            </div>
-          </AccordionSection>
-        )}
       </div>
 
       {/* Resume Actions */}

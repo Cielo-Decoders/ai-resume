@@ -184,7 +184,7 @@ const FAQ: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
-      <div className="container mx-auto px-4 py-16 max-w-7xl">
+      <div className="container mx-auto px-4 py-10 sm:py-16 max-w-7xl">
         {/* Back to Home Button */}
         <div className="mb-8">
           <Link
@@ -197,20 +197,20 @@ const FAQ: React.FC = () => {
         </div>
 
         {/* Header */}
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+        <div className="text-center mb-10 sm:mb-16">
+          <h1 className="text-3xl sm:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             Frequently Asked Questions
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mt-4">
+          <p className="text-base sm:text-xl text-gray-600 max-w-3xl mx-auto mt-4">
             Find answers to common questions about CareerDev AI
           </p>
         </div>
 
         {/* FAQ Sections */}
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           {faqs.map((category, catIndex) => (
-            <div key={catIndex} className="bg-white rounded-2xl p-8 shadow-lg">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">
+            <div key={catIndex} className="bg-white rounded-2xl p-5 sm:p-8 shadow-lg">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-6">
                 {category.category}
               </h2>
               <div className="space-y-4">
@@ -225,9 +225,9 @@ const FAQ: React.FC = () => {
                     >
                       <button
                         onClick={() => toggleQuestion(catIndex, qIndex)}
-                        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+                        className="w-full px-4 sm:px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
                       >
-                        <span className="font-semibold text-gray-800 pr-4">{faq.q}</span>
+                        <span className="font-semibold text-gray-800 text-sm sm:text-base pr-4">{faq.q}</span>
                         {isOpen ? (
                           <ChevronUp className="w-5 h-5 text-indigo-600 flex-shrink-0" />
                         ) : (
@@ -235,7 +235,7 @@ const FAQ: React.FC = () => {
                         )}
                       </button>
                       {isOpen && (
-                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                        <div className="px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-200">
                           <div className="text-gray-700 leading-relaxed">{faq.a}</div>
                         </div>
                       )}
@@ -248,15 +248,15 @@ const FAQ: React.FC = () => {
         </div>
 
         {/* Contact Section */}
-        <div className="mt-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 text-center text-white shadow-xl">
-          <h3 className="text-2xl font-bold mb-4">Still have questions?</h3>
+        <div className="mt-12 sm:mt-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 sm:p-8 text-center text-white shadow-xl">
+          <h3 className="text-xl sm:text-2xl font-bold mb-4">Still have questions?</h3>
           <p className="mb-6 text-indigo-100">
             Our support team is here to help you succeed
           </p>
           <Link
             to={{ pathname: '/contact' }}
             state={{ subject: 'Technical Support', message: 'I need help with an issue I found in the FAQ.' }}
-            className="inline-flex items-center gap-2 bg-white text-indigo-600 px-8 py-4 rounded-full font-semibold hover:shadow-2xl transition-all duration-300 hover:scale-105"
+            className="inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-white text-indigo-600 px-8 py-4 rounded-full font-semibold hover:shadow-2xl transition-all duration-300 hover:scale-105"
           >
             Contact Support
           </Link>

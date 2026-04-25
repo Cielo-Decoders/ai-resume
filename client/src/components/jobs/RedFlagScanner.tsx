@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Shield, ShieldAlert, ShieldCheck, ShieldQuestion,
-  AlertTriangle, AlertCircle, Info, ChevronDown, ChevronUp,
+  AlertTriangle, AlertCircle, Info,
   CheckCircle, MessageCircle, HelpCircle, X
 } from 'lucide-react';
 import { RedFlagResult, RedFlag } from '../../types';
@@ -68,9 +68,6 @@ const VERDICT_CONFIG: Record<string, {
 };
 
 const RedFlagScanner: React.FC<RedFlagScannerProps> = ({ result, onDismiss }) => {
-  const [expandedFlags, setExpandedFlags] = useState<Set<string>>(new Set());
-  const [showQuestions, setShowQuestions] = useState(false);
-
   const getScoreColors = (score: number) => {
     if (score >= 70) return { ring: 'ring-emerald-300', text: 'text-emerald-600' };
     if (score >= 50) return { ring: 'ring-amber-300', text: 'text-amber-600' };
@@ -78,16 +75,6 @@ const RedFlagScanner: React.FC<RedFlagScannerProps> = ({ result, onDismiss }) =>
   };
 
   const scoreColors = getScoreColors(result.score);
-
-  const toggleFlag = (id: string) => {
-    const next = new Set(expandedFlags);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    setExpandedFlags(next);
-  };
 
   const vConfig = VERDICT_CONFIG[result.overallRisk] || VERDICT_CONFIG.medium;
   const VerdictIcon = vConfig.icon;
@@ -174,109 +161,102 @@ const RedFlagScanner: React.FC<RedFlagScannerProps> = ({ result, onDismiss }) =>
       <div className="p-5 space-y-4">
         {/* Flags */}
         {sortedFlags.length > 0 && (
-          <div className="space-y-2">
-            {sortedFlags.map((flag: RedFlag, idx: number) => {
-              const config = SEVERITY_CONFIG[flag.severity] || SEVERITY_CONFIG.low;
-              const FlagIcon = config.icon;
-              const isExpanded = expandedFlags.has(flag.id || String(idx));
+          <section className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div className="p-4 flex items-center gap-3 border-b border-gray-100">
+              <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <h4 className="text-xl font-bold text-gray-800 flex-1">Detected Risk Signals</h4>
+              <span className="px-2.5 py-1 rounded-full text-sm font-bold bg-gray-100 text-gray-700">
+                {sortedFlags.length}
+              </span>
+            </div>
+            <div className="p-4 space-y-3">
+              {sortedFlags.map((flag: RedFlag, idx: number) => {
+                const config = SEVERITY_CONFIG[flag.severity] || SEVERITY_CONFIG.low;
+                const FlagIcon = config.icon;
 
-              return (
-                <div
-                  key={flag.id || idx}
-                  className={`rounded-lg border ${config.border} overflow-hidden transition-all`}
-                >
-                  {/* Left accent bar */}
-                  <div className="flex">
-                    <div className={`w-1 ${config.accentBar} flex-shrink-0`} />
-                    <div className="flex-1">
-                      <button
-                        onClick={() => toggleFlag(flag.id || String(idx))}
-                        className={`w-full text-left p-3 flex items-start gap-3 hover:${config.bg} transition-colors`}
-                      >
-                        <FlagIcon className={`w-5 h-5 ${config.iconColor} flex-shrink-0 mt-0.5`} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-gray-800 text-sm">{flag.title}</span>
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${config.badge}`}>
-                              {config.label}
-                            </span>
+                return (
+                  <div
+                    key={flag.id || idx}
+                    className={`rounded-xl border ${config.border} overflow-hidden`}
+                  >
+                    <div className="flex">
+                      <div className={`w-1 ${config.accentBar} flex-shrink-0`} />
+                      <div className={`flex-1 ${config.bg}`}>
+                        <div className="p-4 pl-5 space-y-3">
+                          <div className="flex items-start gap-3">
+                            <FlagIcon className={`w-5 h-5 ${config.iconColor} flex-shrink-0 mt-0.5`} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h5 className="text-xl font-bold text-gray-800">{flag.title}</h5>
+                                <span className={`px-2.5 py-1 rounded-full text-sm font-bold uppercase ${config.badge}`}>
+                                  {config.label}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="pl-8 space-y-2">
+                            <p className="text-sm text-gray-700">{flag.reason}</p>
+                            {flag.evidence && (
+                              <div className="text-xs text-gray-500 bg-white/80 rounded px-3 py-2 border border-gray-200 italic">
+                                "{flag.evidence}"
+                              </div>
+                            )}
                           </div>
                         </div>
-                        {isExpanded ? (
-                          <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                        )}
-                      </button>
-
-                      {isExpanded && (
-                        <div className={`px-3 pb-3 pl-11 space-y-2 ${config.bg}`}>
-                          <p className="text-sm text-gray-700">{flag.reason}</p>
-                          {flag.evidence && (
-                            <div className="text-xs text-gray-500 bg-white/80 rounded px-3 py-2 border border-gray-200 italic">
-                              "{flag.evidence}"
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          </section>
         )}
 
         {/* Positives */}
         {result.positives && result.positives.length > 0 && (
-          <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-4">
-            <h4 className="font-semibold text-emerald-800 text-sm flex items-center gap-2 mb-2">
-              <CheckCircle className="w-4 h-4" />
-              Positive Signals
-            </h4>
-            <ul className="space-y-1">
+          <section className="rounded-xl border border-emerald-200 bg-emerald-50 shadow-sm overflow-hidden">
+            <div className="px-4 py-4 flex items-center gap-3 border-b border-emerald-100">
+              <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+              <h4 className="text-xl font-bold text-emerald-800 flex-1">Positive Signals</h4>
+              <span className="px-2.5 py-1 rounded-full text-sm font-bold bg-emerald-100 text-emerald-700">
+                {result.positives.length}
+              </span>
+            </div>
+            <div className="p-4 space-y-2">
               {result.positives.map((pos, idx) => (
-                <li key={idx} className="text-sm text-emerald-700 flex items-start gap-2">
+                <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-white/80 border border-emerald-100">
                   <span className="text-emerald-500 mt-0.5">✓</span>
-                  {pos}
-                </li>
+                  <p className="text-sm text-emerald-700">{pos}</p>
+                </div>
               ))}
-            </ul>
-          </div>
+            </div>
+          </section>
         )}
 
         {/* Questions to Ask */}
         {result.questionsToAsk && result.questionsToAsk.length > 0 && (
-          <div>
-            <button
-              onClick={() => setShowQuestions(!showQuestions)}
-              className="w-full flex items-center justify-between px-4 py-3 bg-indigo-50 rounded-lg border border-indigo-200 hover:bg-indigo-100 transition-colors"
-            >
-              <span className="font-semibold text-indigo-800 text-sm flex items-center gap-2">
+          <section className="rounded-xl border border-indigo-200 bg-indigo-50 shadow-sm overflow-hidden">
+            <div className="px-4 py-4 flex items-center gap-3 border-b border-indigo-100">
+              <span className="font-bold text-indigo-800 text-xl flex items-center gap-2 flex-1">
                 <MessageCircle className="w-4 h-4" />
-                Questions to Ask the Recruiter ({result.questionsToAsk.length})
+                Questions to Ask the Recruiter
               </span>
-              {showQuestions ? (
-                <ChevronUp className="w-4 h-4 text-indigo-500" />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-indigo-500" />
-              )}
-            </button>
-
-            {showQuestions && (
-              <div className="mt-2 space-y-2 pl-2">
-                {result.questionsToAsk.map((q, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-white border border-gray-200"
-                  >
-                    <HelpCircle className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-gray-700">{q}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+              <span className="px-2.5 py-1 rounded-full text-sm font-bold bg-indigo-100 text-indigo-700">
+                {result.questionsToAsk.length}
+              </span>
+            </div>
+            <div className="p-4 space-y-2">
+              {result.questionsToAsk.map((q, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-start gap-3 p-3 rounded-lg bg-white border border-gray-200"
+                >
+                  <HelpCircle className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-gray-700">{q}</p>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
       </div>
     </div>

@@ -1184,6 +1184,15 @@ OUTPUT (valid JSON only, no markdown):
             keyword_verification=keyword_check
         )
 
+        # Count how many resume sections contain at least one integrated keyword
+        integrated_lower = [k.lower() for k in keyword_check['integrated']]
+        sections_with_keywords = 0
+        for section in optimized_sections:
+            section_text_lower = section.get('content', '').lower()
+            if any(kw in section_text_lower for kw in integrated_lower):
+                sections_with_keywords += 1
+        sections_modified = sections_with_keywords or len(optimized_sections)
+
         return {
             "success": True,
             "message": "New resume generated successfully",
@@ -1195,7 +1204,8 @@ OUTPUT (valid JSON only, no markdown):
             "tips": result.get("tips", []),
             "metadata": {
                 "keywordsRequested": len(keywords),
-                "keywordsIntegrated": len(keyword_check['integrated'])
+                "keywordsIntegrated": len(keyword_check['integrated']),
+                "sectionsModified": sections_modified
             }
         }
 

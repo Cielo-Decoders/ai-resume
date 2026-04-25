@@ -191,7 +191,7 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
             <Sparkles className="w-4 h-4 absolute -top-1 -right-1 text-yellow-300" />
           </div>
           <div className="text-left">
-            <h2 className="text-2xl font-bold">AI Cover Letter Generator</h2>
+            <h2 className="text-xl sm:text-2xl font-bold">AI Cover Letter Generator</h2>
             <p className="text-indigo-100 text-sm">
               {result ? 'Your cover letter is ready' : 'Craft the perfect cover letter in seconds'}
             </p>
@@ -214,7 +214,7 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
             <label className="block text-sm font-semibold text-gray-700 mb-3">
               Choose your tone
             </label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
               {TONES.map((tone) => {
                 const Icon = tone.icon;
                 const isSelected = selectedTone === tone.id;
@@ -225,7 +225,7 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
                       setSelectedTone(tone.id);
                       if (result) setResult(null);
                     }}
-                    className={`relative group p-4 rounded-xl border-2 transition-all duration-200 text-left
+                    className={`relative group p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 text-left
                       ${isSelected
                         ? `${tone.accent} ${tone.bg} ring-2 ${tone.ring} shadow-md scale-[1.02]`
                         : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
@@ -258,7 +258,7 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
             <button
               onClick={handleGenerate}
               disabled={isGenerating}
-              className="px-8 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 text-base mx-auto"
+              className="px-8 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 text-base w-full sm:w-auto mx-auto"
             >
               {isGenerating ? (
                 <>
@@ -317,10 +317,10 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
                   <button
                     onClick={handleRegenerate}
                     disabled={isGenerating}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md transition-all disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed"
                   >
                     <RotateCcw className={`w-3.5 h-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
-                    Regenerate
+                    {isGenerating ? 'Regenerating...' : 'Regenerate'}
                   </button>
                 </div>
               </div>
@@ -420,7 +420,7 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
             <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
               <div className="bg-white shadow-lg rounded-lg mx-auto max-w-2xl"
                 style={{
-                  padding: '60px 50px',
+                  padding: '40px 24px',
                   minHeight: '700px',
                   fontFamily: '"Times New Roman", Times, serif',
                 }}
