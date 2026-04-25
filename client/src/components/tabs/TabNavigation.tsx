@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, Briefcase, type LucideIcon } from 'lucide-react';
+import { Target, Briefcase, Mail, type LucideIcon } from 'lucide-react';
 
 interface TabNavigationProps {
   activeTab: string;
@@ -15,10 +15,11 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
   const tabs: Array<{ id: string; label: string; subtitle: string; icon: LucideIcon; badge?: number }> = [
     { id: 'jobs', label: 'Job Listings', subtitle: 'Discover matching opportunities', icon: Briefcase },
     { id: 'analyze', label: 'Analyze & Optimize', subtitle: 'ATS scoring & resume tailoring', icon: Target, badge: applicationsCount },
+    { id: 'cover-letter', label: 'Cover Letter', subtitle: 'AI-crafted cover letters', icon: Mail },
   ];
 
   return (
-    <nav className="flex flex-col sm:flex-row gap-4 mb-10" role="tablist">
+    <nav className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-8 sm:mb-10" role="tablist">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
@@ -33,9 +34,9 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
           >
             <div
               className={`
-                relative overflow-hidden rounded-2xl px-7 py-5
+                relative overflow-hidden rounded-2xl px-4 sm:px-7 py-4 sm:py-5
                 transition-all duration-300 ease-out
-                flex items-center gap-4
+                flex items-center gap-3 sm:gap-4
                 ${isActive
                   ? 'bg-white shadow-[0_8px_30px_rgba(79,70,229,0.12)] border border-indigo-100 scale-[1.02]'
                   : 'bg-white/60 backdrop-blur-sm shadow-sm border border-gray-200/70 hover:bg-white hover:shadow-md hover:border-gray-300 hover:-translate-y-0.5'
@@ -77,7 +78,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
                 <div className="flex items-center gap-2.5">
                   <span
                     className={`
-                      text-lg font-bold tracking-tight leading-snug
+                      text-base sm:text-lg font-bold tracking-tight leading-snug
                       transition-colors duration-300
                       ${isActive ? 'text-gray-900' : 'text-gray-600 group-hover:text-gray-800'}
                     `}
@@ -102,7 +103,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
                 </div>
                 <span
                   className={`
-                    text-sm leading-tight mt-1
+                    text-xs sm:text-sm leading-tight mt-1
                     transition-colors duration-300
                     ${isActive ? 'text-indigo-500/80' : 'text-gray-400 group-hover:text-gray-500'}
                   `}

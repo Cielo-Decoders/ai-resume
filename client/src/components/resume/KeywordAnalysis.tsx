@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-import { AlertCircle, Star, Check, Zap, Sparkles, CheckCircle, X } from 'lucide-react';
+import { Check, Zap, Sparkles, CheckCircle, X } from 'lucide-react';
 import { ActionableKeyword } from '../../types';
 
 interface KeywordAnalysisProps {
-  missingKeywords: string[];
-  suggestedKeywords: string[];
   actionableKeywords?: ActionableKeyword[];
   onKeywordsSelected?: (selectedKeywords: ActionableKeyword[]) => void;
   onOptimizeResume?: (selectedKeywords: ActionableKeyword[]) => void;
@@ -15,8 +13,6 @@ interface KeywordAnalysisProps {
 }
 
 const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
-  missingKeywords,
-  suggestedKeywords,
   actionableKeywords = [],
   onKeywordsSelected,
   onOptimizeResume,
@@ -129,7 +125,7 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
                     Optimize Your Resume
                   </h3>
                   {(jobTitle || company) && (
-                    <div className="text-lg font-bold italic mt-2 space-y-0" style={{ color: '#FE7F2D' }}>
+                    <div className="text-lg font-bold italic mt-2 space-y-0 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                       {jobTitle && company && (
                         <p>
                           for <span>{jobTitle}</span> at <span>{company}</span>
@@ -218,70 +214,18 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
           </div>
         </div>
       )}
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-red-500" />
-            Missing from Your Resume
-          </h3>
-
-          <p className="text-gray-500 mb-3">
-            These skills appear in the job description but are not found in your resume. Adding these relevant skills would significantly improve how well your resume matches this role.
-          </p>
-
-          <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
-            {missingKeywords.map((keyword, idx) => (
-              <span
-                key={idx}
-                className="px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-semibold"
-              >
-                {keyword}
-              </span>
-            ))}
-          </div>
-          {missingKeywords.length === 0 && (
-            <p className="text-gray-500 text-sm">No missing keywords found!</p>
-          )}
-        </div>
-
-
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <Star className="w-5 h-5 text-green-500" />
-            Already in Your Resume
-          </h3>
-          <p className="text-gray-500 mb-3">
-            These job-description terms already appear in your resume.
-            </p>
-          <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
-            {suggestedKeywords.map((keyword, idx) => (
-              <span
-                key={idx}
-                className="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-semibold"
-              >
-                {keyword}
-              </span>
-            ))}
-          </div>
-          {suggestedKeywords.length === 0 && (
-            <p className="text-gray-500 text-sm">No matching terms found.</p>
-          )}
-        </div>
-
-      </div>
-
       {actionableKeywords.length > 0 && (
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-              <Zap className="w-5 h-5 text-indigo-600" />
-              Job-Relevant Skills & Terms to Add To Optimize Resume
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+              <Zap className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+              <span>Job-Relevant Skills &amp; Terms to Add To Optimize Resume</span>
             </h3>
-            <div className="flex gap-3">
+            <div className="flex gap-2 flex-shrink-0">
               <button
                 onClick={selectAll}
                 aria-label="Select all keywords"
-                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm md:text-base font-semibold rounded-lg shadow-lg hover:scale-105 transform transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold rounded-lg shadow-lg hover:scale-105 transform transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200"
               >
                 <Check className="w-4 h-4" />
                 Select All
@@ -290,7 +234,7 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
               <button
                 onClick={clearSelection}
                 aria-label="Clear selected keywords"
-                className="flex items-center gap-2 px-5 py-3 bg-white border-2 border-gray-200 text-gray-700 text-sm md:text-base font-semibold rounded-lg hover:bg-gray-50 hover:scale-105 transform transition-all shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-100"
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 bg-white border-2 border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 hover:scale-105 transform transition-all shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-100"
               >
                 <Zap className="w-4 h-4 text-indigo-600" />
                 Clear

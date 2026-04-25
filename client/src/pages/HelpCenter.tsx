@@ -48,7 +48,7 @@ const HelpCenter: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
-      <div className="container mx-auto px-4 py-16 max-w-7xl">
+      <div className="container mx-auto px-4 py-10 sm:py-16 max-w-7xl">
         {/* Back to Home Button */}
         <div className="mb-8">
           <Link
@@ -61,11 +61,11 @@ const HelpCenter: React.FC = () => {
         </div>
 
         {/* Header */}
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+        <div className="text-center mb-10 sm:mb-16">
+          <h1 className="text-3xl sm:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             Help Center
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mt-4">
+          <p className="text-base sm:text-xl text-gray-600 max-w-3xl mx-auto mt-4">
             Everything you need to master CareerDev AI and land your dream job
           </p>
         </div>
@@ -86,12 +86,12 @@ const HelpCenter: React.FC = () => {
         */}
 
         {/* Detailed Guides */}
-        <div className="mb-16">
-          <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">Comprehensive Guides</h2>
+        <div className="mb-12 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-8 text-center">Comprehensive Guides</h2>
           <div className="grid gap-6">
             {guides.map((guide, index) => (
-              <div key={index} className="bg-white rounded-xl p-8 shadow-lg border border-gray-100">
-                <h3 className="text-2xl font-bold text-gray-800 mb-4">
+              <div key={index} className="bg-white rounded-xl p-6 sm:p-8 shadow-lg border border-gray-100">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">
                   {guide.title}
                 </h3>
                 <p className="text-gray-700 whitespace-pre-line leading-relaxed">{guide.content}</p>
@@ -101,8 +101,8 @@ const HelpCenter: React.FC = () => {
         </div>
 
         {/* Quick Tips */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 mb-16 text-white">
-          <h2 className="text-3xl font-bold mb-6">
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 sm:p-8 mb-12 sm:mb-16 text-white">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-6">
             Optimization Quick Tips
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
@@ -125,8 +125,8 @@ const HelpCenter: React.FC = () => {
         </div>
 
         {/* Contact Support */}
-        <div className="bg-white rounded-2xl p-12 shadow-xl text-center">
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">Need More Help?</h2>
+        <div className="bg-white rounded-2xl p-6 sm:p-12 shadow-xl text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">Need More Help?</h2>
           <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
             Can't find what you're looking for? Our support team is ready to assist you with any questions or issues.
           </p>
