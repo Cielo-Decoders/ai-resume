@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {JobData, AnalysisResults, KeywordAnalysisResult, ActionableKeyword, OptimizationResult } from '../types/index';
+import {JobData, AnalysisResults, KeywordAnalysisResult, ActionableKeyword, OptimizationResult, CoverLetterResult, RedFlagResult, MockInterviewResult, AnswerEvaluationResult } from '../types/index';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -50,7 +50,7 @@ export const extractJobDataFromText = async (jobDescription: string): Promise<Jo
       { job_description: jobDescription },
       {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 30000,
+        timeout: 90000,
       }
     );
 
@@ -91,7 +91,7 @@ export const analyzeKeywords = async (
         headers: {
           'Content-Type': 'application/json',
         },
-        timeout: 30000,
+        timeout: 90000,
       }
     );
 
@@ -201,14 +201,187 @@ export const sendContactMessage = async (data: {
 };
 
 /**
+ * Generate a tailored cover letter based on resume and job description
+ */
+export const generateCoverLetter = async (
+  resumeText: string,
+  jobDescription: string,
+  jobTitle: string = '',
+  company: string = '',
+  tone: string = 'professional'
+): Promise<CoverLetterResult> => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/api/generate-cover-letter`,
+      {
+        resume_text: resumeText,
+        job_description: jobDescription,
+        job_title: jobTitle,
+        company: company,
+        tone: tone,
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 60000,
+      }
+    );
+
+    if (!response.data) {
+      throw new Error('No response from server');
+    }
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Cover letter generation failed');
+    }
+
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Cover letter generation timed out. Please try again.');
+    }
+
+    if (error.message) {
+      throw error;
+    }
+
+    throw new Error('Failed to generate cover letter. Please try again.');
+  }
+};
+
+/**
  * Export functions for use in components
  */
+/**
+ * Scan a job description for red flags and risk assessment
+ */
+export const scanJobRedFlags = async (
+  jobDescription: string
+): Promise<RedFlagResult> => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/api/scan-red-flags`,
+      { job_description: jobDescription },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 60000,
+      }
+    );
+
+    if (!response.data) {
+      throw new Error('No response from server');
+    }
+
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Red flag scan timed out. Please try again.');
+    }
+
+    throw new Error(error.message || 'Failed to scan job description. Please try again.');
+  }
+};
+
+
+/**
+ * Generate mock interview questions based on resume and job description
+ */
+export const generateInterviewQuestions = async (
+  resumeText: string,
+  jobDescription: string,
+  count: number = 5,
+  persona: string = 'professional'
+): Promise<MockInterviewResult> => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/api/generate-interview`,
+      {
+        resume_text: resumeText,
+        job_description: jobDescription,
+        count,
+        persona,
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 60000,
+      }
+    );
+
+    if (!response.data) {
+      throw new Error('No response from server');
+    }
+
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Interview generation timed out. Please try again.');
+    }
+
+    throw new Error(error.message || 'Failed to generate interview questions. Please try again.');
+  }
+};
+
+/**
+ * Evaluate a candidate's answer to an interview question
+ */
+export const evaluateInterviewAnswer = async (
+  question: string,
+  answer: string,
+  jobDescription: string
+): Promise<AnswerEvaluationResult> => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/api/evaluate-answer`,
+      {
+        question,
+        answer,
+        job_description: jobDescription,
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 60000,
+      }
+    );
+
+    if (!response.data) {
+      throw new Error('No response from server');
+    }
+
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Answer evaluation timed out. Please try again.');
+    }
+
+    throw new Error(error.message || 'Failed to evaluate answer. Please try again.');
+  }
+};
+
 const apiService = {
   extractTextFromResume,
   extractJobDataFromText,
   analyzeKeywords,
   optimizeResume,
   sendContactMessage,
+  generateCoverLetter,
+  scanJobRedFlags,
+  generateInterviewQuestions,
+  evaluateInterviewAnswer,
 };
 
 export default apiService;

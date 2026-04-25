@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 const PrivacyPolicy: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
-      <div className="container mx-auto px-4 py-16 max-w-4xl">
+      <div className="container mx-auto px-4 py-10 sm:py-16 max-w-4xl">
         {/* Back to Home Button */}
         <div className="mb-8">
           <Link
@@ -19,10 +19,10 @@ const PrivacyPolicy: React.FC = () => {
         </div>
 
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 sm:mb-16">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Shield className="w-10 h-10 text-indigo-600" />
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            <Shield className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-600" />
+            <h1 className="text-3xl sm:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               Privacy Policy
             </h1>
           </div>
@@ -30,7 +30,7 @@ const PrivacyPolicy: React.FC = () => {
         </div>
 
         {/* Content */}
-        <div className="bg-white rounded-2xl p-8 md:p-12 shadow-xl space-y-8">
+        <div className="bg-white rounded-2xl p-5 sm:p-8 md:p-12 shadow-xl space-y-8">
           <div>
             <p className="text-gray-700 mb-4">
               At CareerDev AI, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our resume optimization platform.
@@ -38,8 +38,8 @@ const PrivacyPolicy: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <FileText className="w-6 h-6 text-indigo-600" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
               Information We Collect
             </h2>
             <div className="space-y-4 text-gray-700">
@@ -62,8 +62,8 @@ const PrivacyPolicy: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <Eye className="w-6 h-6 text-indigo-600" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <Eye className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
               How We Use Your Information
             </h2>
             <div className="text-gray-700 space-y-2">
@@ -79,8 +79,8 @@ const PrivacyPolicy: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <Server className="w-6 h-6 text-indigo-600" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <Server className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
               Data Storage and Retention
             </h2>
             <div className="text-gray-700 space-y-3">
@@ -97,8 +97,8 @@ const PrivacyPolicy: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <Lock className="w-6 h-6 text-indigo-600" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
               Data Security
             </h2>
             <div className="text-gray-700 space-y-3">
@@ -120,8 +120,8 @@ const PrivacyPolicy: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <UserCheck className="w-6 h-6 text-indigo-600" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <UserCheck className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
               Your Rights and Choices
             </h2>
             {/*
@@ -143,7 +143,7 @@ const PrivacyPolicy: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Third-Party Services</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Third-Party Services</h2>
             <div className="text-gray-700 space-y-3">
               <p>
                 CareerDev AI may use third-party services for:
@@ -161,7 +161,7 @@ const PrivacyPolicy: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Cookies and Tracking</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Cookies and Tracking</h2>
             <div className="text-gray-700 space-y-2">
               <p>We use cookies and similar technologies to:</p>
               <ul className="list-disc list-inside ml-4 space-y-1">
@@ -176,28 +176,28 @@ const PrivacyPolicy: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Children's Privacy</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Children's Privacy</h2>
             <p className="text-gray-700">
               CareerDev AI is not intended for users under the age of 16. We do not knowingly collect personal information from children. If we become aware that we have collected data from a child without parental consent, we will take steps to delete that information.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">International Data Transfers</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">International Data Transfers</h2>
             <p className="text-gray-700">
               Your information may be transferred to and processed in countries other than your country of residence. We ensure appropriate safeguards are in place to protect your data in accordance with this Privacy Policy and applicable laws.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Changes to This Policy</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Changes to This Policy</h2>
             <p className="text-gray-700">
               We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new policy on this page and updating the "Last Updated" date. We encourage you to review this Privacy Policy periodically.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Contact Us</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Contact Us</h2>
             <div className="text-gray-700 space-y-2">
               <p>If you have questions or concerns about this Privacy Policy, please contact us:</p>
               <div className="bg-gray-50 p-4 rounded-lg mt-3">

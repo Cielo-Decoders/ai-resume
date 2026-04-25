@@ -534,6 +534,71 @@ def save_optimized_resume_to_file(text: str) -> Optional[str]:
 
 
 # =========================================================
+# ------- SMART JD CONDENSER (prevent timeout) -----------
+# =========================================================
+
+_JD_SECTION_PATTERNS = re.compile(
+    r'(?:^|\n)\s*'
+    r'(?:required|preferred|minimum|desired|must[\s-]have|nice[\s-]to[\s-]have|'
+    r'qualifications?|requirements?|skills?|responsibilities|what you.?ll|'
+    r'who you are|about the role|about you|tech[\s-]?stack|tools?|competenc)'
+    r'[^\n]{0,60}',
+    re.IGNORECASE,
+)
+
+_MAX_JD_CHARS_FOR_AI = 6_000  # ~1 500 tokens – plenty for extraction
+
+
+def _condense_job_description(raw_jd: str) -> str:
+    """
+    Return a shorter version of a job description that keeps only the
+    sections most relevant for keyword extraction (requirements, skills,
+    qualifications, tools).
+
+    If the JD is already short enough it is returned unchanged.
+    """
+    if len(raw_jd) <= _MAX_JD_CHARS_FOR_AI:
+        return raw_jd
+
+    lines = raw_jd.split('\n')
+
+    # ── Pass 1: find section boundaries ──────────────────────
+    keep_ranges: list[tuple[int, int]] = []
+    in_relevant = False
+    start = 0
+
+    for i, line in enumerate(lines):
+        if _JD_SECTION_PATTERNS.search(line):
+            if not in_relevant:
+                start = i
+                in_relevant = True
+        elif in_relevant and line.strip() == '':
+            # Blank line might be a paragraph break, keep going for a bit
+            pass
+        elif in_relevant and re.match(r'^[A-Z][A-Za-z\s]{2,40}:?\s*$', line.strip()):
+            # New section header that isn't relevant → close range
+            keep_ranges.append((start, i))
+            in_relevant = False
+
+    if in_relevant:
+        keep_ranges.append((start, len(lines)))
+
+    # ── Pass 2: merge kept lines ──────────────────────────────
+    if keep_ranges:
+        kept_lines: list[str] = []
+        for s, e in keep_ranges:
+            kept_lines.extend(lines[s:e])
+        condensed = '\n'.join(kept_lines).strip()
+        # If we extracted meaningful content, use it
+        if len(condensed) >= 200:
+            return condensed[:_MAX_JD_CHARS_FOR_AI]
+
+    # Fallback: take the first + last chunks (title area + requirements usually at end)
+    half = _MAX_JD_CHARS_FOR_AI // 2
+    return (raw_jd[:half] + '\n...\n' + raw_jd[-half:]).strip()
+
+
+# =========================================================
 # ---------------- RESUME ANALYSIS ------------------------
 # =========================================================
 
@@ -575,6 +640,10 @@ async def analyze_resume_against_job(resume_text: str, job_data: Dict) -> Dict[s
     # Normalize resume text for better matching
     resume_normalized = re.sub(r'[^\w\s]', ' ', resume_lower)  # Remove punctuation
     resume_words = set(resume_normalized.split())
+
+    # Batch-load skill variations for ALL job phrases in one call
+    # This replaces N serial OpenAI calls with a single batch call
+    _batch_load_skill_variations(job_phrases)
 
     for phrase in job_phrases:
         phrase_lower = phrase.lower()
@@ -639,18 +708,23 @@ async def analyze_resume_against_job(resume_text: str, job_data: Dict) -> Dict[s
 def _check_skill_variations(skill: str, resume_text: str) -> bool:
     """
     Check for common skill variations and abbreviations across all professions.
-    Uses AI to dynamically identify variations for any skill in any industry.
-    Results are cached for performance.
+    Uses a hardcoded lookup only — AI batch lookup happens separately.
     """
-    # Common hardcoded variations for performance (most frequently used)
     common_variations = {
         # Tech
-        'javascript': ['js'], 'typescript': ['ts'], 'python': ['py'],
+        'javascript': ['js', 'ecmascript'], 'typescript': ['ts'], 'python': ['py'],
         'kubernetes': ['k8s'], 'artificial intelligence': ['ai'], 'machine learning': ['ml'],
+        'continuous integration': ['ci'], 'continuous delivery': ['cd'], 'ci/cd': ['cicd'],
+        'amazon web services': ['aws'], 'google cloud platform': ['gcp'],
+        'microsoft azure': ['azure'], 'structured query language': ['sql'],
+        'nosql': ['mongodb', 'dynamodb', 'cassandra'], 'react.js': ['react', 'reactjs'],
+        'node.js': ['node', 'nodejs'], 'vue.js': ['vue', 'vuejs'],
+        'next.js': ['next', 'nextjs'], 'angular.js': ['angular', 'angularjs'],
 
         # Business
         'search engine optimization': ['seo'], 'customer relationship management': ['crm'],
         'return on investment': ['roi'], 'key performance indicator': ['kpi', 'kpis'],
+        'enterprise resource planning': ['erp'], 'business intelligence': ['bi'],
 
         # Finance
         'generally accepted accounting principles': ['gaap'], 'profit and loss': ['p&l'],
@@ -663,109 +737,82 @@ def _check_skill_variations(skill: str, resume_text: str) -> bool:
     }
 
     skill_lower = skill.lower().strip()
+    resume_lower = resume_text.lower()
 
     # Quick check: common variations first (no API call needed)
     if skill_lower in common_variations:
         for variant in common_variations[skill_lower]:
             pattern = r'\b' + re.escape(variant) + r'\b'
-            if re.search(pattern, resume_text):
+            if re.search(pattern, resume_lower):
                 return True
 
     # Reverse lookup for common variations
     for full_form, abbrevs in common_variations.items():
         if skill_lower in abbrevs:
             pattern = r'\b' + re.escape(full_form) + r'\b'
-            if re.search(pattern, resume_text):
+            if re.search(pattern, resume_lower):
                 return True
 
-    # If not in common variations, use AI to check for variations dynamically
-    return _check_skill_variations_with_ai(skill_lower, resume_text)
+    # Check the batch cache (populated by _batch_check_skill_variations)
+    if skill_lower in _skill_variations_cache:
+        for variant in _skill_variations_cache[skill_lower]:
+            pattern = r'\b' + re.escape(variant.lower()) + r'\b'
+            if re.search(pattern, resume_lower):
+                return True
+
+    return False
 
 
 # Cache for AI-detected skill variations
 _skill_variations_cache: Dict[str, List[str]] = {}
 
 
-def _check_skill_variations_with_ai(skill: str, resume_text: str) -> bool:
+def _batch_load_skill_variations(skills: List[str]) -> None:
     """
-    Use AI to dynamically detect skill variations and abbreviations.
-    Works for any skill in any profession. Results are cached.
+    Batch-fetch variations for multiple skills in ONE OpenAI call.
+    Replaces the old per-skill serial approach that caused timeouts.
     """
-    skill_lower = skill.lower().strip()
+    # Filter to only skills not already cached
+    uncached = [s for s in skills if s.lower().strip() not in _skill_variations_cache]
+    if not uncached:
+        return
 
-    # Check if we've already looked up variations for this skill
-    if skill_lower not in _skill_variations_cache:
-        # Get variations from AI
-        variations = _get_skill_variations_from_ai(skill_lower)
-        _skill_variations_cache[skill_lower] = variations
-    else:
-        variations = _skill_variations_cache[skill_lower]
+    # Limit batch size to keep prompt reasonable
+    batch = uncached[:30]
 
-    # Check if any variation exists in resume
-    resume_lower = resume_text.lower()
-    for variant in variations:
-        pattern = r'\b' + re.escape(variant.lower()) + r'\b'
-        if re.search(pattern, resume_lower):
-            return True
-
-    return False
-
-
-def _get_skill_variations_from_ai(skill: str) -> List[str]:
-    """
-    Ask AI to identify common variations and abbreviations for a skill.
-    Returns list of variations including the original skill.
-    """
     client = _get_openai_client()
-
     try:
-        prompt = f"""List ALL common variations, abbreviations, and alternative names for this skill/term: "{skill}"
-
-Include:
-- Common abbreviations (e.g., "JavaScript" → "JS")
-- Alternative names (e.g., "Machine Learning" → "ML", "AI")
-- Industry-specific terms
-- Plural/singular forms if relevant
-
-Return ONLY a JSON array of strings. No explanations.
-
-Example for "JavaScript": ["javascript", "js", "ecmascript", "node.js", "nodejs"]
-Example for "Search Engine Optimization": ["search engine optimization", "seo"]
-
-Skill: "{skill}"
-"""
+        prompt = (
+            "For each skill below, list its common abbreviations and alternative names.\n"
+            "Return ONLY a JSON object mapping each skill to an array of variations.\n"
+            "Example: {\"javascript\": [\"js\", \"ecmascript\"], \"machine learning\": [\"ml\"]}\n\n"
+            "Skills:\n" + "\n".join(f"- {s}" for s in batch)
+        )
 
         response = client.chat.completions.create(
             model=settings.openai_model or "gpt-4o-mini",
             messages=[
-                {
-                    "role": "system",
-                    "content": "You are a skill variation expert. Return ONLY a JSON array of strings with no markdown formatting."
-                },
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "Return ONLY valid JSON, no markdown."},
+                {"role": "user", "content": prompt},
             ],
             temperature=0.0,
-            max_tokens=200
+            max_tokens=1000,
         )
 
         content = response.choices[0].message.content.strip()
         content = re.sub(r"^```(?:json)?|```$", "", content, flags=re.MULTILINE).strip()
+        mapping = json.loads(content)
 
-        variations = json.loads(content)
-
-        # Ensure it's a list and includes the original skill
-        if isinstance(variations, list):
-            # Add original skill if not present
-            if skill.lower() not in [v.lower() for v in variations]:
-                variations.append(skill)
-            return variations
-        else:
-            return [skill]
+        if isinstance(mapping, dict):
+            for skill, variants in mapping.items():
+                if isinstance(variants, list):
+                    _skill_variations_cache[skill.lower().strip()] = variants
 
     except Exception as e:
-        print(f"AI skill variation lookup error for '{skill}': {e}")
-        # Fallback: return just the skill itself
-        return [skill]
+        print(f"Batch skill variation lookup error: {e}")
+        # On failure, cache empty lists so we don't retry
+        for s in batch:
+            _skill_variations_cache[s.lower().strip()] = []
 
 
 # =========================================================
@@ -1184,6 +1231,15 @@ OUTPUT (valid JSON only, no markdown):
             keyword_verification=keyword_check
         )
 
+        # Count how many resume sections contain at least one integrated keyword
+        integrated_lower = [k.lower() for k in keyword_check['integrated']]
+        sections_with_keywords = 0
+        for section in optimized_sections:
+            section_text_lower = section.get('content', '').lower()
+            if any(kw in section_text_lower for kw in integrated_lower):
+                sections_with_keywords += 1
+        sections_modified = sections_with_keywords or len(optimized_sections)
+
         return {
             "success": True,
             "message": "New resume generated successfully",
@@ -1195,7 +1251,8 @@ OUTPUT (valid JSON only, no markdown):
             "tips": result.get("tips", []),
             "metadata": {
                 "keywordsRequested": len(keywords),
-                "keywordsIntegrated": len(keyword_check['integrated'])
+                "keywordsIntegrated": len(keyword_check['integrated']),
+                "sectionsModified": sections_modified
             }
         }
 
@@ -1204,6 +1261,396 @@ OUTPUT (valid JSON only, no markdown):
         print(f"Generation error: {e}")
         print(f"Error traceback: {traceback.format_exc()}")
         return {"success": False, "optimizedResume": "", "message": f"Generation failed: {str(e)}"}
+
+
+# =========================================================
+# ---------------- RED FLAG SCANNER -----------------------
+# =========================================================
+
+# Rule-based red flag patterns (cheap, deterministic, no API call)
+_RED_FLAG_RULES: List[Dict[str, Any]] = [
+    {
+        "id": "missing_salary",
+        "title": "No salary or compensation mentioned",
+        "severity": "medium",
+        "reason": "Legitimate employers increasingly disclose pay ranges. Absence may signal below-market compensation.",
+        "patterns": [],  # special logic: flag when NO salary-related terms found
+        "detect": "absence",
+        "absence_terms": [
+            r"\$\d", r"salary", r"compensation", r"pay\s*range", r"per\s*(hour|year|annum)",
+            r"\d+k\s*[-–]\s*\d+k", r"competitive\s+pay", r"base\s+pay", r"hourly\s+rate",
+        ],
+    },
+    {
+        "id": "scope_creep",
+        "title": "Role spans too many unrelated functions",
+        "severity": "high",
+        "reason": "When a single role covers engineering, support, QA, and operations it often means an understaffed team where one person does everything.",
+        "detect": "threshold",
+        "threshold": 4,
+        "buckets": {
+            "engineering": [r"develop", r"engineer", r"architect", r"code", r"programming"],
+            "support": [r"customer\s+support", r"help\s*desk", r"troubleshoot.*customer", r"client.*issue"],
+            "qa": [r"test.*quality", r"quality\s+assurance", r"\bQA\b", r"write.*test"],
+            "design": [r"UI\s*/?\s*UX", r"user\s+interface", r"figma", r"design.*mockup"],
+            "ops": [r"deploy", r"infrastructure", r"devops", r"CI\s*/?\s*CD", r"monitor.*production"],
+            "product": [r"product\s+manag", r"roadmap", r"stakeholder.*priorit"],
+            "marketing": [r"SEO", r"content.*market", r"social\s+media", r"brand"],
+            "sales": [r"sales.*target", r"revenue.*generat", r"prospect", r"close.*deal"],
+        },
+    },
+    {
+        "id": "buzzword_culture",
+        "title": "Excessive buzzword culture signals",
+        "severity": "low",
+        "reason": "Terms like 'rockstar', 'ninja', or 'guru' can indicate an immature hiring process or unrealistic expectations.",
+        "detect": "any",
+        "patterns": [
+            r"\brockstar\b", r"\bninja\b", r"\bguru\b", r"\bunicorn\b",
+            r"\bhustl", r"\bgrind\b", r"work\s+hard.*play\s+hard",
+        ],
+    },
+    {
+        "id": "unrealistic_experience",
+        "title": "Unrealistic experience requirements for the level",
+        "severity": "high",
+        "reason": "Requiring 5+ years of experience for an entry-level or junior title is a common red flag that suggests the employer wants senior work at junior pay.",
+        "detect": "mismatch",
+        "junior_patterns": [r"\bjunior\b", r"\bentry[\s-]*level\b", r"\bintern\b", r"\bassociate\b"],
+        "high_exp_patterns": [r"[5-9]\+?\s*years", r"\b[1-9]\d\+?\s*years", r"10\+?\s*years"],
+    },
+    {
+        "id": "vague_responsibilities",
+        "title": "Vague or generic responsibilities",
+        "severity": "medium",
+        "reason": "Phrases like 'wear many hats' or 'whatever it takes' often mean the role is poorly defined and the workload is unpredictable.",
+        "detect": "any",
+        "patterns": [
+            r"wear\s+many\s+hats", r"whatever\s+it\s+takes", r"other\s+duties\s+as\s+assigned",
+            r"self[\s-]*starter", r"must\s+thrive\s+under\s+pressure",
+            r"comfortable\s+with\s+ambiguity",
+        ],
+    },
+    {
+        "id": "unpaid_signals",
+        "title": "Possible unpaid or exploitative arrangement",
+        "severity": "high",
+        "reason": "Mentions of unpaid trials, equity-only compensation, or 'passion projects' can signal exploitation.",
+        "detect": "any",
+        "patterns": [
+            r"unpaid\s+(trial|test|period|internship)",
+            r"equity[\s-]*only", r"sweat\s+equity",
+            r"volunteer\s+(position|role|opportunity)",
+            r"no\s+monetary\s+compensation",
+        ],
+    },
+    {
+        "id": "excessive_qualifications",
+        "title": "Excessive qualification list",
+        "severity": "medium",
+        "reason": "Listing 15+ requirements often means the employer hasn't prioritized what truly matters, or is trying to justify a low offer by demanding everything.",
+        "detect": "count",
+        "count_pattern": r"(?:^|\n)\s*[-•●▪]\s+",
+        "threshold": 20,
+    },
+    {
+        "id": "urgency_pressure",
+        "title": "Unusual urgency language",
+        "severity": "low",
+        "reason": "Phrases like 'ASAP', 'immediately', or 'we need someone yesterday' can indicate poor planning or high turnover.",
+        "detect": "any",
+        "patterns": [
+            r"\bASAP\b", r"start\s+immediately", r"need.*yesterday",
+            r"urgent\s+(hire|opening|need)", r"fill.*position.*immediately",
+        ],
+    },
+]
+
+
+def _run_rule_based_scan(job_description: str) -> List[Dict[str, Any]]:
+    """Run deterministic rule-based red flag checks. No API calls."""
+    flags = []
+    text = job_description
+    text_lower = text.lower()
+
+    for rule in _RED_FLAG_RULES:
+        detected = False
+        evidence = ""
+
+        if rule["detect"] == "absence":
+            found_any = False
+            for term_pat in rule["absence_terms"]:
+                if re.search(term_pat, text_lower):
+                    found_any = True
+                    break
+            if not found_any:
+                detected = True
+                evidence = "No salary, compensation, or pay range mentioned anywhere in the posting."
+
+        elif rule["detect"] == "any":
+            for pat in rule["patterns"]:
+                m = re.search(pat, text_lower)
+                if m:
+                    detected = True
+                    start = max(0, m.start() - 30)
+                    end = min(len(text), m.end() + 30)
+                    evidence = "..." + text[start:end].strip() + "..."
+                    break
+
+        elif rule["detect"] == "threshold":
+            hit_buckets = []
+            for bucket_name, patterns in rule["buckets"].items():
+                for pat in patterns:
+                    if re.search(pat, text_lower):
+                        hit_buckets.append(bucket_name)
+                        break
+            if len(hit_buckets) >= rule["threshold"]:
+                detected = True
+                evidence = f"Role spans {len(hit_buckets)} distinct functions: {', '.join(hit_buckets)}"
+
+        elif rule["detect"] == "mismatch":
+            is_junior = any(re.search(p, text_lower) for p in rule["junior_patterns"])
+            has_high_exp = any(re.search(p, text_lower) for p in rule["high_exp_patterns"])
+            if is_junior and has_high_exp:
+                detected = True
+                evidence = "Junior/entry-level title combined with 5+ years experience requirement."
+
+        elif rule["detect"] == "count":
+            matches = re.findall(rule["count_pattern"], text)
+            if len(matches) >= rule["threshold"]:
+                detected = True
+                evidence = f"Found {len(matches)} bullet-point requirements in the listing."
+
+        if detected:
+            flags.append({
+                "id": rule["id"],
+                "title": rule["title"],
+                "severity": rule["severity"],
+                "reason": rule["reason"],
+                "evidence": evidence,
+            })
+
+    return flags
+
+
+async def scan_job_red_flags(job_description: str) -> Dict[str, Any]:
+    """
+    Scan a job description for red flags using hybrid approach:
+    1. Fast rule-based checks (deterministic, free)
+    2. AI-powered analysis for nuanced concerns
+    Returns structured risk assessment.
+    """
+    # Phase 1: Rule-based scan
+    rule_flags = _run_rule_based_scan(job_description)
+
+    # Phase 2: AI analysis for nuance
+    ai_result = await _ai_red_flag_analysis(job_description)
+
+    # Merge: rule-based flags first, then AI flags (deduplicated by id)
+    seen_ids = {f["id"] for f in rule_flags}
+    all_flags = list(rule_flags)
+    for af in ai_result.get("flags", []):
+        if af.get("id", af.get("title", "")) not in seen_ids:
+            all_flags.append(af)
+            seen_ids.add(af.get("id", af.get("title", "")))
+
+    # Score: start at 100, subtract based on severity
+    score = 100
+    for f in all_flags:
+        sev = f.get("severity", "low")
+        if sev == "high":
+            score -= 20
+        elif sev == "medium":
+            score -= 10
+        elif sev == "low":
+            score -= 5
+    score = max(0, min(100, score))
+
+    # Verdict
+    if score >= 80:
+        verdict = "Looks Good"
+        overall_risk = "low"
+    elif score >= 55:
+        verdict = "Proceed With Caution"
+        overall_risk = "medium"
+    else:
+        verdict = "High Risk"
+        overall_risk = "high"
+
+    return {
+        "success": True,
+        "score": score,
+        "verdict": verdict,
+        "overallRisk": overall_risk,
+        "summary": ai_result.get("summary", ""),
+        "flags": all_flags,
+        "positives": ai_result.get("positives", []),
+        "questionsToAsk": ai_result.get("questionsToAsk", []),
+    }
+
+
+async def _ai_red_flag_analysis(job_description: str) -> Dict[str, Any]:
+    """Use AI to detect nuanced red flags and generate positives + recruiter questions."""
+    try:
+        client = _get_openai_client()
+
+        prompt = f"""Analyze this job description for red flags and positive signals.
+
+JOB DESCRIPTION:
+{job_description[:6000]}
+
+Return ONLY valid JSON (no markdown fences):
+{{
+  "summary": "1-2 sentence overall assessment of this posting's quality and legitimacy",
+  "flags": [
+    {{
+      "id": "unique_short_id",
+      "title": "Short title of concern",
+      "severity": "high|medium|low",
+      "reason": "Why this is a concern",
+      "evidence": "Exact quote or paraphrased evidence from the posting"
+    }}
+  ],
+  "positives": ["Positive signal 1", "Positive signal 2"],
+  "questionsToAsk": ["Smart question to ask the recruiter 1", "Question 2", "Question 3"]
+}}
+
+ANALYSIS RULES:
+- Only flag genuinely concerning patterns, NOT normal job requirements
+- severity: high = likely problematic, medium = worth noting, low = minor concern
+- Include 2-5 flags maximum (only real issues)
+- Include 2-4 positives (genuine strengths of the posting)
+- Include 3-5 smart questions the candidate should ask about flagged concerns
+- Do NOT flag standard items like "team player", "communication skills", or normal tech stacks
+- DO flag: compensation red flags, scope creep, unrealistic expectations, high-turnover signals, discriminatory language, vague role definitions"""
+
+        response = client.chat.completions.create(
+            model=settings.openai_model or "gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a career advisor who helps job seekers evaluate opportunities objectively. "
+                        "You are balanced — you highlight both concerns and positives. "
+                        "You never manufacture issues where none exist."
+                    )
+                },
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=1500,
+        )
+
+        content = response.choices[0].message.content.strip()
+        content = re.sub(r"^```(?:json)?|```$", "", content, flags=re.MULTILINE).strip()
+        result = json.loads(content)
+
+        if not isinstance(result, dict):
+            return {"flags": [], "positives": [], "questionsToAsk": [], "summary": ""}
+
+        return result
+
+    except Exception as e:
+        print(f"AI red flag analysis error: {e}")
+        return {"flags": [], "positives": [], "questionsToAsk": [], "summary": "Could not complete AI analysis."}
+
+
+# =========================================================
+# ---------------- COVER LETTER GENERATION ----------------
+# =========================================================
+
+COVER_LETTER_TONES = {
+    "professional": "Write in a polished, formal tone suitable for corporate environments. Use confident, precise language.",
+    "conversational": "Write in a warm, approachable tone that still maintains professionalism. Use first-person naturally and show personality.",
+    "enthusiastic": "Write with genuine excitement and energy about the opportunity. Show passion while remaining professional.",
+    "executive": "Write in a commanding, strategic tone suitable for senior leadership roles. Emphasize vision and impact.",
+}
+
+async def generate_cover_letter(
+    resume_text: str,
+    job_description: str,
+    job_title: str = "",
+    company: str = "",
+    tone: str = "professional",
+) -> Dict[str, Any]:
+    """
+    Generate a tailored cover letter based on the user's resume and the target job.
+    """
+    api_key = (settings.openai_api_key or os.getenv("OPENAI_API_KEY", "")).strip()
+    if not api_key:
+        return {"success": False, "coverLetter": "", "message": "OpenAI API key missing."}
+
+    tone_instruction = COVER_LETTER_TONES.get(tone, COVER_LETTER_TONES["professional"])
+
+    try:
+        client = _get_openai_client()
+
+        prompt = f"""Generate a compelling, tailored cover letter for this candidate.
+
+CANDIDATE'S RESUME:
+{resume_text[:8000]}
+
+TARGET POSITION: {job_title or "Not specified"}
+TARGET COMPANY: {company or "Not specified"}
+
+JOB DESCRIPTION:
+{job_description[:4000]}
+
+TONE: {tone}
+{tone_instruction}
+
+REQUIREMENTS:
+1. Use ONLY real information from the candidate's resume — do NOT fabricate achievements, companies, or dates
+2. Open with a strong, specific hook — avoid generic "I am writing to apply" openers
+3. Connect the candidate's actual experience to the job requirements with concrete examples
+4. Show knowledge of the company and why the candidate is specifically interested
+5. Keep it to 3-4 paragraphs, approximately 250-350 words
+6. End with a confident call-to-action
+7. Return ONLY the cover letter text — no subject lines, no "Dear Hiring Manager" alternatives list
+8. Start with "Dear Hiring Manager," (or use the company name if available)
+9. Sign off with just the candidate's name extracted from the resume
+
+OUTPUT: Return ONLY the plain text cover letter, nothing else."""
+
+        response = client.chat.completions.create(
+            model=settings.openai_model or "gpt-4o",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an expert career coach who writes exceptional, personalized cover letters. "
+                        "You never use filler phrases like 'I believe I would be a great fit' or 'I am excited to apply'. "
+                        "Instead, you craft letters that read like they were written by a confident professional "
+                        "who knows their worth and can articulate exactly why they're the right person for the role. "
+                        "You always use specific examples from the candidate's actual resume."
+                    )
+                },
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=2000,
+        )
+
+        cover_letter = response.choices[0].message.content.strip()
+
+        if not cover_letter:
+            return {"success": False, "coverLetter": "", "message": "AI returned empty response."}
+
+        word_count = len(cover_letter.split())
+
+        return {
+            "success": True,
+            "message": "Cover letter generated successfully",
+            "coverLetter": cover_letter,
+            "tone": tone,
+            "wordCount": word_count,
+        }
+
+    except Exception as e:
+        import traceback
+        print(f"Cover letter generation error: {e}")
+        print(f"Error traceback: {traceback.format_exc()}")
+        return {"success": False, "coverLetter": "", "message": f"Generation failed: {str(e)}"}
 
 
 def verify_keyword_integration(optimized_text: str, keywords: List[str]) -> Dict[str, Any]:
@@ -1328,3 +1775,187 @@ def calculate_ats_score(
     final_score = max(0, min(100, round(score)))
 
     return final_score
+
+
+# =========================================================
+# ----------- MOCK INTERVIEW GENERATION -------------------
+# =========================================================
+
+async def generate_interview_questions(
+    job_description: str,
+    resume_text: str,
+    count: int = 5,
+    persona: str = "professional",
+) -> Dict[str, Any]:
+    """
+    Generate role-specific mock interview questions based on the job
+    description and candidate resume.
+    """
+    api_key = (settings.openai_api_key or os.getenv("OPENAI_API_KEY", "")).strip()
+    if not api_key:
+        return {"success": False, "questions": [], "message": "OpenAI API key missing."}
+
+    _PERSONA_SYSTEM = {
+        "professional": (
+            "You are a seasoned hiring manager who conducts structured, insightful interviews. "
+            "Your questions are specific to the role and candidate — never generic. "
+            "You probe for real competence, not rehearsed answers."
+        ),
+        "tech_lead": (
+            "You are a senior technical lead conducting a rigorous technical interview. "
+            "Focus heavily on system design, engineering depth, and problem-solving precision. "
+            "Ask questions that reveal how the candidate thinks about hard technical problems."
+        ),
+        "pressure_test": (
+            "You are an experienced interviewer known for your challenging, direct style. "
+            "Ask probing questions that test how candidates handle ambiguity, pressure, and difficult trade-offs. "
+            "Challenge assumptions and separate good from great candidates."
+        ),
+    }
+    _PERSONA_RULES = {
+        "professional": "Mix question types evenly. Order from easier to harder.",
+        "tech_lead": "Weight towards technical and role-specific questions (at least 60%). Include at least one system design or architecture question.",
+        "pressure_test": "Lean towards medium-to-hard difficulty. Include at least one question that challenges an assumption or gap in the candidate's resume.",
+    }
+
+    try:
+        client = _get_openai_client()
+        system_msg = _PERSONA_SYSTEM.get(persona, _PERSONA_SYSTEM["professional"])
+        extra_rules = _PERSONA_RULES.get(persona, _PERSONA_RULES["professional"])
+
+        prompt = f"""Based on the job description and the candidate's resume below, generate exactly {count} interview questions.
+
+JOB DESCRIPTION:
+{job_description[:5000]}
+
+CANDIDATE RESUME:
+{resume_text[:5000]}
+
+RULES:
+- {extra_rules}
+- Mix question types: behavioral, technical, situational, and role-specific
+- Target gaps between the resume and job requirements
+- Also probe strengths the candidate can leverage
+- Each question must have a clear "context" explaining why you'd ask it
+
+Return ONLY valid JSON (no markdown fences):
+[
+  {{
+    "id": 1,
+    "type": "behavioral|technical|situational|role-specific",
+    "question": "The full interview question",
+    "context": "Why this question matters for this role",
+    "difficulty": "easy|medium|hard"
+  }}
+]"""
+
+        response = client.chat.completions.create(
+            model=settings.openai_model or "gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.6,
+            max_tokens=2000,
+        )
+
+        content = response.choices[0].message.content.strip()
+        content = re.sub(r"^```(?:json)?|```$", "", content, flags=re.MULTILINE).strip()
+        questions = json.loads(content)
+
+        if not isinstance(questions, list):
+            return {"success": False, "questions": [], "message": "Unexpected AI response format."}
+
+        return {"success": True, "questions": questions}
+
+    except Exception as e:
+        print(f"Interview question generation error: {e}")
+        return {"success": False, "questions": [], "message": f"Generation failed: {str(e)}"}
+
+
+async def evaluate_interview_answer(
+    question: str,
+    answer: str,
+    job_description: str,
+) -> Dict[str, Any]:
+    """
+    Evaluate a candidate's interview answer for relevance, completeness,
+    and overall quality.
+    """
+    api_key = (settings.openai_api_key or os.getenv("OPENAI_API_KEY", "")).strip()
+    if not api_key:
+        return {"success": False, "feedback": None, "message": "OpenAI API key missing."}
+
+    try:
+        client = _get_openai_client()
+
+        prompt = f"""You are an experienced interview coach evaluating a candidate's answer.
+
+INTERVIEW QUESTION:
+{question}
+
+CANDIDATE'S ANSWER:
+{answer[:3000]}
+
+JOB CONTEXT:
+{job_description[:3000]}
+
+Score the answer on three dimensions (0-100 each):
+1. relevance — Does the answer actually address the question asked?
+2. completeness — Does it provide enough depth, examples, and the STAR method where applicable?
+3. overall score — Holistic quality considering clarity, confidence, and impact
+
+Provide:
+- 2-3 specific strengths of the answer
+- 2-3 concrete improvements
+- A sample strong answer (150-200 words) the candidate can learn from
+- starAnalysis: For behavioral/situational questions, evaluate each STAR component (true if clearly present, false if missing). For technical or role-specific questions, set all STAR fields to null.
+- followUpQuestion: One concise, probing follow-up question that digs deeper into either the weakest part of their answer or an interesting point they raised.
+
+Return ONLY valid JSON (no markdown fences):
+{{
+  "score": <overall 0-100>,
+  "relevance": <0-100>,
+  "completeness": <0-100>,
+  "strengths": ["strength 1", "strength 2"],
+  "improvements": ["improvement 1", "improvement 2"],
+  "sampleAnswer": "A well-structured sample answer...",
+  "starAnalysis": {{
+    "situation": true,
+    "task": false,
+    "action": true,
+    "result": null
+  }},
+  "followUpQuestion": "One probing follow-up question based on their answer"
+}}"""
+
+        response = client.chat.completions.create(
+            model=settings.openai_model or "gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a supportive but honest interview coach. "
+                        "You give constructive feedback that helps candidates improve. "
+                        "You never score too generously — an average answer gets 50-60, "
+                        "a good one 70-80, and only exceptional answers score 85+."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.4,
+            max_tokens=1500,
+        )
+
+        content = response.choices[0].message.content.strip()
+        content = re.sub(r"^```(?:json)?|```$", "", content, flags=re.MULTILINE).strip()
+        feedback = json.loads(content)
+
+        if not isinstance(feedback, dict):
+            return {"success": False, "feedback": None, "message": "Unexpected AI response format."}
+
+        return {"success": True, "feedback": feedback}
+
+    except Exception as e:
+        print(f"Interview answer evaluation error: {e}")
+        return {"success": False, "feedback": None, "message": f"Evaluation failed: {str(e)}"}

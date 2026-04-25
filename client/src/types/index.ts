@@ -151,10 +151,47 @@ export interface OptimizationResult {
   message: string;
   optimizedResume: string;
   resumeSections?: ResumeSection[];
-  changes: ResumeChange[];
+  changes?: ResumeChange[];
   atsScore: number;
   tips?: string[];
   formatting?: ResumeFormatting;
+  keywordVerification?: {
+    integrated: string[];
+    missing: string[];
+    integrationRate: number;
+  };
+  metadata?: {
+    keywordsRequested: number;
+    keywordsIntegrated: number;
+    sectionsModified: number;
+  };
+}
+
+export interface CoverLetterResult {
+  success: boolean;
+  message: string;
+  coverLetter: string;
+  tone: string;
+  wordCount: number;
+}
+
+export interface RedFlag {
+  id: string;
+  title: string;
+  severity: 'high' | 'medium' | 'low';
+  reason: string;
+  evidence: string;
+}
+
+export interface RedFlagResult {
+  success: boolean;
+  score: number;
+  verdict: string;
+  overallRisk: 'low' | 'medium' | 'high';
+  summary: string;
+  flags: RedFlag[];
+  positives: string[];
+  questionsToAsk: string[];
 }
 
 export interface JobListing {
@@ -171,4 +208,55 @@ export interface JobListing {
   salary: string;
   description: string;
   source?: string;
+}
+
+export interface InterviewQuestion {
+  id: number;
+  type: 'behavioral' | 'technical' | 'situational' | 'role-specific';
+  question: string;
+  context: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
+export interface StarAnalysis {
+  situation: boolean | null;
+  task: boolean | null;
+  action: boolean | null;
+  result: boolean | null;
+}
+
+export interface AnswerFeedback {
+  score: number;
+  relevance: number;
+  completeness: number;
+  strengths: string[];
+  improvements: string[];
+  sampleAnswer: string;
+  starAnalysis?: StarAnalysis | null;
+  followUpQuestion?: string;
+}
+
+export interface MockInterviewResult {
+  success: boolean;
+  questions: InterviewQuestion[];
+  message?: string;
+}
+
+export interface AnswerEvaluationResult {
+  success: boolean;
+  feedback: AnswerFeedback;
+  message?: string;
+}
+
+export type PersonaType = 'professional' | 'tech_lead' | 'pressure_test';
+
+export interface InterviewSession {
+  id: string;
+  date: string;
+  jobTitle: string;
+  company: string;
+  persona: PersonaType;
+  averageScore: number;
+  questionCount: number;
+  scores: number[];
 }

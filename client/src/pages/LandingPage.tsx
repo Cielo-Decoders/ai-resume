@@ -63,7 +63,7 @@ export default function LandingPage() {
           <div className="flex flex-col space-y-6 lg:mt-20">
 
             {/* Logo + Name */}
-            <div className="flex items-center justify-center lg:justify-start gap-0">
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-1 sm:gap-0">
               <img
                 src="/Logo3.png"
                 alt="CareerDev AI"
@@ -122,7 +122,7 @@ export default function LandingPage() {
             </div>
 
             {/* 2×2 Feature Cards */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {iconFeatures.map((f, i) => {
                 const Icon = f.icon;
                 return (
@@ -177,7 +177,7 @@ export default function LandingPage() {
           </div>
 
           {/* Steps */}
-          <div className="relative grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-4">
+          <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4">
 
             {/* Connector line — desktop only */}
             <div className="hidden sm:block absolute top-5 left-[12.5%] right-[12.5%] h-px bg-indigo-100" />

@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from ..dependencies import AnalyzeControllerDep
-from ..controllers.AnalyzeController import KeywordAnalysisRequest, ResumeOptimizationRequest, ExtractJobRequest
+from ..controllers.AnalyzeController import KeywordAnalysisRequest, ResumeOptimizationRequest, ExtractJobRequest, CoverLetterRequest, RedFlagScanRequest, MockInterviewRequest, EvaluateAnswerRequest
 from ..config import settings
 from ..limiter import limiter
 
@@ -157,6 +157,50 @@ async def job_proxy_endpoint(source: str, request: Request):
         )
     except Exception as exc:
         return JSONResponse(status_code=502, content={"error": "Failed to fetch job data"})
+
+
+@analyze_router.post("/generate-cover-letter")
+@limiter.limit("5/minute")
+async def generate_cover_letter_endpoint(
+    request: Request,
+    body: CoverLetterRequest,
+    controller: AnalyzeControllerDep = None
+):
+    """Generate a tailored cover letter based on resume and job description."""
+    return await controller.generate_cover_letter_endpoint(body)
+
+
+@analyze_router.post("/scan-red-flags")
+@limiter.limit("20/minute")
+async def scan_red_flags_endpoint(
+    request: Request,
+    body: RedFlagScanRequest,
+    controller: AnalyzeControllerDep = None
+):
+    """Scan a job description for red flags and risks."""
+    return await controller.scan_red_flags(body)
+
+
+@analyze_router.post("/generate-interview")
+@limiter.limit("5/minute")
+async def generate_interview_endpoint(
+    request: Request,
+    body: MockInterviewRequest,
+    controller: AnalyzeControllerDep = None
+):
+    """Generate mock interview questions based on JD and resume."""
+    return await controller.generate_interview(body)
+
+
+@analyze_router.post("/evaluate-answer")
+@limiter.limit("20/minute")
+async def evaluate_answer_endpoint(
+    request: Request,
+    body: EvaluateAnswerRequest,
+    controller: AnalyzeControllerDep = None
+):
+    """Evaluate a candidate's interview answer."""
+    return await controller.evaluate_answer(body)
 
 
 def register_routes(app):

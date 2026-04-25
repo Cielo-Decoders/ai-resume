@@ -47,6 +47,10 @@ function AppContent() {
 
         {/* App route - publicly accessible (no auth required yet) */}
         <Route path="/app" element={<ATSAnalyzerPro />} />
+        <Route path="/app/jobs" element={<ATSAnalyzerPro />} />
+        <Route path="/app/analysis" element={<ATSAnalyzerPro />} />
+        <Route path="/app/coverletter" element={<ATSAnalyzerPro />} />
+        <Route path="/app/interview" element={<ATSAnalyzerPro />} />
 
         {/* Catch all - redirect to landing */}
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -42,7 +42,7 @@ const Features: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
-      <div className="container mx-auto px-4 py-16 max-w-7xl">
+      <div className="container mx-auto px-4 py-10 sm:py-16 max-w-7xl">
         {/* Back to Home Button */}
         <div className="mb-8">
           <Link
@@ -55,26 +55,26 @@ const Features: React.FC = () => {
         </div>
 
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 sm:mb-16">
           <div className="flex items-center justify-center gap-2 mb-4">
 
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               Features
             </h1>
           </div>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-base sm:text-xl text-gray-600 max-w-3xl mx-auto">
             Discover how CareerDev AI empowers you to create winning resumes that get past ATS systems and land interviews
           </p>
         </div>
 
         {/* Features Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-12 sm:mb-16">
           {features.map((feature, index) => (
             <div
               key={index}
-              className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-indigo-200 hover:-translate-y-1 flex flex-col h-full"
+              className="bg-white rounded-2xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-indigo-200 hover:-translate-y-1 flex flex-col h-full"
             >
-              <h3 className="text-2xl font-bold text-gray-800 mb-3">{feature.title}</h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3">{feature.title}</h3>
               <p className="text-gray-600 mb-4 flex-1">{feature.description}</p>
               <ul className="mt-4 space-y-2">
                 {feature.highlights.map((highlight, idx) => (
@@ -89,9 +89,9 @@ const Features: React.FC = () => {
         </div>
 
         {/* How It Works */}
-        <div className="bg-white rounded-2xl p-12 shadow-xl mb-16">
-          <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">How It Works</h2>
-          <div className="grid md:grid-cols-4 gap-8">
+        <div className="bg-white rounded-2xl p-6 sm:p-12 shadow-xl mb-12 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-8 text-center">How It Works</h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="text-center">
               <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-indigo-600">1</span>

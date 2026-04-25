@@ -1,17 +1,47 @@
-import React, { useState } from 'react';
-import { Upload, CheckCircle, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Upload, CheckCircle, FileText, Mail, Mic } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import TabNavigation from '../components/tabs/TabNavigation';
 import ResumeUpload from '../components/resume/ResumeUpload';
 import KeywordAnalysis from '../components/resume/KeywordAnalysis';
 import OptimizedResumeDisplay from '../components/resume/OptimizedResumeDisplay';
-import {Application, JobData, KeywordAnalysisResult, ActionableKeyword, OptimizationResult } from '../types/index';
-import {extractJobDataFromText, extractTextFromResume, analyzeKeywords, optimizeResume} from '../services/api';
+import CoverLetterDisplay from '../components/resume/CoverLetterDisplay';
+import MatchScoreCard from '../components/resume/MatchScoreCard';
+import {Application, JobData, KeywordAnalysisResult, ActionableKeyword, OptimizationResult, RedFlagResult } from '../types/index';
+import {extractJobDataFromText, extractTextFromResume, analyzeKeywords, optimizeResume, scanJobRedFlags} from '../services/api';
 import JobDescriptionInput from '../components/jobs/JobDescriptionInput';
 import JobListings from '../components/jobs/JobListings';
+import RedFlagScanner from '../components/jobs/RedFlagScanner';
+import InterviewerQuestions from '../components/questions/InterviewerQuestions';
 import Footer from '../components/Footer';
 
 export default function ATSAnalyzer() {
-  const [activeTab, setActiveTab] = useState('jobs');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const getTabFromPath = (pathname: string) => {
+    if (pathname === '/app/analysis') return 'analyze';
+    if (pathname === '/app/coverletter') return 'cover-letter';
+    if (pathname === '/app/interview') return 'interview';
+    return 'jobs';
+  };
+
+  const [activeTab, setActiveTab] = useState(() => getTabFromPath(location.pathname));
+
+  const handleSetActiveTab = (tab: string) => {
+    setActiveTab(tab);
+    const paths: Record<string, string> = {
+      analyze: '/app/analysis',
+      'cover-letter': '/app/coverletter',
+      interview: '/app/interview',
+      jobs: '/app/jobs',
+    };
+    navigate(paths[tab] || '/app/jobs', { replace: true });
+  };
+
+  useEffect(() => {
+    setActiveTab(getTabFromPath(location.pathname));
+  }, [location.pathname]);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState('');
   const [inputMode, setInputMode] = useState<'paste'>('paste');
@@ -26,10 +56,12 @@ export default function ATSAnalyzer() {
   const [resumeText, setResumeText] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [company, setCompany] = useState('');
+  const [jobUrl, setJobUrl] = useState('');
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
   const [, setSelectedKeywords] = useState<ActionableKeyword[]>([]);
   const [clearKeywordSelections, setClearKeywordSelections] = useState(false);
+  const [redFlagResult, setRedFlagResult] = useState<RedFlagResult | null>(null);
 
   // Ref for scrolling to results section
   const resultsRef = React.useRef<HTMLDivElement>(null);
@@ -71,20 +103,35 @@ export default function ATSAnalyzer() {
   setKeywordResults(null);
   setAnalysisComplete(false);
   setOptimizationResult(null); // Reset optimization result
+  setRedFlagResult(null); // Reset red flag result
 
   try {
     let jobData: JobData;
     let extractedResumeText: string = '';
 
-    // Step 1: Extract job data from description
+    // Step 1: Extract job data from description + run red flag scan in parallel
     if (inputMode === 'paste') {
-      setScrapingStatus('Extracting job details with AI...');
+      const jdLength = jobDescription.length;
+      const isLongJd = jdLength > 3000;
+      setScrapingStatus(
+        isLongJd
+          ? 'Extracting job details with AI (long description detected — condensing for speed)...'
+          : 'Extracting job details with AI...'
+      );
       try {
-        jobData = await extractJobDataFromText(jobDescription);
+        const [jobDataResult, redFlagScanResult] = await Promise.all([
+          extractJobDataFromText(jobDescription),
+          scanJobRedFlags(jobDescription).catch(() => null),
+        ]);
+        jobData = jobDataResult;
         // Store job title for optimization
         setJobTitle(jobData.title || '');
         // Store company name for optimization
         setCompany(jobData.company || '');
+        // Store red flag results
+        if (redFlagScanResult) {
+          setRedFlagResult(redFlagScanResult);
+        }
       } catch (error) {
         alert('Failed to extract job data. Please try again.');
         setScrapingStatus('');
@@ -126,7 +173,7 @@ export default function ATSAnalyzer() {
 
     // Step 3: Analyze keywords - compare resume against job description
     try {
-      setScrapingStatus('Analyzing keywords and matching skills...');
+      setScrapingStatus('Analyzing keywords and matching skills — this may take a moment for detailed descriptions...');
       const keywordAnalysis = await analyzeKeywords(extractedResumeText, jobData);
       setKeywordResults(keywordAnalysis);
       setAnalysisComplete(true);
@@ -211,7 +258,11 @@ export default function ATSAnalyzer() {
                 <div className="bg-gradient-to-r from-indigo-600 to-purple-600 h-full rounded-full animate-progress"></div>
               </div>
 
-              <p className="text-sm text-gray-500">This may take a few moments...</p>
+              <p className="text-sm text-gray-500">
+                {scrapingStatus.includes('keyword') || scrapingStatus.includes('matching')
+                  ? 'AI is comparing your resume against the job — longer descriptions take a bit more time'
+                  : 'This may take a few moments...'}
+              </p>
             </div>
           </div>
         </div>
@@ -227,7 +278,7 @@ export default function ATSAnalyzer() {
                 className="h-12 sm:h-16 lg:h-20 w-auto object-contain"
               />
               <div className="flex flex-col mt-4">
-                <h1 className="text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 bg-clip-text text-transparent drop-shadow-2xl tracking-tight">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 bg-clip-text text-transparent drop-shadow-2xl tracking-tight">
                   CareerDev AI
                 </h1>
                 <p className="text-gray-600 text-sm font-medium tracking-wide text-center">
@@ -237,7 +288,7 @@ export default function ATSAnalyzer() {
             </div>
           </div>
           <div className="text-center">
-            <p className="text-gray-600 text-lg mb-4">
+            <p className="text-gray-600 text-base sm:text-lg mb-4">
               AI-Powered Resume Optimization for Career Success
             </p>
             {baseResume && (
@@ -250,7 +301,7 @@ export default function ATSAnalyzer() {
         </div>
         <TabNavigation
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={handleSetActiveTab}
           applicationsCount={applications.length}
         />
         {activeTab === 'jobs' && (
@@ -259,7 +310,10 @@ export default function ATSAnalyzer() {
               // Strip HTML tags to get plain text description
               const plainText = job.description.replace(/<[^>]*>/g, '\n').replace(/\n{2,}/g, '\n').trim();
               setJobDescription(plainText);
-              setActiveTab('analyze');
+              setJobUrl(job.url || '');
+              setCompany(job.company_name || '');
+              setJobTitle(job.title || '');
+              handleSetActiveTab('analyze');
             }}
           />
         )}
@@ -314,7 +368,7 @@ export default function ATSAnalyzer() {
               <button
                 onClick={analyzeResume}
                 disabled={isAnalyzing || !resumeFile || !jobDescription}
-                className="mt-6 mx-auto w-full sm:w-auto min-w-[220px] md:min-w-[260px] bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg"
+                className="mt-6 mx-auto w-full sm:w-auto min-w-0 sm:min-w-[220px] md:min-w-[260px] bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg"
               >
                 {isAnalyzing ? (
                   <>
@@ -334,44 +388,19 @@ export default function ATSAnalyzer() {
             {/* Keyword Analysis Results */}
             {analysisComplete && keywordResults && (
               <div className="space-y-6" ref={resultsRef}>
+                {/* Red Flag Scanner — shown at top of results */}
+                {redFlagResult && (
+                  <RedFlagScanner
+                    result={redFlagResult}
+                    onDismiss={() => setRedFlagResult(null)}
+                  />
+                )}
+
                 {/* Match Score Card */}
-                <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="flex-1">
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-800">Job Match Score</h3>
-                      <p className="text-sm sm:text-base text-gray-500 mt-1">How well your uploaded resume matches this job description
-                      based on our AI analysis of your resume and this job description</p>
-                    </div>
-                    <div className={`text-3xl sm:text-4xl font-bold text-center md:text-right ${
-                      keywordResults.matchScore >= 70 ? 'text-green-600' :
-                      keywordResults.matchScore >= 50 ? 'text-yellow-600' : 'text-red-600'
-                    }`}>
-                      {keywordResults.matchScore}%
-                    </div>
-                  </div>
-                  {keywordResults.suggestions && keywordResults.suggestions.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <h4 className="font-semibold text-gray-700 mb-2">Suggestions:</h4>
-                      <ul className="space-y-1">
-                        {keywordResults.suggestions.map((suggestion, idx) => (
-                          <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
-                            <span className="text-indigo-500">•</span>
-                            {suggestion}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
+                <MatchScoreCard result={keywordResults} />
 
                 {/* Missing and Matching Keywords */}
                 <KeywordAnalysis
-                  missingKeywords={(keywordResults.missingPhrases && keywordResults.missingPhrases.length > 0)
-                    ? keywordResults.missingPhrases
-                    : (keywordResults.missingKeywords || []).slice(0, 15)}
-                  suggestedKeywords={(keywordResults.matchingPhrases && keywordResults.matchingPhrases.length > 0)
-                    ? keywordResults.matchingPhrases
-                    : (keywordResults.matchingKeywords || []).slice(0, 15)}
                   actionableKeywords={keywordResults.actionableKeywords || []}
                   jobTitle={jobTitle}
                   company={company}
@@ -390,8 +419,76 @@ export default function ATSAnalyzer() {
                     originalResume={resumeText}
                     onClose={() => setOptimizationResult(null)}
                     company={company}
+                    jobUrl={jobUrl}
                   />
                 )}
+
+                {/* CTA: go to Cover Letter tab */}
+                {optimizationResult && optimizationResult.success && (
+                  <div className="flex justify-center pt-2">
+                    <button
+                      onClick={() => handleSetActiveTab('cover-letter')}
+                      className="inline-flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all"
+                    >
+                      <Mail className="w-5 h-5" />
+                      Create Cover Letter
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        {activeTab === 'cover-letter' && (
+          <div className="space-y-6">
+            {resumeText && jobDescription ? (
+              <CoverLetterDisplay
+                resumeText={resumeText}
+                jobDescription={jobDescription}
+                jobTitle={jobTitle}
+                company={company}
+                jobUrl={jobUrl}
+              />
+            ) : (
+              <div className="bg-white rounded-xl shadow-lg p-10 text-center space-y-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-50 mb-2">
+                  <Mail className="w-8 h-8 text-indigo-400" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-800">No resume analysed yet</h3>
+                <p className="text-gray-500 max-w-md mx-auto">
+                  First analyse your resume and optimise it in the <strong>Analyze &amp; Optimize</strong> tab, then come back here to generate a tailored cover letter.
+                </p>
+                <button
+                  onClick={() => handleSetActiveTab('analyze')}
+                  className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                  Go to Analyze &amp; Optimize
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        {activeTab === 'interview' && (
+          <div className="space-y-6">
+            {resumeText && jobDescription ? (
+              <InterviewerQuestions
+                resumeText={resumeText}
+                jobDescription={jobDescription}
+                jobTitle={jobTitle}
+                company={company}
+              />
+            ) : (
+              <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+                <Mic className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+                <h3 className="text-xl font-bold text-gray-700 mb-2">Upload & Analyze First</h3>
+                <p className="text-gray-500 text-sm max-w-md mx-auto mb-4">
+                  To start a mock interview, first upload your resume and paste a job description in the{' '}
+                  <button onClick={() => handleSetActiveTab('analyze')} className="text-indigo-600 font-semibold hover:underline">
+                    Analyze & Optimize
+                  </button>{' '}
+                  tab. The AI needs both to generate tailored interview questions.
+                </p>
               </div>
             )}
           </div>

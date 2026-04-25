@@ -85,7 +85,7 @@ const ContactUs: React.FC = () => {
         </div>
       )}
 
-      <div className="container mx-auto px-4 py-16 max-w-6xl">
+      <div className="container mx-auto px-4 py-10 sm:py-16 max-w-6xl">
         {/* Back to Home Button */}
         <div className="mb-8">
           <Link
@@ -98,22 +98,22 @@ const ContactUs: React.FC = () => {
         </div>
 
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 sm:mb-16">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Mail className="w-10 h-10 text-indigo-600" />
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            <Mail className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-600" />
+            <h1 className="text-3xl sm:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               Contact Us
             </h1>
           </div>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-base sm:text-xl text-gray-600 max-w-3xl mx-auto">
             Have questions? We're here to help. Reach out to our team and we'll get back to you as soon as possible.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 mb-16">
+        <div className="grid md:grid-cols-2 gap-6 sm:gap-8 mb-12 sm:mb-16">
           {/* Contact Form */}
-          <div className="bg-white rounded-2xl p-8 shadow-xl">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Send us a Message</h2>
+          <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-xl">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-6">Send us a Message</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -209,8 +209,8 @@ const ContactUs: React.FC = () => {
 
           {/* Contact Information */}
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl p-8 shadow-xl">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">Get in Touch</h2>
+            <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-xl">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-6">Get in Touch</h2>
 
               <div className="space-y-6">
                 <div className="flex items-start gap-4">
@@ -250,8 +250,8 @@ const ContactUs: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 shadow-xl text-white">
-              <h3 className="text-2xl font-bold mb-4">Development Team</h3>
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 sm:p-8 shadow-xl text-white">
+              <h3 className="text-xl sm:text-2xl font-bold mb-4">Development Team</h3>
               <p className="mb-4 text-indigo-100">
                 CareerDev AI is proudly developed by:
               </p>
@@ -274,7 +274,7 @@ const ContactUs: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-white rounded-2xl p-8 shadow-xl">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-xl">
               <h3 className="text-xl font-bold text-gray-800 mb-4">Other Ways to Reach Us</h3>
               <div className="space-y-3">
                 <a
@@ -297,27 +297,27 @@ const ContactUs: React.FC = () => {
         </div>
 
         {/* Additional Resources */}
-        <div className="bg-white rounded-2xl p-12 shadow-xl text-center">
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">Need Immediate Help?</h2>
+        <div className="bg-white rounded-2xl p-6 sm:p-12 shadow-xl text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">Need Immediate Help?</h2>
           <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
             Most questions can be answered quickly by checking our documentation and FAQ. For urgent technical issues, please include as much detail as possible in your message.
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center gap-4">
             <a
               href="/help"
-              className="px-6 py-3 bg-gray-100 text-gray-800 rounded-full font-semibold hover:bg-gray-200 transition-all"
+              className="w-full sm:w-auto px-6 py-3 bg-gray-100 text-gray-800 rounded-full font-semibold hover:bg-gray-200 transition-all"
             >
               Help Center
             </a>
             <a
               href="/faq"
-              className="px-6 py-3 bg-gray-100 text-gray-800 rounded-full font-semibold hover:bg-gray-200 transition-all"
+              className="w-full sm:w-auto px-6 py-3 bg-gray-100 text-gray-800 rounded-full font-semibold hover:bg-gray-200 transition-all"
             >
               FAQ
             </a>
             <a
               href="/app"
-              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full font-semibold hover:shadow-xl transition-all"
+              className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full font-semibold hover:shadow-xl transition-all"
             >
               Back to Home
             </a>

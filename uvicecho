@@ -1,0 +1,3 @@
+83970 83970 83970 83970 PI echo Killing uvicor e  kill 83905 2>/dev/null || kill -9 83905 2>/depifi
+# Kill any process listening on ports 8000 and 8001
+for P

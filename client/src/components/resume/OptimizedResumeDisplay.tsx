@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Download, Sparkles, ChevronDown, ChevronUp, Eye, X } from 'lucide-react';
+import { FileText, Download, Sparkles, ChevronDown, ChevronUp, Eye, X, ExternalLink, BarChart3, Lightbulb, TrendingUp, CheckCircle, Wrench } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { OptimizationResult, ResumeChange, ResumeFormatting } from '../../types';
 
@@ -8,6 +8,7 @@ interface OptimizedResumeDisplayProps {
   originalResume?: string;
   onClose?: () => void;
   company?: string;
+  jobUrl?: string;
 }
 
 // Default formatting settings matching user's resume style
@@ -20,7 +21,7 @@ const DEFAULT_FORMATTING: ResumeFormatting = {
   margins: { top: 12.7, bottom: 12.7, left: 12.7, right: 12.7 }
 };
 
-const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result, originalResume, onClose, company }) => {
+const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result, originalResume, onClose, company, jobUrl }) => {
   const [showChanges, setShowChanges] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -348,6 +349,57 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
     return 'text-red-600 bg-red-100';
   };
 
+  const getScoreColors = (score: number) => {
+    if (score >= 70) return { ring: 'ring-emerald-300', gradient: 'from-emerald-500 to-green-600', scoreColor: 'text-emerald-700', scoreBg: 'bg-emerald-50', badgeColor: 'bg-emerald-100 text-emerald-700' };
+    if (score >= 50) return { ring: 'ring-amber-300', gradient: 'from-amber-500 to-orange-500', scoreColor: 'text-amber-700', scoreBg: 'bg-amber-50', badgeColor: 'bg-amber-100 text-amber-700' };
+    return { ring: 'ring-red-300', gradient: 'from-red-500 to-rose-600', scoreColor: 'text-red-700', scoreBg: 'bg-red-50', badgeColor: 'bg-red-100 text-red-700' };
+  };
+
+  const getScoreLabel = (score: number) => {
+    if (score >= 80) return { label: 'Excellent ATS Score', description: 'Your resume is highly optimized for ATS systems' };
+    if (score >= 70) return { label: 'Good ATS Score', description: 'Your resume is well-optimized with minor room for improvement' };
+    if (score >= 50) return { label: 'Fair ATS Score', description: 'Your resume could benefit from further optimization' };
+    return { label: 'Needs Improvement', description: 'Consider additional optimization for better ATS compatibility' };
+  };
+
+  const AccordionSection: React.FC<{
+    title: string;
+    icon: React.ElementType;
+    iconColor: string;
+    badge?: string;
+    badgeColor?: string;
+    defaultOpen?: boolean;
+    children: React.ReactNode;
+  }> = ({ title, icon: Icon, iconColor, badge, badgeColor, defaultOpen = false, children }) => {
+    const [open, setOpen] = useState(defaultOpen);
+    return (
+      <div className="rounded-lg border border-gray-200 overflow-hidden transition-all">
+        <button
+          onClick={() => setOpen(!open)}
+          className="w-full text-left p-3.5 flex items-center gap-3 hover:bg-gray-50 transition-colors"
+        >
+          <Icon className={`w-5 h-5 ${iconColor} flex-shrink-0`} />
+          <span className="font-semibold text-gray-800 text-sm flex-1">{title}</span>
+          {badge && (
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${badgeColor}`}>
+              {badge}
+            </span>
+          )}
+          {open ? (
+            <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          )}
+        </button>
+        {open && (
+          <div className="px-3.5 pb-3.5 border-t border-gray-100">
+            {children}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Enhanced function to highlight word-level differences
   const highlightWordDifferences = (original: string, optimized: string): JSX.Element => {
     const elements: JSX.Element[] = [];
@@ -639,45 +691,121 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
     return <div className="whitespace-pre-wrap text-sm text-gray-800 font-sans leading-relaxed">{elements}</div>;
   };
 
+  const scoreColors = getScoreColors(result.atsScore);
+  const scoreLabel = getScoreLabel(result.atsScore);
+  const totalKeywordsAdded =
+    result.metadata?.keywordsIntegrated ??
+    result.keywordVerification?.integrated?.length ??
+    result.changes?.reduce((sum, c) => sum + (c.keywordsAdded?.length || 0), 0) ??
+    0;
+  const sectionsModified =
+    result.metadata?.sectionsModified ??
+    result.changes?.length ??
+    0;
+
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden" ref={displayRef}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6">
+      <div className="bg-gradient-to-r from-indigo-800 via-purple-800 to-indigo-900 text-white p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Sparkles className="w-8 h-8" />
+            <div className="p-2 rounded-lg bg-white/20">
+              <Sparkles className="w-6 h-6" />
+            </div>
             <div>
-              <h2 className="text-2xl font-bold">Optimized Resume Generated!</h2>
-              <p className="text-indigo-100">Your ATS-optimized resume is ready</p>
+              <h3 className="text-lg font-bold">Optimized Resume Generated!</h3>
+              <p className="text-white/80 text-sm">Your ATS-optimized resume is ready</p>
             </div>
           </div>
-          <div className={`px-4 py-2 rounded-lg font-bold text-2xl ${getScoreColor(result.atsScore)}`}>
-            {result.atsScore}%
-            <span className="text-sm font-normal ml-1">ATS Score</span>
+          <div className={`flex flex-col items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/20 ring-2 ${scoreColors.ring}`}>
+            <span className="text-lg sm:text-xl font-bold leading-none">{result.atsScore}%</span>
+            <span className="text-[10px] uppercase tracking-wider opacity-80">ATS</span>
           </div>
         </div>
       </div>
 
-      {/* Changes Summary */}
-      {result.changes && result.changes.length > 0 && (
-        <div className="border-b border-gray-200">
-          <button
-            onClick={() => setShowChanges(!showChanges)}
-            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-          >
-            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-indigo-600" />
-              Changes Made ({result.changes.length})
-            </h3>
-            {showChanges ? (
-              <ChevronUp className="w-5 h-5 text-gray-500" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-500" />
-            )}
-          </button>
+      {/* Verdict bar */}
+      <div className={`px-5 py-3 ${scoreColors.scoreBg} border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2`}>
+        <div className="flex items-center gap-2">
+          <TrendingUp className={`w-5 h-5 ${scoreColors.scoreColor}`} />
+          <span className={`font-bold ${scoreColors.scoreColor}`}>{scoreLabel.label}</span>
+          <span className="text-gray-600 text-sm hidden sm:inline">— {scoreLabel.description}</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <span className={`px-2 py-0.5 rounded-full font-medium ${scoreColors.badgeColor}`}>
+            {result.atsScore}%
+          </span>
+          {sectionsModified > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">
+              {sectionsModified} Sections
+            </span>
+          )}
+          {totalKeywordsAdded > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">
+              +{totalKeywordsAdded} Keywords
+            </span>
+          )}
+        </div>
+      </div>
 
-          {showChanges && (
-            <div className="px-4 pb-4 space-y-3">
+      {/* Mobile description */}
+      <div className="sm:hidden px-5 py-3 text-sm text-gray-600 border-b bg-gray-50">
+        {scoreLabel.description}
+      </div>
+
+      {/* Accordion sections */}
+      <div className="p-5 space-y-3">
+        {/* Score Breakdown */}
+        <AccordionSection
+          title="How Your ATS Score Was Derived"
+          icon={BarChart3}
+          iconColor="text-indigo-600"
+          defaultOpen={true}
+        >
+          <div className="mt-3 space-y-3">
+            <p className="text-sm text-gray-600">
+              Your ATS score reflects how well your optimized resume is formatted and keyword-matched for Applicant Tracking Systems.
+            </p>
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Resume sections modified</span>
+                <span className="font-bold text-indigo-700">{sectionsModified}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Keywords integrated</span>
+                <span className="font-bold text-emerald-700">{totalKeywordsAdded}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm border-t border-gray-200 pt-2">
+                <span className="text-gray-700 font-medium">ATS Compatibility Score</span>
+                <span className={`font-bold ${scoreColors.scoreColor}`}>{result.atsScore}%</span>
+              </div>
+            </div>
+            {/* Visual bar */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>0%</span>
+                <span>100%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 bg-gradient-to-r ${scoreColors.gradient}`}
+                  style={{ width: `${Math.min(result.atsScore, 100)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </AccordionSection>
+
+        {/* Changes Made */}
+        {result.changes && result.changes.length > 0 && (
+          <AccordionSection
+            title="Changes Made to Your Resume"
+            icon={Wrench}
+            iconColor="text-purple-600"
+            badge={`${result.changes.length}`}
+            badgeColor="bg-purple-100 text-purple-700"
+          >
+            <div className="mt-3 space-y-2">
               {result.changes.map((change: ResumeChange, idx: number) => (
                 <div key={idx} className="bg-gray-50 rounded-lg p-3">
                   <div className="flex items-start gap-2">
@@ -701,14 +829,41 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
                 </div>
               ))}
             </div>
-          )}
-        </div>
-      )}
+          </AccordionSection>
+        )}
 
-      {/* Resume Content */}
-      <div className="p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">Optimized Resume</h3>
+        {/* Keywords Added */}
+        {totalKeywordsAdded > 0 && (
+          <AccordionSection
+            title="Keywords Added"
+            icon={CheckCircle}
+            iconColor="text-emerald-600"
+            badge={`${totalKeywordsAdded}`}
+            badgeColor="bg-emerald-100 text-emerald-700"
+          >
+            <div className="mt-3">
+              <p className="text-sm text-gray-500 mb-2">
+                These keywords were strategically integrated into your resume:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {result.changes?.flatMap(c => c.keywordsAdded || []).map((kw, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  >
+                    <CheckCircle className="w-3 h-3" />
+                    {kw}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </AccordionSection>
+        )}
 
+      </div>
+
+      {/* Resume Actions */}
+      <div className="p-5 border-t border-gray-200 bg-gray-50">
         <div className="flex flex-wrap gap-3 justify-center">
           <button
             onClick={() => setShowPreview(true)}
@@ -725,6 +880,18 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
             <Download className="w-5 h-5" />
             Download PDF
           </button>
+
+          {jobUrl && (
+            <a
+              href={jobUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium shadow-md"
+            >
+              <ExternalLink className="w-5 h-5" />
+              Apply for This Job
+            </a>
+          )}
         </div>
       </div>
 
