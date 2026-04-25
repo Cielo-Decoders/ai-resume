@@ -218,6 +218,13 @@ export interface InterviewQuestion {
   difficulty: 'easy' | 'medium' | 'hard';
 }
 
+export interface StarAnalysis {
+  situation: boolean | null;
+  task: boolean | null;
+  action: boolean | null;
+  result: boolean | null;
+}
+
 export interface AnswerFeedback {
   score: number;
   relevance: number;
@@ -225,6 +232,8 @@ export interface AnswerFeedback {
   strengths: string[];
   improvements: string[];
   sampleAnswer: string;
+  starAnalysis?: StarAnalysis | null;
+  followUpQuestion?: string;
 }
 
 export interface MockInterviewResult {
@@ -237,4 +246,17 @@ export interface AnswerEvaluationResult {
   success: boolean;
   feedback: AnswerFeedback;
   message?: string;
+}
+
+export type PersonaType = 'professional' | 'tech_lead' | 'pressure_test';
+
+export interface InterviewSession {
+  id: string;
+  date: string;
+  jobTitle: string;
+  company: string;
+  persona: PersonaType;
+  averageScore: number;
+  questionCount: number;
+  scores: number[];
 }

@@ -296,7 +296,8 @@ export const scanJobRedFlags = async (
 export const generateInterviewQuestions = async (
   resumeText: string,
   jobDescription: string,
-  count: number = 5
+  count: number = 5,
+  persona: string = 'professional'
 ): Promise<MockInterviewResult> => {
   try {
     const response = await axios.post(
@@ -305,6 +306,7 @@ export const generateInterviewQuestions = async (
         resume_text: resumeText,
         job_description: jobDescription,
         count,
+        persona,
       },
       {
         headers: { 'Content-Type': 'application/json' },

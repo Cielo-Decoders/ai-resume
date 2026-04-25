@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   FileText, Download, Copy, Check, PenLine, RotateCcw,
-  Briefcase, MessageCircle, Zap, Crown, ChevronDown, ChevronUp,
+  Briefcase, MessageCircle, Zap, Crown,
   Sparkles, X, ExternalLink
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
@@ -77,7 +77,6 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(true);
   const [error, setError] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -181,9 +180,8 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden" ref={sectionRef}>
       {/* Header */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full bg-gradient-to-r from-indigo-800 via-purple-800 to-indigo-900 text-white p-6 flex items-center justify-between hover:brightness-105 transition-all"
+      <div
+        className="w-full bg-gradient-to-r from-indigo-800 via-purple-800 to-indigo-900 text-white p-6 flex items-center justify-between"
       >
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -191,7 +189,11 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
             <Sparkles className="w-4 h-4 absolute -top-1 -right-1 text-yellow-300" />
           </div>
           <div className="text-left">
-            <h2 className="text-xl sm:text-2xl font-bold">AI Cover Letter Generator</h2>
+            <h2 className="text-xl sm:text-2xl font-bold">
+                {jobTitle
+                  ? `Cover Letter for ${jobTitle}${company ? ` at ${company}` : ''}`
+                  : 'AI Cover Letter Generator'}
+              </h2>
             <p className="text-indigo-100 text-sm">
               {result ? 'Your cover letter is ready' : 'Craft the perfect cover letter in seconds'}
             </p>
@@ -203,12 +205,10 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
               {wordCount} words
             </span>
           )}
-          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </div>
-      </button>
+      </div>
 
-      {isExpanded && (
-        <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6">
           {/* Tone Selector */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -398,7 +398,6 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
             </div>
           )}
         </div>
-      )}
 
       {/* Full Page Preview Modal */}
       {showPreview && (

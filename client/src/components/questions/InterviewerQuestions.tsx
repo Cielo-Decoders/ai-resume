@@ -23,8 +23,14 @@ import {
   Code,
   Briefcase,
   Star,
+  History,
+  Download,
+  TrendingUp,
+  AlertTriangle,
+  ListChecks,
 } from 'lucide-react';
-import { InterviewQuestion, AnswerFeedback } from '../../types/index';
+import { jsPDF } from 'jspdf';
+import { InterviewQuestion, AnswerFeedback, PersonaType, InterviewSession } from '../../types/index';
 import { generateInterviewQuestions, evaluateInterviewAnswer } from '../../services/api';
 
 interface InterviewerQuestionsProps {
@@ -71,6 +77,134 @@ function getScoreLabel(score: number) {
   return 'Needs Work';
 }
 
+// ── Persona options ────────────────────────────────────────────────
+const PERSONA_OPTIONS: Array<{
+  id: PersonaType;
+  label: string;
+  subtitle: string;
+  icon: React.ElementType;
+  activeClass: string;
+  borderClass: string;
+}> = [
+  {
+    id: 'professional',
+    label: 'HR Screen',
+    subtitle: 'Friendly & balanced',
+    icon: Users,
+    activeClass: 'bg-sky-600 text-white border-sky-600',
+    borderClass: 'border-sky-200 hover:border-sky-400 text-gray-600',
+  },
+  {
+    id: 'tech_lead',
+    label: 'Tech Lead',
+    subtitle: 'Deep-dive technical',
+    icon: Code,
+    activeClass: 'bg-amber-600 text-white border-amber-600',
+    borderClass: 'border-amber-200 hover:border-amber-400 text-gray-600',
+  },
+  {
+    id: 'pressure_test',
+    label: 'Pressure Test',
+    subtitle: 'Challenging & rigorous',
+    icon: Zap,
+    activeClass: 'bg-red-600 text-white border-red-600',
+    borderClass: 'border-red-200 hover:border-red-400 text-gray-600',
+  },
+];
+
+// ── Answer hint templates ─────────────────────────────────────────
+const HINT_TEMPLATES: Record<string, { title: string; steps: string[] }> = {
+  behavioral: {
+    title: 'STAR Method',
+    steps: [
+      'Situation — Set the scene: where, when, and what was the context?',
+      'Task — What was your specific responsibility or challenge?',
+      'Action — What exact steps did YOU take? Use "I", not "we".',
+      'Result — What was the measurable outcome? Use numbers where possible.',
+    ],
+  },
+  situational: {
+    title: 'STAR Method (Hypothetical)',
+    steps: [
+      'Situation — Acknowledge the scenario and clarify any assumptions.',
+      'Task — Define your role and priority in this hypothetical.',
+      'Action — Walk through exactly what you would do, step by step.',
+      'Result — Describe the expected positive outcome and what you learned.',
+    ],
+  },
+  technical: {
+    title: 'Technical Answer Framework',
+    steps: [
+      'Concept — Define the topic clearly in 1-2 sentences.',
+      'Real Example — Describe where you applied it in an actual project.',
+      'Tradeoffs — Mention limitations or when NOT to use this approach.',
+      'Impact — Quantify the result (performance gain, scale, reliability).',
+    ],
+  },
+  'role-specific': {
+    title: 'Role-Specific Tips',
+    steps: [
+      'Context — Tie your answer directly to the company and role.',
+      'Specificity — Use concrete examples from your actual experience.',
+      'Impact — Show measurable value you delivered.',
+      'Fit — Connect your background to their stated requirements.',
+    ],
+  },
+};
+
+// ── Session history helpers ───────────────────────────────────────
+const HISTORY_KEY = 'careerdev_interview_history';
+
+function loadHistory(): InterviewSession[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as InterviewSession[];
+  } catch {
+    return [];
+  }
+}
+
+function saveSession(session: InterviewSession) {
+  try {
+    const existing = loadHistory();
+    const updated = [session, ...existing].slice(0, 5);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+  } catch {
+    // silently fail if storage is unavailable
+  }
+}
+
+// ── Difficulty adaptation ─────────────────────────────────────────
+function adaptDifficulty(
+  score: number,
+  currentIdx: number,
+  qs: InterviewQuestion[]
+): { questions: InterviewQuestion[]; adjusted: boolean } {
+  const answered = qs.slice(0, currentIdx + 1);
+  const remaining = qs.slice(currentIdx + 1);
+  if (remaining.length <= 1) return { questions: qs, adjusted: false };
+
+  if (score >= 82) {
+    const hardIdx = remaining.findIndex((q) => q.difficulty === 'hard');
+    if (hardIdx > 0) {
+      const sorted = [...remaining];
+      const [hard] = sorted.splice(hardIdx, 1);
+      sorted.unshift(hard);
+      return { questions: [...answered, ...sorted], adjusted: true };
+    }
+  } else if (score <= 45) {
+    const easyIdx = remaining.findIndex((q) => q.difficulty === 'easy');
+    if (easyIdx > 0) {
+      const sorted = [...remaining];
+      const [easy] = sorted.splice(easyIdx, 1);
+      sorted.unshift(easy);
+      return { questions: [...answered, ...sorted], adjusted: true };
+    }
+  }
+  return { questions: qs, adjusted: false };
+}
+
 export default function InterviewerQuestions({
   resumeText,
   jobDescription,
@@ -93,6 +227,16 @@ export default function InterviewerQuestions({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  // New feature state
+  const [persona, setPersona] = useState<PersonaType>('professional');
+  const [answerHistory, setAnswerHistory] = useState<string[]>([]);
+  const [sessionHistory, setSessionHistory] = useState<InterviewSession[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [difficultyAdjusted, setDifficultyAdjusted] = useState(false);
+  const [followUpAnswer, setFollowUpAnswer] = useState('');
+  const [followUpEvalPhase, setFollowUpEvalPhase] = useState<'idle' | 'evaluating' | 'done'>('idle');
+  const [followUpScore, setFollowUpScore] = useState<number | null>(null);
 
   // Timer for answering
   useEffect(() => {
@@ -126,6 +270,11 @@ export default function InterviewerQuestions({
       setTimeout(() => textareaRef.current?.focus(), 300);
     }
   }, [phase, currentIndex, inputMode]);
+
+  // Load session history on mount
+  useEffect(() => {
+    setSessionHistory(loadHistory());
+  }, []);
 
   const startListening = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -199,9 +348,11 @@ export default function InterviewerQuestions({
     setFeedbacks([]);
     setCurrentIndex(0);
     setCurrentAnswer('');
+    setAnswerHistory([]);
+    setDifficultyAdjusted(false);
 
     try {
-      const result = await generateInterviewQuestions(resumeText, jobDescription, questionCount);
+      const result = await generateInterviewQuestions(resumeText, jobDescription, questionCount, persona);
       if (result.success && result.questions.length > 0) {
         setQuestions(result.questions);
         setPhase('interviewing');
@@ -226,7 +377,16 @@ export default function InterviewerQuestions({
         jobDescription
       );
       if (result.success && result.feedback) {
+        setAnswerHistory((prev) => [...prev, currentAnswer]);
         setFeedbacks((prev) => [...prev, result.feedback]);
+        const { questions: adapted, adjusted } = adaptDifficulty(result.feedback.score, currentIndex, questions);
+        if (adjusted) {
+          setQuestions(adapted);
+          setDifficultyAdjusted(true);
+        }
+        setFollowUpAnswer('');
+        setFollowUpEvalPhase('idle');
+        setFollowUpScore(null);
         setPhase('feedback');
       } else {
         setError(result.message || 'Failed to evaluate answer.');
@@ -239,7 +399,25 @@ export default function InterviewerQuestions({
   };
 
   const handleNextQuestion = () => {
+    setFollowUpAnswer('');
+    setFollowUpEvalPhase('idle');
+    setFollowUpScore(null);
+    setDifficultyAdjusted(false);
     if (currentIndex + 1 >= questions.length) {
+      const avgScore = feedbacks.length > 0
+        ? Math.round(feedbacks.reduce((sum, f) => sum + f.score, 0) / feedbacks.length)
+        : 0;
+      saveSession({
+        id: Date.now().toString(),
+        date: new Date().toLocaleDateString(),
+        jobTitle: jobTitle || 'Unknown Role',
+        company: company || '',
+        persona,
+        averageScore: avgScore,
+        questionCount: questions.length,
+        scores: feedbacks.map((f) => f.score),
+      });
+      setSessionHistory(loadHistory());
       setPhase('complete');
       topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else {
@@ -257,6 +435,85 @@ export default function InterviewerQuestions({
     setCurrentAnswer('');
     setError('');
     setExpandedSample(null);
+    setAnswerHistory([]);
+    setFollowUpAnswer('');
+    setFollowUpEvalPhase('idle');
+    setFollowUpScore(null);
+    setDifficultyAdjusted(false);
+  };
+
+  const handleFollowUpSubmit = async () => {
+    if (!followUpAnswer.trim() || followUpAnswer.trim().length < 10) return;
+    const fb = feedbacks[feedbacks.length - 1];
+    if (!fb?.followUpQuestion) return;
+    setFollowUpEvalPhase('evaluating');
+    try {
+      const result = await evaluateInterviewAnswer(fb.followUpQuestion, followUpAnswer, jobDescription);
+      if (result.success && result.feedback) {
+        setFollowUpScore(result.feedback.score);
+        setFollowUpEvalPhase('done');
+      } else {
+        setFollowUpEvalPhase('idle');
+      }
+    } catch {
+      setFollowUpEvalPhase('idle');
+    }
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 18;
+    const contentWidth = pageWidth - margin * 2;
+    let y = 20;
+
+    const ln = (extra = 2) => { y += extra; };
+    const addText = (text: string, size: number, rgb: [number, number, number], bold = false) => {
+      doc.setFontSize(size);
+      doc.setTextColor(...rgb);
+      doc.setFont('helvetica', bold ? 'bold' : 'normal');
+      const lines = doc.splitTextToSize(text, contentWidth) as string[];
+      lines.forEach((line: string) => {
+        if (y > 272) { doc.addPage(); y = 20; }
+        doc.text(line, margin, y);
+        y += size * 0.43;
+      });
+      ln();
+    };
+
+    // Header bar
+    doc.setFillColor(79, 70, 229);
+    doc.rect(0, 0, pageWidth, 30, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(17);
+    doc.setTextColor(255, 255, 255);
+    doc.text('Mock Interview Report', margin, 20);
+    y = 42;
+
+    addText(`Role: ${jobTitle || 'Not specified'}${company ? ` at ${company}` : ''}`, 11, [31, 41, 55], true);
+    addText(`Date: ${new Date().toLocaleDateString()}  ·  Style: ${persona.replace('_', ' ')}  ·  Questions: ${questions.length}`, 9, [107, 114, 128]);
+    addText(`Overall Score: ${averageScore}/100 — ${getScoreLabel(averageScore)}`, 13, [79, 70, 229], true);
+    ln(4);
+
+    questions.forEach((q, idx) => {
+      const fb = feedbacks[idx];
+      if (!fb) return;
+      if (y > 255) { doc.addPage(); y = 20; }
+      doc.setFillColor(243, 244, 246);
+      doc.rect(margin - 3, y - 4, contentWidth + 6, 7, 'F');
+      addText(`Q${idx + 1}  [${q.type}]  Score: ${fb.score}/100`, 11, [31, 41, 55], true);
+      addText(q.question, 10, [55, 65, 81]);
+      if (answerHistory[idx]) addText(`Your Answer: ${answerHistory[idx]}`, 9, [107, 114, 128]);
+      if (fb.strengths.length) addText(`\u2713 ${fb.strengths.join('  ·  ')}`, 9, [5, 150, 105]);
+      if (fb.improvements.length) addText(`\u2192 ${fb.improvements.join('  ·  ')}`, 9, [180, 100, 20]);
+      ln(3);
+    });
+
+    doc.setFontSize(8);
+    doc.setTextColor(156, 163, 175);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Generated by CareerDev AI — careerdev.ai', margin, 290);
+    doc.save(`mock-interview-${(jobTitle || 'report').replace(/\s+/g, '-').toLowerCase()}.pdf`);
   };
 
   const averageScore = feedbacks.length > 0
@@ -276,7 +533,7 @@ export default function InterviewerQuestions({
               <Mic className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-lg font-bold">AI Mock Interview</h3>
+              <h3 className="text-lg font-bold">{company ? `${company} Mock Interview` : 'AI Mock Interview'}</h3>
               <p className="text-white/80 text-sm">
                 {phase === 'idle'
                   ? 'Practice with AI-generated questions tailored to this role'
@@ -322,6 +579,43 @@ export default function InterviewerQuestions({
       {phase === 'idle' && (
         <div className="p-6">
           <div className="max-w-lg mx-auto text-center space-y-6">
+
+            {/* Session History */}
+            {sessionHistory.length > 0 && (
+              <div className="text-left">
+                <button
+                  onClick={() => setShowHistory(!showHistory)}
+                  className="flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+                >
+                  <History className="w-4 h-4" />
+                  Past Sessions ({sessionHistory.length})
+                  {showHistory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+                {showHistory && (
+                  <div className="mt-2 space-y-2">
+                    {sessionHistory.map((s) => (
+                      <div key={s.id} className="bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-200 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-800 truncate">
+                            {s.jobTitle}{s.company ? ` @ ${s.company}` : ''}
+                          </p>
+                          <p className="text-xs text-gray-400">{s.date} · {s.questionCount} questions · {s.persona.replace('_', ' ')}</p>
+                          <div className="flex gap-1 mt-1">
+                            {s.scores.map((sc, i) => (
+                              <div key={i} className={`w-4 h-1.5 rounded-full ${getScoreColor(sc).gradient.replace('from-', 'bg-').split(' ')[0]}`} style={{ background: sc >= 80 ? '#10b981' : sc >= 60 ? '#3b82f6' : sc >= 40 ? '#f59e0b' : '#ef4444' }} />
+                            ))}
+                          </div>
+                        </div>
+                        <div className={`flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center ring-2 bg-white ${getScoreColor(s.averageScore).ring}`}>
+                          <span className={`text-sm font-bold ${getScoreColor(s.averageScore).text}`}>{s.averageScore}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Illustration area */}
             <div className="relative py-6">
               <div className="w-24 h-24 mx-auto rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center shadow-inner">
@@ -342,12 +636,36 @@ export default function InterviewerQuestions({
                 {company ? ` at ${company}` : ''}
               </h4>
               <p className="text-gray-500 text-sm">
-                The AI will ask you role-specific questions based on the job description and your resume.
+                CareerDev AI will ask you role-specific questions based on the job description and your resume.
                 Type your answers and get instant feedback with scoring.
               </p>
             </div>
 
-            {/* Settings */}
+            {/* Interviewer Style / Persona */}
+            <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+              <span className="text-sm font-bold text-gray-800 block text-left">Interviewer Style</span>
+              <div className="grid grid-cols-3 gap-2">
+                {PERSONA_OPTIONS.map((p) => {
+                  const Icon = p.icon;
+                  const isActive = persona === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => setPersona(p.id)}
+                      className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 text-center transition-all ${
+                        isActive ? p.activeClass : `bg-white ${p.borderClass}`
+                      }`}
+                    >
+                      <Icon className="w-5 h-5" />
+                      <span className="text-xs font-bold leading-none">{p.label}</span>
+                      <span className={`text-[10px] leading-none ${isActive ? 'opacity-80' : 'text-gray-400'}`}>{p.subtitle}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Question Count */}
             <div className="bg-gray-50 rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700">Number of Questions</span>
@@ -410,6 +728,14 @@ export default function InterviewerQuestions({
       {/* === INTERVIEWING STATE === */}
       {phase === 'interviewing' && currentQuestion && (
         <div className="p-6 space-y-5">
+          {/* Difficulty adaptation badge */}
+          {difficultyAdjusted && (
+            <div className="flex items-center gap-2 text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">
+              <TrendingUp className="w-3.5 h-3.5 flex-shrink-0" />
+              Difficulty adjusted based on your last score
+            </div>
+          )}
+
           {/* Question Card */}
           <div className="relative">
             <div className="bg-gradient-to-br from-gray-50 to-indigo-50/30 rounded-xl p-5 border border-indigo-100">
@@ -430,6 +756,26 @@ export default function InterviewerQuestions({
               </p>
             </div>
           </div>
+
+          {/* Answer Hint Panel */}
+          {HINT_TEMPLATES[currentQuestion.type] && (
+            <div className="border border-amber-200 rounded-xl bg-amber-50 px-4 py-3 space-y-2">
+              <span className="text-sm font-semibold text-amber-800 flex items-center gap-2">
+                <Lightbulb className="w-4 h-4" />
+                {HINT_TEMPLATES[currentQuestion.type].title} Guide
+              </span>
+              <div className="space-y-2">
+                {HINT_TEMPLATES[currentQuestion.type].steps.map((step, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm text-amber-800">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-200 text-amber-900 text-[11px] font-bold flex items-center justify-center mt-0.5">
+                      {i + 1}
+                    </span>
+                    {step}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Answer Box */}
           <div className="space-y-3">
@@ -650,6 +996,42 @@ export default function InterviewerQuestions({
                   </div>
                 </div>
 
+                {/* STAR Structure Analysis */}
+                {fb.starAnalysis && Object.values(fb.starAnalysis).some((v) => v !== null) && (
+                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                    <h5 className="font-semibold text-gray-700 mb-3 flex items-center gap-1.5 text-sm">
+                      <ListChecks className="w-4 h-4 text-indigo-500" />
+                      STAR Structure Check
+                    </h5>
+                    <div className="grid grid-cols-4 gap-2">
+                      {(['situation', 'task', 'action', 'result'] as const).map((key) => {
+                        const val = fb.starAnalysis![key];
+                        if (val === null) return null;
+                        return (
+                          <div
+                            key={key}
+                            className={`flex flex-col items-center justify-center rounded-lg py-2.5 px-1 border ${
+                              val
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                                : 'bg-red-50 border-red-200 text-red-600'
+                            }`}
+                          >
+                            {val
+                              ? <CheckCircle className="w-4 h-4 mb-1" />
+                              : <AlertTriangle className="w-4 h-4 mb-1" />}
+                            <span className="text-[11px] font-semibold capitalize">{key}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {Object.values(fb.starAnalysis).some((v) => v === false) && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        Missing STAR elements weaken your answer. Add specific examples for each component.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Sample Answer Toggle */}
                 <div className="border border-gray-200 rounded-xl overflow-hidden">
                   <button
@@ -674,6 +1056,51 @@ export default function InterviewerQuestions({
                     </div>
                   )}
                 </div>
+
+                {/* Follow-Up Challenge */}
+                {fb.followUpQuestion && (
+                  <div className="border border-indigo-200 rounded-xl bg-indigo-50 p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-indigo-800">
+                      <MessageCircle className="w-4 h-4" />
+                      Bonus: Answer the Follow-Up
+                    </div>
+                    <p className="text-sm text-indigo-900 font-medium italic">"{fb.followUpQuestion}"</p>
+                    {followUpEvalPhase !== 'done' ? (
+                      <>
+                        <textarea
+                          value={followUpAnswer}
+                          onChange={(e) => setFollowUpAnswer(e.target.value)}
+                          placeholder="Answer the follow-up question..."
+                          className="w-full rounded-xl border border-indigo-200 p-3 text-gray-700 placeholder:text-gray-400 text-sm resize-none focus:ring-2 focus:ring-indigo-200 outline-none bg-white"
+                          rows={3}
+                        />
+                        <button
+                          onClick={handleFollowUpSubmit}
+                          disabled={followUpAnswer.trim().length < 10 || followUpEvalPhase === 'evaluating'}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-indigo-700 transition-colors"
+                        >
+                          {followUpEvalPhase === 'evaluating' ? (
+                            <><span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />Evaluating...</>
+                          ) : (
+                            <><Send className="w-3.5 h-3.5" />Submit Follow-Up</>
+                          )}
+                        </button>
+                      </>
+                    ) : (
+                      <div className={`flex items-center gap-3 p-3 rounded-lg ${getScoreColor(followUpScore || 0).bg} border bg-white`}>
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ring-2 ${getScoreColor(followUpScore || 0).ring} bg-white`}>
+                          <span className={`text-sm font-bold ${getScoreColor(followUpScore || 0).text}`}>{followUpScore}</span>
+                        </div>
+                        <div>
+                          <p className={`font-semibold text-sm ${getScoreColor(followUpScore || 0).text}`}>
+                            {getScoreLabel(followUpScore || 0)} follow-up answer!
+                          </p>
+                          <p className="text-xs text-gray-500">Great practice on deep-dive questions.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Next button */}
                 <div className="flex justify-center">
@@ -765,6 +1192,32 @@ export default function InterviewerQuestions({
             })}
           </div>
 
+          {/* Score Trend */}
+          {feedbacks.length > 1 && (
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <h5 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-1.5">
+                <TrendingUp className="w-4 h-4 text-indigo-500" />
+                Score Trend
+              </h5>
+              <div className="flex items-end gap-1.5 h-16">
+                {feedbacks.map((fb, i) => {
+                  const sc = getScoreColor(fb.score);
+                  const barH = Math.max(10, (fb.score / 100) * 56);
+                  return (
+                    <div key={i} className="flex flex-col items-center gap-1 flex-1">
+                      <span className={`text-[10px] font-bold ${sc.text}`}>{fb.score}</span>
+                      <div
+                        className={`w-full rounded-t-sm bg-gradient-to-t ${sc.gradient}`}
+                        style={{ height: barH }}
+                      />
+                      <span className="text-[10px] text-gray-400">Q{i + 1}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex flex-wrap justify-center gap-3 pt-2">
             <button
@@ -773,6 +1226,13 @@ export default function InterviewerQuestions({
             >
               <RotateCcw className="w-5 h-5" />
               Try Again
+            </button>
+            <button
+              onClick={handleExportPDF}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors shadow-md"
+            >
+              <Download className="w-5 h-5" />
+              Download Report
             </button>
           </div>
         </div>

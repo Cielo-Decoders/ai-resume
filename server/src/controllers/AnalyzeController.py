@@ -126,6 +126,7 @@ class MockInterviewRequest(BaseModel):
     job_description: str
     resume_text: str
     count: int = 5
+    persona: str = "professional"
 
     @field_validator("job_description")
     @classmethod
@@ -146,6 +147,14 @@ class MockInterviewRequest(BaseModel):
     def validate_count(cls, v: int) -> int:
         if v < 1 or v > 10:
             raise ValueError("count must be between 1 and 10")
+        return v
+
+    @field_validator("persona")
+    @classmethod
+    def validate_persona(cls, v: str) -> str:
+        allowed = {"professional", "tech_lead", "pressure_test"}
+        if v not in allowed:
+            raise ValueError(f"persona must be one of: {', '.join(allowed)}")
         return v
 
 
@@ -479,6 +488,7 @@ class AnalyzeController:
                 job_description=request.job_description,
                 resume_text=request.resume_text,
                 count=request.count,
+                persona=request.persona,
             )
 
             self.logger.info(f"Interview generation complete. Questions: {len(result.get('questions', []))}")
