@@ -8,7 +8,7 @@ from fastapi import HTTPException, UploadFile, File
 from pydantic import BaseModel, field_validator
 
 from ..config import settings
-from ..services.analysis_service import extract_text_from_pdf, analyze_resume_against_job, generate_optimized_resume
+from ..services.analysis_service import extract_text_from_pdf, analyze_resume_against_job, generate_optimized_resume, generate_cover_letter, scan_job_red_flags
 
 # Maximum character limits for text inputs to prevent abuse and unbounded OpenAI costs
 _MAX_RESUME_TEXT = 50_000   # ~25 pages of dense text
@@ -75,6 +75,49 @@ class ExtractJobRequest(BaseModel):
     def job_desc_max_length(cls, v: str) -> str:
         if len(v) > _MAX_JOB_DESC:
             raise ValueError(f"job_description exceeds maximum length of {_MAX_JOB_DESC} characters")
+        return v
+
+
+class RedFlagScanRequest(BaseModel):
+    """Request model for job description red flag scanning."""
+    job_description: str
+
+    @field_validator("job_description")
+    @classmethod
+    def job_desc_max_length(cls, v: str) -> str:
+        if len(v) > _MAX_JOB_DESC:
+            raise ValueError(f"job_description exceeds maximum length of {_MAX_JOB_DESC} characters")
+        return v
+
+
+class CoverLetterRequest(BaseModel):
+    """Request model for cover letter generation."""
+    resume_text: str
+    job_description: str
+    job_title: str = ""
+    company: str = ""
+    tone: str = "professional"
+
+    @field_validator("resume_text")
+    @classmethod
+    def resume_text_max_length(cls, v: str) -> str:
+        if len(v) > _MAX_RESUME_TEXT:
+            raise ValueError(f"resume_text exceeds maximum length of {_MAX_RESUME_TEXT} characters")
+        return v
+
+    @field_validator("job_description")
+    @classmethod
+    def job_desc_max_length(cls, v: str) -> str:
+        if len(v) > _MAX_JOB_DESC:
+            raise ValueError(f"job_description exceeds maximum length of {_MAX_JOB_DESC} characters")
+        return v
+
+    @field_validator("tone")
+    @classmethod
+    def validate_tone(cls, v: str) -> str:
+        allowed = {"professional", "conversational", "enthusiastic", "executive"}
+        if v not in allowed:
+            raise ValueError(f"tone must be one of: {', '.join(allowed)}")
         return v
 
 
@@ -295,3 +338,63 @@ class AnalyzeController:
         except Exception as e:
             self.logger.error(f"Job data extraction error: {str(e)}")
             raise HTTPException(status_code=500, detail="Job data extraction failed. Please try again.")
+
+    async def generate_cover_letter_endpoint(self, request: CoverLetterRequest) -> Dict[str, Any]:
+        """Generate a tailored cover letter based on resume and job description."""
+        try:
+            if not request.resume_text or len(request.resume_text.strip()) < 50:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Resume text is required and must contain meaningful content"
+                )
+
+            if not request.job_description or len(request.job_description.strip()) < 50:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Job description is required and must contain meaningful content"
+                )
+
+            self.logger.info(f"Generating cover letter (tone={request.tone})...")
+
+            result = await generate_cover_letter(
+                resume_text=request.resume_text,
+                job_description=request.job_description,
+                job_title=request.job_title,
+                company=request.company,
+                tone=request.tone,
+            )
+
+            if result.get("success"):
+                self.logger.info(f"Cover letter generated. Words: {result.get('wordCount', 0)}")
+            else:
+                self.logger.warning(f"Cover letter generation failed: {result.get('message')}")
+
+            return result
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            self.logger.error(f"Cover letter generation error: {str(e)}")
+            raise HTTPException(status_code=500, detail="Cover letter generation failed. Please try again.")
+
+    async def scan_red_flags(self, request: RedFlagScanRequest) -> Dict[str, Any]:
+        """Scan a job description for red flags."""
+        try:
+            if not request.job_description or len(request.job_description.strip()) < 20:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Job description is required and must contain meaningful content"
+                )
+
+            self.logger.info("Scanning job description for red flags...")
+
+            result = await scan_job_red_flags(request.job_description)
+
+            self.logger.info(f"Red flag scan complete. Score: {result.get('score')}, Flags: {len(result.get('flags', []))}")
+            return result
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            self.logger.error(f"Red flag scan error: {str(e)}")
+            raise HTTPException(status_code=500, detail="Red flag scan failed. Please try again.")

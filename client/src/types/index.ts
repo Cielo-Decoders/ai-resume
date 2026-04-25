@@ -151,10 +151,47 @@ export interface OptimizationResult {
   message: string;
   optimizedResume: string;
   resumeSections?: ResumeSection[];
-  changes: ResumeChange[];
+  changes?: ResumeChange[];
   atsScore: number;
   tips?: string[];
   formatting?: ResumeFormatting;
+  keywordVerification?: {
+    integrated: string[];
+    missing: string[];
+    integrationRate: number;
+  };
+  metadata?: {
+    keywordsRequested: number;
+    keywordsIntegrated: number;
+    sectionsModified: number;
+  };
+}
+
+export interface CoverLetterResult {
+  success: boolean;
+  message: string;
+  coverLetter: string;
+  tone: string;
+  wordCount: number;
+}
+
+export interface RedFlag {
+  id: string;
+  title: string;
+  severity: 'high' | 'medium' | 'low';
+  reason: string;
+  evidence: string;
+}
+
+export interface RedFlagResult {
+  success: boolean;
+  score: number;
+  verdict: string;
+  overallRisk: 'low' | 'medium' | 'high';
+  summary: string;
+  flags: RedFlag[];
+  positives: string[];
+  questionsToAsk: string[];
 }
 
 export interface JobListing {
