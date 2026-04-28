@@ -1264,6 +1264,154 @@ OUTPUT (valid JSON only, no markdown):
 
 
 # =========================================================
+# ----------- RESUME REWRITE & REORGANIZE -----------------
+# =========================================================
+
+async def rewrite_and_reorganize_resume(edited_resume_text: str) -> Dict[str, Any]:
+    """
+    Take an edited resume (which may have newly added experiences or skills) and
+    intelligently rewrite it so that:
+    - Work experiences are sorted most-recent-first by date
+    - Education entries are sorted most-recent-first by date
+    - The overall structure follows standard resume conventions
+    - Formatting is clean and ATS-friendly
+
+    Uses the same OpenAI client as the rest of the pipeline.
+    """
+    api_key = settings.openai_api_key or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return {"success": False, "rewrittenResume": "", "message": "OpenAI API key missing."}
+
+    try:
+        client = _get_openai_client()
+
+        prompt = f"""You are an expert resume writer and editor.
+
+A user has edited their resume — they may have added new work experiences, new skills, or corrected existing content.
+Your job is to:
+
+1. **Re-arrange ALL work experience entries chronologically** — most recent job FIRST (reverse chronological order).
+   - Parse each position's start and end dates carefully (e.g. "Jan 2023 – Present", "2021 – 2022", "March 2020 to June 2021").
+   - If "Present" or "Current" is used, treat that position as the most recent.
+   - If two entries have the same start date, preserve their relative order.
+2. **Re-arrange ALL education entries chronologically** — most recent degree/school FIRST.
+3. **Preserve EVERY detail** — all bullet points, all skills, all projects, all certifications. Do NOT remove or summarize anything.
+4. **Clean up formatting** — consistent use of bullet points (•), clear section headers in ALL CAPS or Title Case, proper spacing.
+5. **Do NOT fabricate** — do not add experiences, skills, or achievements that are not present in the input.
+6. **Output only the plain-text resume** with no JSON wrapper, no markdown code fences, and no extra commentary.
+
+Here is the user's edited resume:
+
+{edited_resume_text}
+
+Return ONLY the rewritten, reorganized resume as plain text."""
+
+        response = client.chat.completions.create(
+            model=settings.openai_model or "gpt-4o",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an expert resume editor. You reorganize resumes so work experiences and "
+                        "education appear in reverse-chronological order (most recent first). "
+                        "You preserve every piece of content faithfully and output only clean plain text."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.0,
+            max_tokens=8000,
+        )
+
+        rewritten = response.choices[0].message.content.strip()
+
+        # Strip any accidental markdown code fences
+        rewritten = re.sub(r"^```[a-z]*\n?", "", rewritten, flags=re.MULTILINE)
+        rewritten = re.sub(r"```$", "", rewritten, flags=re.MULTILINE).strip()
+
+        if not rewritten or len(rewritten) < 100:
+            return {"success": False, "rewrittenResume": "", "message": "AI returned an empty response."}
+
+        rewritten = clean_encoding_artifacts(rewritten)
+
+        return {
+            "success": True,
+            "rewrittenResume": rewritten,
+            "message": "Resume rewritten and reorganized successfully.",
+        }
+
+    except Exception as e:
+        import traceback
+        print(f"Rewrite error: {e}")
+        print(f"Error traceback: {traceback.format_exc()}")
+        return {"success": False, "rewrittenResume": "", "message": f"Rewrite failed: {str(e)}"}
+
+
+async def enhance_resume_bullet(bullet: str, job_title: str = "", company: str = "") -> Dict[str, Any]:
+    """
+    Enhance a single resume bullet point to follow industry standards.
+    Rewrites it to be action-verb-led, concise, and naturally quantified.
+    """
+    api_key = settings.openai_api_key or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return {"success": False, "enhanced": bullet, "message": "OpenAI API key missing."}
+
+    try:
+        client = _get_openai_client()
+
+        context_parts = []
+        if job_title:
+            context_parts.append(f"Job title: {job_title}")
+        if company:
+            context_parts.append(f"Company: {company}")
+        context_line = "\n".join(context_parts)
+
+        prompt = f"""You are an expert resume writer. Rewrite the following resume bullet point to be strong, professional, and industry-standard.
+
+Rules:
+- Start with a powerful past-tense action verb (e.g. Engineered, Designed, Led, Delivered, Automated, Reduced, Increased, Built, Implemented, Optimized)
+- Keep it concise — ideally 15–25 words
+- Quantify the impact where the original implies scope (e.g. "large codebase" → "codebase of 50K+ lines") but ONLY if it sounds natural
+- Do NOT invent specific numbers that aren't implied by the original
+- Sound human and genuine, not robotic or overly polished
+- Do NOT add experiences or context that aren't present in the original
+- Return ONLY the improved bullet text — no bullet symbol, no quotes, no explanation
+{f"Context: {context_line}" if context_line else ""}
+
+Original bullet: {bullet}
+
+Improved bullet:"""
+
+        response = client.chat.completions.create(
+            model=settings.openai_model or "gpt-4o",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an expert resume bullet point writer. "
+                        "Return only the improved bullet text — no bullet symbol, no quotes, no extra commentary."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.4,
+            max_tokens=120,
+        )
+
+        enhanced = response.choices[0].message.content.strip()
+        # Strip any accidental leading bullet symbols or quotes
+        enhanced = re.sub(r'^[•\-\*›»·▪▸→]\s*', '', enhanced).strip('"').strip("'").strip()
+
+        if not enhanced:
+            return {"success": False, "enhanced": bullet, "message": "AI returned empty response."}
+
+        return {"success": True, "enhanced": enhanced}
+
+    except Exception as e:
+        return {"success": False, "enhanced": bullet, "message": f"Enhancement failed: {str(e)}"}
+
+
+# =========================================================
 # ---------------- RED FLAG SCANNER -----------------------
 # =========================================================
 
