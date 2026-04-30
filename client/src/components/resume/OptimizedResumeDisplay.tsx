@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useImperativeHandle } from 'react';
 import { FileText, Download, Sparkles, ChevronDown, ChevronUp, Eye, X, ExternalLink, BarChart3, Lightbulb, TrendingUp, CheckCircle, Wrench } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { OptimizationResult, ResumeChange, ResumeFormatting } from '../../types';
@@ -11,6 +11,11 @@ interface OptimizedResumeDisplayProps {
   jobUrl?: string;
 }
 
+export interface OptimizedResumeDisplayHandle {
+  openPreview: () => void;
+  downloadPDF: () => void;
+}
+
 // Default formatting settings matching user's resume style
 const DEFAULT_FORMATTING: ResumeFormatting = {
   fontFamily: 'Times New Roman',
@@ -21,9 +26,16 @@ const DEFAULT_FORMATTING: ResumeFormatting = {
   margins: { top: 12.7, bottom: 12.7, left: 12.7, right: 12.7 }
 };
 
-const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result, originalResume, onClose, company, jobUrl }) => {
+const OptimizedResumeDisplay = React.forwardRef<OptimizedResumeDisplayHandle, OptimizedResumeDisplayProps>(
+  ({ result, originalResume, onClose, company, jobUrl }, ref) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [showChanges, setShowChanges] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
+
+  useImperativeHandle(ref, () => ({
+    openPreview: () => setShowPreview(true),
+    downloadPDF: () => handleDownloadPDF(),
+  }));
 
   const formatting = result.formatting || DEFAULT_FORMATTING;
   const displayRef = React.useRef<HTMLDivElement>(null);
@@ -705,24 +717,31 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden" ref={displayRef}>
-      {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-800 via-purple-800 to-indigo-900 text-white p-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-white/20">
-              <Sparkles className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold">Optimized Resume Generated!</h3>
-              <p className="text-white/80 text-sm">Your ATS-optimized resume is ready</p>
-            </div>
+      {/* Header — clickable accordion toggle */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full bg-white p-5 flex items-center justify-between hover:bg-gray-50 transition-all text-left"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-indigo-100">
+            <Sparkles className="w-6 h-6 text-indigo-600" />
           </div>
-          <div className={`flex flex-col items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/20 ring-2 ${scoreColors.ring}`}>
+          <div>
+            <h3 className="text-lg font-bold text-gray-800">Application Tracking System (ATS) Score</h3>
+            <p className="text-gray-600 text-sm">Your ATS-optimized resume is ready</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className={`flex flex-col items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-indigo-50 ring-2 ${scoreColors.ring} ${scoreColors.scoreColor}`}>
             <span className="text-lg sm:text-xl font-bold leading-none">{result.atsScore}%</span>
             <span className="text-[10px] uppercase tracking-wider opacity-80">ATS</span>
           </div>
+          <ChevronDown className={`w-5 h-5 text-gray-400 flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
         </div>
-      </div>
+      </button>
+
+      {isExpanded && (
+        <>
 
       {/* Verdict bar */}
       <div className={`px-5 py-3 ${scoreColors.scoreBg} border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2`}>
@@ -861,39 +880,8 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
         )}
 
       </div>
-
-      {/* Resume Actions */}
-      <div className="p-5 border-t border-gray-200 bg-gray-50">
-        <div className="flex flex-wrap gap-3 justify-center">
-          <button
-            onClick={() => setShowPreview(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors font-medium"
-          >
-            <Eye className="w-5 h-5" />
-            Preview Resume
-          </button>
-
-          <button
-            onClick={handleDownloadPDF}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-colors font-medium shadow-md"
-          >
-            <Download className="w-5 h-5" />
-            Download PDF
-          </button>
-
-          {jobUrl && (
-            <a
-              href={jobUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium shadow-md"
-            >
-              <ExternalLink className="w-5 h-5" />
-              Apply for This Job
-            </a>
-          )}
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Preview Modal */}
       {showPreview && (
@@ -955,7 +943,7 @@ const OptimizedResumeDisplay: React.FC<OptimizedResumeDisplayProps> = ({ result,
       )}
     </div>
   );
-};
+});
 
 export default OptimizedResumeDisplay;
 

@@ -38,7 +38,8 @@ class Settings:
 
     # File upload configuration
     allowed_file_types: List[str] = [".pdf", ".doc", ".docx", ".txt"]
-    max_file_size: int = 10 * 1024 * 1024  # 10MB in bytes
+    max_file_size: int = 5 * 1024 * 1024   # 5 MB — resumes are tiny documents
+    max_resume_pages: int = 2               # hard page cap to prevent abuse
 
     # OpenAI configuration — strip to remove any trailing newline injected by Secret Manager
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "").strip()

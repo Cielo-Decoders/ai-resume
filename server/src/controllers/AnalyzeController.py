@@ -3,9 +3,11 @@ AnalyzeController module for handling resume analysis endpoints.
 """
 import logging
 import json
+from io import BytesIO
 from typing import Dict, Any, List
 from fastapi import HTTPException, UploadFile, File
 from pydantic import BaseModel, field_validator
+import PyPDF2
 
 from ..config import settings
 from ..services.analysis_service import extract_text_from_pdf, analyze_resume_against_job, generate_optimized_resume, generate_cover_letter, scan_job_red_flags
@@ -13,6 +15,7 @@ from ..services.analysis_service import extract_text_from_pdf, analyze_resume_ag
 # Maximum character limits for text inputs to prevent abuse and unbounded OpenAI costs
 _MAX_RESUME_TEXT = 50_000   # ~25 pages of dense text
 _MAX_JOB_DESC = 20_000      # generous for any real job posting
+_MAX_RESUME_PAGES = 2       # hard cap — a resume should never exceed 2 pages
 
 # Magic bytes for allowed file types (M3 — file type validation beyond extension)
 _MAGIC_BYTES: Dict[str, List[bytes]] = {
@@ -159,6 +162,21 @@ class AnalyzeController:
                     status_code=400,
                     detail="File content does not match the declared file type"
                 )
+
+            # Enforce page limit for PDF uploads to prevent abuse
+            if file_extension == ".pdf":
+                try:
+                    reader = PyPDF2.PdfReader(BytesIO(resume_content))
+                    num_pages = len(reader.pages)
+                    if num_pages > _MAX_RESUME_PAGES:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Resume has {num_pages} pages. Please upload a resume with {_MAX_RESUME_PAGES} pages or fewer."
+                        )
+                except HTTPException:
+                    raise
+                except Exception:
+                    pass  # If page counting fails, let extraction proceed and report errors there
 
             self.logger.info(f"Extracting text from resume (ext={file_extension})")
 

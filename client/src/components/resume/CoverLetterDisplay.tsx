@@ -14,6 +14,12 @@ interface CoverLetterDisplayProps {
   jobTitle: string;
   company: string;
   jobUrl?: string;
+  result: CoverLetterResult | null;
+  editedText: string;
+  selectedTone: string;
+  onResultChange: (r: CoverLetterResult | null) => void;
+  onEditedTextChange: (t: string) => void;
+  onToneChange: (tone: string) => void;
 }
 
 const TONES = [
@@ -69,11 +75,14 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
   jobTitle,
   company,
   jobUrl,
+  result,
+  editedText,
+  selectedTone,
+  onResultChange,
+  onEditedTextChange,
+  onToneChange,
 }) => {
-  const [selectedTone, setSelectedTone] = useState('professional');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [result, setResult] = useState<CoverLetterResult | null>(null);
-  const [editedText, setEditedText] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -84,8 +93,9 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
 
   useEffect(() => {
     if (result?.coverLetter) {
-      setEditedText(result.coverLetter);
+      onEditedTextChange(result.coverLetter);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result]);
 
   useEffect(() => {
@@ -99,7 +109,7 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
   const handleGenerate = async () => {
     setIsGenerating(true);
     setError('');
-    setResult(null);
+    onResultChange(null);
 
     try {
       const data = await generateCoverLetter(
@@ -109,7 +119,7 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
         company,
         selectedTone
       );
-      setResult(data);
+      onResultChange(data);
     } catch (err: any) {
       setError(err.message || 'Failed to generate cover letter');
     } finally {
@@ -222,8 +232,8 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
                   <button
                     key={tone.id}
                     onClick={() => {
-                      setSelectedTone(tone.id);
-                      if (result) setResult(null);
+                      onToneChange(tone.id);
+                      if (result) onResultChange(null);
                     }}
                     className={`relative group p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 text-left
                       ${isSelected
@@ -339,7 +349,7 @@ const CoverLetterDisplay: React.FC<CoverLetterDisplayProps> = ({
                       ref={textareaRef}
                       value={editedText}
                       onChange={(e) => {
-                        setEditedText(e.target.value);
+                        onEditedTextChange(e.target.value);
                         e.target.style.height = 'auto';
                         e.target.style.height = `${e.target.scrollHeight}px`;
                       }}

@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Shield, ShieldAlert, ShieldCheck, ShieldQuestion,
   AlertTriangle, AlertCircle, Info,
-  CheckCircle, MessageCircle, HelpCircle, X
+  CheckCircle, MessageCircle, HelpCircle, ChevronDown
 } from 'lucide-react';
 import { RedFlagResult, RedFlag } from '../../types';
 
@@ -68,6 +68,7 @@ const VERDICT_CONFIG: Record<string, {
 };
 
 const RedFlagScanner: React.FC<RedFlagScannerProps> = ({ result, onDismiss }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const getScoreColors = (score: number) => {
     if (score >= 70) return { ring: 'ring-emerald-300', text: 'text-emerald-600' };
     if (score >= 50) return { ring: 'ring-amber-300', text: 'text-amber-600' };
@@ -91,32 +92,31 @@ const RedFlagScanner: React.FC<RedFlagScannerProps> = ({ result, onDismiss }) =>
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-800 via-purple-800 to-indigo-900 text-white p-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-white/20">
-              <Shield className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold">Job Posting Risk Scan</h3>
-              <p className="text-white/80 text-sm">AI-powered analysis of this listing</p>
-            </div>
+      {/* Header — clickable accordion toggle */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full bg-white p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:bg-gray-50 transition-all text-left"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-indigo-100">
+            <Shield className="w-6 h-6 text-indigo-600" />
           </div>
-          <div className="flex items-center gap-3">
-            {/* Score circle */}
-            <div className={`flex flex-col items-center justify-center w-16 h-16 rounded-full bg-white/20 ring-2 ${scoreColors.ring}`}>
-              <span className="text-2xl font-bold leading-none">{result.score}</span>
-              <span className="text-[10px] uppercase tracking-wider opacity-80">Score</span>
-            </div>
-            {onDismiss && (
-              <button onClick={onDismiss} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            )}
+          <div>
+            <h3 className="text-lg font-bold text-gray-800">Job Posting Risk Scan</h3>
+            <p className="text-gray-600 text-sm">AI-powered analysis of this listing</p>
           </div>
         </div>
-      </div>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          {/* Score circle */}
+          <div className={`flex flex-col items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-indigo-50 ring-2 ${scoreColors.ring} ${scoreColors.text}`}>
+            <span className="text-xl font-bold leading-none">{result.score}</span>
+          </div>
+          <ChevronDown className={`w-5 h-5 text-gray-400 flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+
+      {isExpanded && (
+        <>
 
       {/* Verdict bar */}
       <div className={`px-5 py-3 ${vConfig.scoreBg} border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2`}>
@@ -259,6 +259,8 @@ const RedFlagScanner: React.FC<RedFlagScannerProps> = ({ result, onDismiss }) =>
           </section>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 };

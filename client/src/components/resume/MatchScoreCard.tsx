@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Target, CheckCircle, XCircle,
-  TrendingUp, Lightbulb, BarChart3, Layers, Zap
+  TrendingUp, Lightbulb, BarChart3, Layers, Zap, ChevronDown
 } from 'lucide-react';
 import { KeywordAnalysisResult } from '../../types';
 
@@ -71,23 +71,31 @@ interface AccordionSectionProps {
 const AccordionSection: React.FC<AccordionSectionProps> = ({
   title, icon: Icon, iconColor, badge, badgeColor, children
 }) => {
+  const [open, setOpen] = useState(false);
   return (
-    <section className="rounded-xl border border-gray-200 bg-white shadow-sm">
-      <div className="p-4 flex items-center gap-3 border-b border-gray-100">
+    <section className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full p-4 flex items-center gap-3 border-b border-gray-100 hover:bg-gray-50 transition-colors text-left"
+      >
         <Icon className={`w-5 h-5 ${iconColor} flex-shrink-0`} />
-        <h4 className="text-xl font-bold text-gray-800 flex-1">{title}</h4>
+        <h4 className="text-base font-bold text-gray-800 flex-1">{title}</h4>
         {badge && (
           <span className={`px-2.5 py-1 rounded-full text-sm font-bold ${badgeColor}`}>
             {badge}
           </span>
         )}
-      </div>
-      <div className="p-4">{children}</div>
+        <ChevronDown
+          className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open && <div className="p-4">{children}</div>}
     </section>
   );
 };
 
 const MatchScoreCard: React.FC<MatchScoreCardProps> = ({ result }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const level = getScoreLevel(result.matchScore);
   const config = SCORE_CONFIG[level];
   const scoreColors = getScoreColors(result.matchScore);
@@ -104,67 +112,73 @@ const MatchScoreCard: React.FC<MatchScoreCardProps> = ({ result }) => {
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-800 via-purple-800 to-indigo-900 text-white p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-white/20">
-              <Target className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold">Job Match Score</h3>
-              <p className="text-white/80 text-sm">AI keyword analysis of your resume vs. this role</p>
-            </div>
+      {/* Header — clickable accordion toggle */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full bg-white p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:bg-gray-50 transition-all text-left"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-indigo-100">
+            <Target className="w-6 h-6 text-indigo-600" />
           </div>
-          <div className={`self-start sm:self-auto flex flex-col items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/20 ring-2 ${scoreColors.ring}`}>
+          <div>
+            <h3 className="text-lg font-bold text-gray-800">Job Match Score</h3>
+            <p className="text-gray-600 text-sm">AI keyword analysis of your resume vs. this role</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          <div className={`flex flex-col items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-indigo-50 ring-2 ${scoreColors.ring} ${scoreColors.text}`}>
             <span className="text-xl font-bold leading-none">{result.matchScore}%</span>
           </div>
+          <ChevronDown className={`w-5 h-5 text-gray-400 flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
         </div>
-      </div>
+      </button>
 
-      {/* Verdict bar */}
-      <div className={`px-5 py-3 ${config.scoreBg} border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2`}>
-        <div className="flex items-center gap-2">
-          <TrendingUp className={`w-5 h-5 ${config.scoreColor}`} />
-          <span className={`font-bold ${config.scoreColor}`}>{config.label}</span>
-          <span className="text-gray-600 text-sm hidden sm:inline">— {config.description}</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className={`px-2 py-0.5 rounded-full font-medium ${config.badgeColor}`}>
-            {result.matchScore}%
-          </span>
-          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">
-            {matchedCount} Matched
-          </span>
-          <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">
-            {missingCount} Missing
-          </span>
-          <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
-            {total} Total
-          </span>
-        </div>
-      </div>
+      {isExpanded && (
+        <>
+          {/* Verdict bar */}
+          <div className={`px-5 py-3 ${config.scoreBg} border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2`}>
+            <div className="flex items-center gap-2">
+              <TrendingUp className={`w-5 h-5 ${config.scoreColor}`} />
+              <span className={`font-bold ${config.scoreColor}`}>{config.label}</span>
+              <span className="text-gray-600 text-sm hidden sm:inline">— {config.description}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className={`px-2 py-0.5 rounded-full font-medium ${config.badgeColor}`}>
+                {result.matchScore}%
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">
+                {matchedCount} Matched
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">
+                {missingCount} Missing
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
+                {total} Total
+              </span>
+            </div>
+          </div>
 
-      {/* Mobile description */}
-      <div className="sm:hidden px-5 py-3 text-sm text-gray-600 border-b bg-gray-50">
-        {config.description}
-      </div>
+          {/* Mobile description */}
+          <div className="sm:hidden px-5 py-3 text-sm text-gray-600 border-b bg-gray-50">
+            {config.description}
+          </div>
 
-      {/* Accordion sections */}
-      <div className="p-5 space-y-3">
-        {/* Score Breakdown */}
-        <AccordionSection
-          title="How Your Score Was Calculated"
-          icon={BarChart3}
-          iconColor="text-indigo-600"
-        >
-          <div className="mt-3 space-y-3">
-            <p className="text-sm text-gray-600">
-              Your score is based on how many job-relevant keywords and phrases from the posting were found in your resume.
-            </p>
-            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Keywords found in resume</span>
+          {/* Accordion sections */}
+          <div className="p-5 space-y-3">
+            {/* Score Breakdown */}
+            <AccordionSection
+              title="How Your Score Was Calculated"
+              icon={BarChart3}
+              iconColor="text-indigo-600"
+            >
+              <div className="mt-3 space-y-3">
+                <p className="text-sm text-gray-600">
+                  Your score is based on how many job-relevant keywords and phrases from the posting were found in your resume.
+                </p>
+                <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Keywords found in resume</span>
                 <span className="font-bold text-emerald-700">{matchedCount}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
@@ -182,10 +196,10 @@ const MatchScoreCard: React.FC<MatchScoreCardProps> = ({ result }) => {
                 <span>0%</span>
                 <span>100%</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-700 bg-gradient-to-r ${scoreColors.gradient}`}
-                  style={{ width: `${Math.min(result.matchScore, 100)}%` }}
+                  className={`h-full transition-all duration-700 bg-gradient-to-r ${scoreColors.gradient}`}
+                  style={{ width: `${Math.min(result.matchScore, 100)}%`, minWidth: result.matchScore > 0 ? '4px' : undefined }}
                 />
               </div>
             </div>
@@ -333,6 +347,8 @@ const MatchScoreCard: React.FC<MatchScoreCardProps> = ({ result }) => {
           </AccordionSection>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 };
