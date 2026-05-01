@@ -37,7 +37,7 @@ async def contact_form_endpoint(body: ContactFormRequest):
     """
     try:
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"[CareerDev AI Contact] {body.subject}"
+        msg["Subject"] = body.subject
         msg["From"] = settings.gmail_user
         msg["To"] = settings.gmail_user
         msg["Reply-To"] = body.email
