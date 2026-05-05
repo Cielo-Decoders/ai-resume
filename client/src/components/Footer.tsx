@@ -13,7 +13,7 @@ const Footer: React.FC = () => {
           {/* Grid layout - stacked on mobile, single row on large screens */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
             {/* CareerDev AI Section - Full width on mobile, spans 6 columns on large screens */}
-            <div className="md:col-span-6 ml-[10%] md:ml-0">
+            <div className="md:col-span-6">
               <div className="flex items-center justify-center md:justify-start gap-1 mb-3">
                 <img
                   src="/Logo3.png"
@@ -30,7 +30,7 @@ const Footer: React.FC = () => {
             </div>
 
             {/* Quick Links and Support - 2 columns on mobile, 3 columns each on large screens */}
-            <div className="grid grid-cols-2 md:col-span-6 md:grid-cols-2 gap-6 md:gap-4 ml-[12%] md:ml-[20%]">
+            <div className="grid grid-cols-2 md:col-span-6 md:grid-cols-2 gap-6 md:gap-4 md:ml-[20%]">
               {/* Quick Links */}
               <div>
                 <h4 className="text-lg font-semibold mb-3 text-indigo-300">Quick Links</h4>
@@ -96,7 +96,7 @@ const Footer: React.FC = () => {
         </div>
 
         {/* Footer Bottom */}
-        <div className="border-t border-white/10 pt-6 ml-[10%] md:ml-0">
+        <div className="border-t border-white/10 pt-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-400 text-sm text-center md:text-left">
               © {currentYear} CareerDev AI. All rights reserved.

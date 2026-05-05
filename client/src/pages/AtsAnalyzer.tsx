@@ -1,17 +1,67 @@
-import React, { useState } from 'react';
-import { Upload, CheckCircle, FileText } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Upload, CheckCircle, FileText, Mail, ChevronDown, Eye, Download, ExternalLink, Zap, HelpCircle, LayoutGrid } from 'lucide-react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import TabNavigation from '../components/tabs/TabNavigation';
 import ResumeUpload from '../components/resume/ResumeUpload';
 import KeywordAnalysis from '../components/resume/KeywordAnalysis';
-import OptimizedResumeDisplay from '../components/resume/OptimizedResumeDisplay';
-import {Application, JobData, KeywordAnalysisResult, ActionableKeyword, OptimizationResult } from '../types/index';
-import {extractJobDataFromText, extractTextFromResume, analyzeKeywords, optimizeResume} from '../services/api';
+import OptimizedResumeDisplay, { OptimizedResumeDisplayHandle } from '../components/resume/OptimizedResumeDisplay';
+import CoverLetterDisplay from '../components/resume/CoverLetterDisplay';
+import MatchScoreCard from '../components/resume/MatchScoreCard';
+import {Application, JobData, KeywordAnalysisResult, ActionableKeyword, OptimizationResult, RedFlagResult, CoverLetterResult } from '../types/index';
+import {extractJobDataFromText, extractTextFromResume, analyzeKeywords, optimizeResume, scanJobRedFlags} from '../services/api';
 import JobDescriptionInput from '../components/jobs/JobDescriptionInput';
 import JobListings from '../components/jobs/JobListings';
+import RedFlagScanner from '../components/jobs/RedFlagScanner';
 import Footer from '../components/Footer';
+import * as pdfjsLib from 'pdfjs-dist';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.mjs`;
+
+const MAX_RESUME_PAGES = 2;
+const MAX_FILE_SIZE_MB = 5;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+async function validateResumePdf(file: File): Promise<string | null> {
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    return `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is ${MAX_FILE_SIZE_MB} MB.`;
+  }
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+    if (pdf.numPages > MAX_RESUME_PAGES) {
+      return `Your resume has ${pdf.numPages} pages. Please upload a resume with ${MAX_RESUME_PAGES} pages or fewer.`;
+    }
+  } catch {
+    return 'Could not read the PDF. Please ensure it is a valid, text-based PDF.';
+  }
+  return null;
+}
 
 export default function ATSAnalyzer() {
-  const [activeTab, setActiveTab] = useState('jobs');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const getTabFromPath = (pathname: string) => {
+    if (pathname === '/app/analysis') return 'analyze';
+    if (pathname === '/app/coverletter') return 'cover-letter';
+    return 'jobs';
+  };
+
+  const [activeTab, setActiveTab] = useState(() => getTabFromPath(location.pathname));
+
+  const handleSetActiveTab = (tab: string) => {
+    setActiveTab(tab);
+    const path =
+      tab === 'analyze' ? '/app/analysis' :
+      tab === 'cover-letter' ? '/app/coverletter' :
+      '/app/jobs';
+    navigate(path, { replace: true });
+  };
+
+  useEffect(() => {
+    setActiveTab(getTabFromPath(location.pathname));
+  }, [location.pathname]);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState('');
   const [inputMode, setInputMode] = useState<'paste'>('paste');
@@ -26,13 +76,23 @@ export default function ATSAnalyzer() {
   const [resumeText, setResumeText] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [company, setCompany] = useState('');
+  const [jobUrl, setJobUrl] = useState('');
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
+  const [optimizedResumeText, setOptimizedResumeText] = useState('');
   const [, setSelectedKeywords] = useState<ActionableKeyword[]>([]);
   const [clearKeywordSelections, setClearKeywordSelections] = useState(false);
+  const [redFlagResult, setRedFlagResult] = useState<RedFlagResult | null>(null);
+  const [coverLetterResult, setCoverLetterResult] = useState<CoverLetterResult | null>(null);
+  const [coverLetterEditedText, setCoverLetterEditedText] = useState('');
+  const [coverLetterTone, setCoverLetterTone] = useState('professional');
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isValidatingFile, setIsValidatingFile] = useState(false);
 
   // Ref for scrolling to results section
   const resultsRef = React.useRef<HTMLDivElement>(null);
+  // Ref for OptimizedResumeDisplay actions (preview, download)
+  const optimizedResumeRef = useRef<OptimizedResumeDisplayHandle>(null);
 
   // Scroll to results when analysis is complete
   React.useEffect(() => {
@@ -46,14 +106,23 @@ export default function ATSAnalyzer() {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
-      setResumeFile(file);
-      if (!baseResume) {
-        setBaseResume(file);
-      }
-    } else {
-      alert('Please upload a PDF file');
+    e.target.value = ''; // reset so the same file can be re-selected after fixing
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      setUploadError('Please upload a PDF file.');
+      return;
     }
+    setUploadError(null);
+    setIsValidatingFile(true);
+    validateResumePdf(file).then((error) => {
+      setIsValidatingFile(false);
+      if (error) {
+        setUploadError(error);
+        return;
+      }
+      setResumeFile(file);
+      if (!baseResume) setBaseResume(file);
+    });
   };
 
   const analyzeResume = async () => {
@@ -71,20 +140,33 @@ export default function ATSAnalyzer() {
   setKeywordResults(null);
   setAnalysisComplete(false);
   setOptimizationResult(null); // Reset optimization result
+  setOptimizedResumeText(''); // Reset optimized resume text
+  setRedFlagResult(null); // Reset red flag result
+  setCoverLetterResult(null); // Reset cover letter
+  setCoverLetterEditedText('');
+  setCoverLetterTone('professional');
 
   try {
     let jobData: JobData;
     let extractedResumeText: string = '';
 
-    // Step 1: Extract job data from description
+    // Step 1: Extract job data from description + run red flag scan in parallel
     if (inputMode === 'paste') {
       setScrapingStatus('Extracting job details with AI...');
       try {
-        jobData = await extractJobDataFromText(jobDescription);
+        const [jobDataResult, redFlagScanResult] = await Promise.all([
+          extractJobDataFromText(jobDescription),
+          scanJobRedFlags(jobDescription).catch(() => null),
+        ]);
+        jobData = jobDataResult;
         // Store job title for optimization
         setJobTitle(jobData.title || '');
         // Store company name for optimization
         setCompany(jobData.company || '');
+        // Store red flag results
+        if (redFlagScanResult) {
+          setRedFlagResult(redFlagScanResult);
+        }
       } catch (error) {
         alert('Failed to extract job data. Please try again.');
         setScrapingStatus('');
@@ -176,6 +258,7 @@ export default function ATSAnalyzer() {
 
       if (result.success) {
         setOptimizationResult(result);
+        setOptimizedResumeText(result.optimizedResume);
         // Trigger keyword selections to be cleared
         setClearKeywordSelections(true);
       } else {
@@ -220,14 +303,15 @@ export default function ATSAnalyzer() {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-0 w-full justify-center md:justify-start">
+            {/* Logo + Title */}
+            <div className="flex items-center gap-0 justify-center md:justify-start">
               <img
                 src="/Logo3.png"
                 alt="CareerDev Logo"
                 className="h-12 sm:h-16 lg:h-20 w-auto object-contain"
               />
               <div className="flex flex-col mt-4">
-                <h1 className="text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 bg-clip-text text-transparent drop-shadow-2xl tracking-tight">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 bg-clip-text text-transparent drop-shadow-2xl tracking-tight">
                   CareerDev AI
                 </h1>
                 <p className="text-gray-600 text-sm font-medium tracking-wide text-center">
@@ -235,22 +319,67 @@ export default function ATSAnalyzer() {
                 </p>
               </div>
             </div>
+
+            {/* Right-side header panel */}
+            <div className="hidden md:flex items-center gap-3">
+              {/* Navigation links */}
+              <nav className="flex items-center gap-0.5">
+                {[
+                  { to: '/features', label: 'Features' },
+                  { to: '/contact', label: 'Contact Us' },
+                ].map(({ to, label }) => (
+                  <Link
+                    key={to}
+                    to={to}
+                    className="px-3 py-1.5 text-base font-bold text-gray-500 rounded-lg hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-150"
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </nav>
+
+              {/* Divider */}
+              <div className="h-6 w-px bg-gray-200" />
+
+              {/* FAQ link */}
+              <Link
+                to="/faq"
+                className="px-3 py-1.5 text-base font-bold text-gray-500 rounded-lg hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-150"
+              >
+                FAQ
+              </Link>
+
+              {/* Divider */}
+              <div className="h-6 w-px bg-gray-200" />
+
+              {/* Help CTA */}
+              <Link
+                to="/help"
+                className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-md shadow-indigo-200/60 hover:shadow-lg hover:shadow-indigo-300/60 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+              >
+                <HelpCircle className="w-4 h-4" />
+                Help Center
+              </Link>
+            </div>
+
+            {/* Mobile: FAQ link */}
+            <Link
+              to="/faq"
+              className="flex md:hidden px-3 py-1.5 text-sm font-medium text-gray-500 rounded-lg hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-150"
+            >
+              FAQ
+            </Link>
           </div>
           <div className="text-center">
-            <p className="text-gray-600 text-lg mb-4">
-              AI-Powered Resume Optimization for Career Success
+            <p className="text-gray-700 text-lg sm:text-2xl font-bold mb-4">
+              Optimize Your Resume. Land More Interviews.
             </p>
-            {baseResume && (
-              <div className="inline-flex items-center gap-2 bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full">
-                <CheckCircle className="w-4 h-4" />
-                Base Resume: {baseResume.name}
-              </div>
-            )}
+
           </div>
         </div>
         <TabNavigation
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={handleSetActiveTab}
           applicationsCount={applications.length}
         />
         {activeTab === 'jobs' && (
@@ -259,7 +388,10 @@ export default function ATSAnalyzer() {
               // Strip HTML tags to get plain text description
               const plainText = job.description.replace(/<[^>]*>/g, '\n').replace(/\n{2,}/g, '\n').trim();
               setJobDescription(plainText);
-              setActiveTab('analyze');
+              setJobUrl(job.url || '');
+              setCompany(job.company_name || '');
+              setJobTitle(job.title || '');
+              handleSetActiveTab('analyze');
             }}
           />
         )}
@@ -291,6 +423,8 @@ export default function ATSAnalyzer() {
                     resumeFile={resumeFile}
                     baseResume={baseResume}
                     onFileUpload={handleFileUpload}
+                    uploadError={uploadError}
+                    isValidating={isValidatingFile}
                   />
                 </div>
 
@@ -314,7 +448,7 @@ export default function ATSAnalyzer() {
               <button
                 onClick={analyzeResume}
                 disabled={isAnalyzing || !resumeFile || !jobDescription}
-                className="mt-6 mx-auto w-full sm:w-auto min-w-[220px] md:min-w-[260px] bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg"
+                className="mt-6 mx-auto w-full sm:w-auto min-w-0 sm:min-w-[220px] md:min-w-[260px] bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg"
               >
                 {isAnalyzing ? (
                   <>
@@ -333,45 +467,9 @@ export default function ATSAnalyzer() {
 
             {/* Keyword Analysis Results */}
             {analysisComplete && keywordResults && (
-              <div className="space-y-6" ref={resultsRef}>
-                {/* Match Score Card */}
-                <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="flex-1">
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-800">Job Match Score</h3>
-                      <p className="text-sm sm:text-base text-gray-500 mt-1">How well your uploaded resume matches this job description
-                      based on our AI analysis of your resume and this job description</p>
-                    </div>
-                    <div className={`text-3xl sm:text-4xl font-bold text-center md:text-right ${
-                      keywordResults.matchScore >= 70 ? 'text-green-600' :
-                      keywordResults.matchScore >= 50 ? 'text-yellow-600' : 'text-red-600'
-                    }`}>
-                      {keywordResults.matchScore}%
-                    </div>
-                  </div>
-                  {keywordResults.suggestions && keywordResults.suggestions.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <h4 className="font-semibold text-gray-700 mb-2">Suggestions:</h4>
-                      <ul className="space-y-1">
-                        {keywordResults.suggestions.map((suggestion, idx) => (
-                          <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
-                            <span className="text-indigo-500">•</span>
-                            {suggestion}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-
-                {/* Missing and Matching Keywords */}
+              <div className="space-y-4" ref={resultsRef}>
+                {/* 1. Job-Relevant Skills & Terms — no accordion, at the very top */}
                 <KeywordAnalysis
-                  missingKeywords={(keywordResults.missingPhrases && keywordResults.missingPhrases.length > 0)
-                    ? keywordResults.missingPhrases
-                    : (keywordResults.missingKeywords || []).slice(0, 15)}
-                  suggestedKeywords={(keywordResults.matchingPhrases && keywordResults.matchingPhrases.length > 0)
-                    ? keywordResults.matchingPhrases
-                    : (keywordResults.matchingKeywords || []).slice(0, 15)}
                   actionableKeywords={keywordResults.actionableKeywords || []}
                   jobTitle={jobTitle}
                   company={company}
@@ -383,21 +481,147 @@ export default function ATSAnalyzer() {
                   clearSelections={clearKeywordSelections}
                 />
 
-                {/* Optimized Resume Display */}
+                {/* 2. Optimized Resume Display (when available) */}
                 {optimizationResult && optimizationResult.success && (
-                  <OptimizedResumeDisplay
-                    result={optimizationResult}
-                    originalResume={resumeText}
-                    onClose={() => setOptimizationResult(null)}
-                    company={company}
-                  />
+                  <>
+                    {/* Action buttons card */}
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+                          <span>Resume Actions</span>
+                        </h3>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-5">
+                        Preview your AI-optimized resume, download it as a PDF, or head straight to the job application.
+                      </p>
+                      <div className="flex flex-wrap gap-3 justify-center">
+                        <button
+                          onClick={() => optimizedResumeRef.current?.openPreview()}
+                          className="flex items-center gap-2 px-6 py-3 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors font-medium"
+                        >
+                          <Eye className="w-5 h-5" />
+                          Preview Resume
+                        </button>
+                        <button
+                          onClick={() => optimizedResumeRef.current?.downloadPDF()}
+                          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-colors font-medium shadow-md"
+                        >
+                          <Download className="w-5 h-5" />
+                          Download PDF
+                        </button>
+                        <button
+                          onClick={() => handleSetActiveTab('cover-letter')}
+                          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-colors font-medium shadow-md"
+                        >
+                          <Mail className="w-5 h-5" />
+                          Create Cover Letter
+                        </button>
+                        {jobUrl && (
+                          <a
+                            href={jobUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium shadow-md"
+                          >
+                            <ExternalLink className="w-5 h-5" />
+                            Apply for This Job
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    <OptimizedResumeDisplay
+                      ref={optimizedResumeRef}
+                      result={optimizationResult}
+                      originalResume={resumeText}
+                      onClose={() => { setOptimizationResult(null); setOptimizedResumeText(''); }}
+                      company={company}
+                      jobUrl={jobUrl}
+                    />
+                  </>
                 )}
+
+                {/* 4. Job Match Score & 5. Job Posting Risk Scan — only after optimization */}
+                {optimizationResult && optimizationResult.success && (
+                  <>
+                    <MatchScoreCard result={keywordResults} />
+                    {redFlagResult && (
+                      <RedFlagScanner
+                        result={redFlagResult}
+                        onDismiss={() => setRedFlagResult(null)}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        {activeTab === 'cover-letter' && (
+          <div className="space-y-6">
+            {resumeText && jobDescription ? (
+              <CoverLetterDisplay
+                resumeText={optimizedResumeText || resumeText}
+                jobDescription={jobDescription}
+                jobTitle={jobTitle}
+                company={company}
+                jobUrl={jobUrl}
+                result={coverLetterResult}
+                editedText={coverLetterEditedText}
+                selectedTone={coverLetterTone}
+                onResultChange={setCoverLetterResult}
+                onEditedTextChange={setCoverLetterEditedText}
+                onToneChange={setCoverLetterTone}
+              />
+            ) : (
+              <div className="bg-white rounded-xl shadow-lg p-10 text-center space-y-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-50 mb-2">
+                  <Mail className="w-8 h-8 text-indigo-400" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-800">No resume analysed yet</h3>
+                <p className="text-gray-500 max-w-md mx-auto">
+                  First analyse your resume and optimise it in the <strong>Analyze &amp; Optimize</strong> tab, then come back here to generate a tailored cover letter.
+                </p>
+                <button
+                  onClick={() => handleSetActiveTab('analyze')}
+                  className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                  Go to Analyze &amp; Optimize
+                </button>
               </div>
             )}
           </div>
         )}
       </div>
       <Footer />
+    </div>
+  );
+}
+
+// ── Accordion wrapper for result sections ────────────────────────────────────
+interface SectionAccordionProps {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}
+
+function SectionAccordion({ title, children, defaultOpen = true }: SectionAccordionProps) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-2.5 mb-2 bg-indigo-50 border border-indigo-200 rounded-lg text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors"
+      >
+        <span>{title}</span>
+        <ChevronDown
+          className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open && children}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Briefcase, MapPin, Clock, DollarSign, Calendar, Tag, ExternalLink, Sparkles } from 'lucide-react';
+import { ArrowLeft, Briefcase, MapPin, Clock, Calendar, Tag, ExternalLink, Sparkles } from 'lucide-react';
 import { JobListing } from '../../types/index';
 
 interface JobDetailProps {
@@ -29,9 +29,9 @@ const JobDetail: React.FC<JobDetailProps> = ({ job, onBack, onUseDescription }) 
       {/* Back Button */}
       <button
         onClick={onBack}
-        className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+        className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg font-semibold transition-all duration-300 shadow-md hover:shadow-lg group"
       >
-        <ArrowLeft className="w-4 h-4" />
+        <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
         Back to Job Listings
       </button>
 
@@ -74,7 +74,6 @@ const JobDetail: React.FC<JobDetailProps> = ({ job, onBack, onUseDescription }) 
           )}
           {job.salary && (
             <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1.5 rounded-full font-medium text-sm">
-              <DollarSign className="w-4 h-4" />
               {job.salary}
             </span>
           )}
