@@ -1,8 +1,9 @@
 import React from 'react';
-import { Mail, MessageCircle, Clock, Send, ArrowLeft, CheckCircle, XCircle, X } from 'lucide-react';
+import { Mail, MessageCircle, Clock, Send, CheckCircle, XCircle, X, ArrowLeft } from 'lucide-react';
 import Footer from '../components/Footer';
 import { Link, useLocation } from 'react-router-dom';
 import { sendContactMessage } from '../services/api';
+import PageNavBar from '../components/PageNavBar';
 
 const ContactUs: React.FC = () => {
   const [formData, setFormData] = React.useState({
@@ -86,6 +87,8 @@ const ContactUs: React.FC = () => {
       )}
 
       <div className="container mx-auto px-4 py-10 sm:py-16 max-w-6xl">
+        <PageNavBar />
+
         {/* Back to Home Button */}
         <div className="mb-8">
           <Link

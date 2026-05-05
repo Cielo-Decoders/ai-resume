@@ -219,7 +219,7 @@ const KeywordAnalysis: React.FC<KeywordAnalysisProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
               <Zap className="w-5 h-5 text-indigo-600 flex-shrink-0" />
-              <span>Job-Relevant Skills &amp; Terms to Add To Optimize Resume</span>
+              <span>Select Job-Relevant Skills &amp; Terms to Add To Optimize Resume</span>
             </h3>
             <div className="flex gap-2 flex-shrink-0">
               <button

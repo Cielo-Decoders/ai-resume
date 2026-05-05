@@ -2,6 +2,7 @@ import React from 'react';
 import { Mail, ArrowLeft } from 'lucide-react';
 import Footer from '../components/Footer';
 import { Link } from 'react-router-dom';
+import PageNavBar from '../components/PageNavBar';
 
 const HelpCenter: React.FC = () => {
   const resources = [
@@ -49,6 +50,8 @@ const HelpCenter: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
       <div className="container mx-auto px-4 py-10 sm:py-16 max-w-7xl">
+        <PageNavBar />
+
         {/* Back to Home Button */}
         <div className="mb-8">
           <Link

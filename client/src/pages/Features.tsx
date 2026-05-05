@@ -2,6 +2,7 @@ import React from 'react';
 import { Sparkles, CheckCircle, ArrowLeft } from 'lucide-react';
 import Footer from '../components/Footer';
 import { Link } from 'react-router-dom';
+import PageNavBar from '../components/PageNavBar';
 
 const Features: React.FC = () => {
   const features = [
@@ -43,6 +44,8 @@ const Features: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
       <div className="container mx-auto px-4 py-10 sm:py-16 max-w-7xl">
+        <PageNavBar />
+
         {/* Back to Home Button */}
         <div className="mb-8">
           <Link
@@ -57,7 +60,6 @@ const Features: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-10 sm:mb-16">
           <div className="flex items-center justify-center gap-2 mb-4">
-
             <h1 className="text-3xl sm:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               Features
             </h1>

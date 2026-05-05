@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, CheckCircle, FileText, Mail, ChevronDown, Eye, Download, ExternalLink } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Upload, CheckCircle, FileText, Mail, ChevronDown, Eye, Download, ExternalLink, Zap, HelpCircle, LayoutGrid } from 'lucide-react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import TabNavigation from '../components/tabs/TabNavigation';
 import ResumeUpload from '../components/resume/ResumeUpload';
 import KeywordAnalysis from '../components/resume/KeywordAnalysis';
@@ -303,7 +303,8 @@ export default function ATSAnalyzer() {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-0 w-full justify-center md:justify-start">
+            {/* Logo + Title */}
+            <div className="flex items-center gap-0 justify-center md:justify-start">
               <img
                 src="/Logo3.png"
                 alt="CareerDev Logo"
@@ -318,17 +319,62 @@ export default function ATSAnalyzer() {
                 </p>
               </div>
             </div>
+
+            {/* Right-side header panel */}
+            <div className="hidden md:flex items-center gap-3">
+              {/* Navigation links */}
+              <nav className="flex items-center gap-0.5">
+                {[
+                  { to: '/features', label: 'Features' },
+                  { to: '/contact', label: 'Contact Us' },
+                ].map(({ to, label }) => (
+                  <Link
+                    key={to}
+                    to={to}
+                    className="px-3 py-1.5 text-base font-bold text-gray-500 rounded-lg hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-150"
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </nav>
+
+              {/* Divider */}
+              <div className="h-6 w-px bg-gray-200" />
+
+              {/* FAQ link */}
+              <Link
+                to="/faq"
+                className="px-3 py-1.5 text-base font-bold text-gray-500 rounded-lg hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-150"
+              >
+                FAQ
+              </Link>
+
+              {/* Divider */}
+              <div className="h-6 w-px bg-gray-200" />
+
+              {/* Help CTA */}
+              <Link
+                to="/help"
+                className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-md shadow-indigo-200/60 hover:shadow-lg hover:shadow-indigo-300/60 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+              >
+                <HelpCircle className="w-4 h-4" />
+                Help Center
+              </Link>
+            </div>
+
+            {/* Mobile: FAQ link */}
+            <Link
+              to="/faq"
+              className="flex md:hidden px-3 py-1.5 text-sm font-medium text-gray-500 rounded-lg hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-150"
+            >
+              FAQ
+            </Link>
           </div>
           <div className="text-center">
-            <p className="text-gray-600 text-base sm:text-lg mb-4">
-              AI-Powered Resume Optimization for Career Success
+            <p className="text-gray-700 text-lg sm:text-2xl font-bold mb-4">
+              Optimize Your Resume. Land More Interviews.
             </p>
-            {baseResume && (
-              <div className="inline-flex items-center gap-2 bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full">
-                <CheckCircle className="w-4 h-4" />
-                Base Resume: {baseResume.name}
-              </div>
-            )}
+
           </div>
         </div>
         <TabNavigation
@@ -496,15 +542,17 @@ export default function ATSAnalyzer() {
                   </>
                 )}
 
-                {/* 4. Job Match Score */}
-                <MatchScoreCard result={keywordResults} />
-
-                {/* 5. Job Posting Risk Scan */}
-                {redFlagResult && (
-                  <RedFlagScanner
-                    result={redFlagResult}
-                    onDismiss={() => setRedFlagResult(null)}
-                  />
+                {/* 4. Job Match Score & 5. Job Posting Risk Scan — only after optimization */}
+                {optimizationResult && optimizationResult.success && (
+                  <>
+                    <MatchScoreCard result={keywordResults} />
+                    {redFlagResult && (
+                      <RedFlagScanner
+                        result={redFlagResult}
+                        onDismiss={() => setRedFlagResult(null)}
+                      />
+                    )}
+                  </>
                 )}
               </div>
             )}

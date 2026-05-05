@@ -58,7 +58,7 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({
           uploadError ? 'text-red-600' : baseResume ? 'text-green-600' : 'text-gray-700'
         }`}
       >
-        {baseResume && !uploadError ? 'Base Resume Loaded ✓' : 'Upload Base Resume (PDF)'}
+        {baseResume && !uploadError ? `${baseResume.name} Loaded ✓` : 'Upload Your Resume (PDF)'}
       </label>
       <div
         onDragOver={handleDragOver}
