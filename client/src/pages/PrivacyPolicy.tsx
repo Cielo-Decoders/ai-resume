@@ -2,11 +2,16 @@ import React from 'react';
 import { Shield, Lock, Eye, Server, UserCheck, FileText, ArrowLeft } from 'lucide-react';
 import Footer from '../components/Footer';
 import { Link } from 'react-router-dom';
+import PageNavBar from '../components/PageNavBar';
 
 const PrivacyPolicy: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
-      <div className="container mx-auto px-4 py-10 sm:py-16 max-w-4xl">
+      <div className="container mx-auto px-4 pt-10 sm:pt-16 max-w-7xl">
+        <PageNavBar />
+      </div>
+      <div className="container mx-auto px-4 pb-10 sm:pb-16 max-w-4xl">
+
         {/* Back to Home Button */}
         <div className="mb-8">
           <Link

@@ -13,9 +13,9 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
   applicationsCount,
 }) => {
   const tabs: Array<{ id: string; label: string; subtitle: string; icon: LucideIcon; badge?: number }> = [
-    { id: 'jobs', label: 'Job Listings', subtitle: 'Discover matching opportunities', icon: Briefcase },
+    { id: 'jobs', label: 'Job Listings', subtitle: 'Discover new opportunities', icon: Briefcase },
     { id: 'analyze', label: 'Analyze & Optimize', subtitle: 'ATS scoring & resume tailoring', icon: Target, badge: applicationsCount },
-    { id: 'cover-letter', label: 'Cover Letter', subtitle: 'AI-crafted cover letters', icon: Mail },
+    { id: 'cover-letter', label: 'Cover Letter', subtitle: 'Tailored to the job', icon: Mail },
   ];
 
   return (

@@ -19,9 +19,8 @@ const JobDescriptionInput: React.FC<JobDescriptionInputProps> = ({
     <div className="mt-0">
       {/* Recommendation text */}
       <div className="mb-2 flex items-start gap-2 text-sm text-gray-600">
-         <div className="mt-0.5">💡</div>
            <div>
-              <strong>Recommended:</strong> Copy the entire job posting from any job site.
+              <strong>Tip:</strong> Paste the full job description for the best ATS results.
            </div>
          </div>
 
