@@ -1,0 +1,26 @@
+Liliane Azabe Berea, KY | azabelili2016@gmail.com | (606) 386 – 6520 | GitHub | LinkedIn 
+
+EDUCATION Berea College, Berea, KY Expected: May 2025 
+● B.A Computer and Information Science Minor: Health Studies GPA: 3.8 /4.0 
+● Honors: 
+• Wharton Dean’s SUMR scholar, University of Pennsylvania 
+• Dean’s List (2021 – Present) 
+• Berea College Full Ride Scholarship ($140,250) 
+● Relevant Courses: Data Structures and Algorithms, Database Systems, Software Engineering, Business Analytics, Information Security, Web Development, Human Centered Computing, Discrete Math, Statistics, Macroeconomics, Customer Decision Making. 
+● Clubs/Affiliation: Girls Who Code (GWC), Rewriting the Code (RTC), National Society of Black Engineers (NSBE), CodePath, Women in Cybersecurity (WiCyS), Society of Women in Engineering (SWE), ColorStack. 
+
+SKILLS 
+● Programming Languages: Python, C++, SQL, R, Java, JavaScript. 
+● Technologies: React, JSON, PostGres, MySQL, Tableau, PowerBi, Spring Boot, REST API, Microsoft Power Platforms, SharePoint, Git Version Control, PowerShell, Microsoft Office applications (suite), Excel, Google suite, Trello, Linux/Unix, SAN, Network Device configuration. 
+● Security Monitoring: CCTV camera, Genetec, Lenel, C-Cure. 
+● Other Skills: Oil and Gas, Debugging, Data Integration, Business Consulting, Hardware installation, Troubleshooting, and Repair. 
+
+PROFESSIONAL 
+
+EXPERIENCES Bloomberg Tech Lab, Bloomberg, New York, New York Feb 2025 – Feb 2025 
+● One of the 36 software engineers selected from 400 applicants to attend a three-day intensive tech lab at Bloomberg Engineering's global headquarters. 
+● Collaborated with Bloomberg Engineers and peers to build a Python-based portfolio manager using OOP, while enhancing skills in Linux/Unix environments. 
+● Attended interactive sessions focused on technical interview skills and tech talks, gaining insights into network device configuration and data center operations. Corporate Security Intern, Occidental Petroleum (OXY), Houston, TX May 2024 – Aug 2024 
+● Standardized and built a comprehensive daily reporting application for the security department, improving data integration and reporting processes. 
+● Assisted in the troubleshooting and repair of security monitoring systems, enhancing operational efficiency and ensuring compliance with safety standards. 
+● Gained hands-on experience with hardware installation and decommissioning of security equipment, contributing to effective inventory management and equipment lifecycle processes.
