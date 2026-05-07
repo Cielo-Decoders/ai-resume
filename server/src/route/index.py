@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from ..dependencies import AnalyzeControllerDep
-from ..controllers.AnalyzeController import KeywordAnalysisRequest, ResumeOptimizationRequest, ExtractJobRequest, CoverLetterRequest, RedFlagScanRequest
+from ..controllers.AnalyzeController import KeywordAnalysisRequest, ResumeOptimizationRequest, ExtractJobRequest, CoverLetterRequest, RedFlagScanRequest, MockInterviewRequest, EvaluateAnswerRequest
 from ..config import settings
 from ..limiter import limiter
 
@@ -179,6 +179,28 @@ async def scan_red_flags_endpoint(
 ):
     """Scan a job description for red flags and risks."""
     return await controller.scan_red_flags(body)
+
+
+@analyze_router.post("/generate-interview")
+@limiter.limit("5/minute")
+async def generate_interview_endpoint(
+    request: Request,
+    body: MockInterviewRequest,
+    controller: AnalyzeControllerDep = None
+):
+    """Generate mock interview questions based on JD and resume."""
+    return await controller.generate_interview(body)
+
+
+@analyze_router.post("/evaluate-answer")
+@limiter.limit("20/minute")
+async def evaluate_answer_endpoint(
+    request: Request,
+    body: EvaluateAnswerRequest,
+    controller: AnalyzeControllerDep = None
+):
+    """Evaluate a candidate's interview answer."""
+    return await controller.evaluate_answer(body)
 
 
 def register_routes(app):
