@@ -18,3 +18,22 @@ env/
 __pycache__/
 *.py[cod]
 *.pyo
+
+# IDE / editor
+.idea/
+*.iml
+.vscode/
+
+# Logs and runtime artifacts
+*.log
+*.pid
+
+# Build artifacts
+main_bundle.js
+
+# Dev tooling
+skills-lock.json
+
+# Typo / stray shell-redirect files
+uvicec
+uvicecho
