@@ -116,7 +116,7 @@ export default function AuthPage() {
           </div>
 
           <div className="space-y-6">
-            <h2 className="text-3xl font-bold text-gray-800">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
               {isSignUp ? 'Start Your Career Journey' : 'Welcome Back!'}
             </h2>
             <p className="text-xl text-gray-600">
@@ -150,7 +150,7 @@ export default function AuthPage() {
         </div>
 
         {/* Right Side - Auth Form */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8 lg:p-10">
+        <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-8 lg:p-10">
           <div className="text-center mb-8">
             <h3 className="text-2xl font-bold text-gray-800 mb-2">
               {isSignUp ? 'Create Your Account' : 'Sign In to Your Account'}

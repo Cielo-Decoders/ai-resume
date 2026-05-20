@@ -50,7 +50,7 @@ const RecruiterComparison: React.FC<RecruiterComparisonProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-lg p-8">
+      <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 md:p-8">
         <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
           <Eye className="w-6 h-6 text-indigo-600" />
           How Recruiters Will See Your Resume

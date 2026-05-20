@@ -903,7 +903,7 @@ const OptimizedResumeDisplay = React.forwardRef<OptimizedResumeDisplayHandle, Op
 
             {/* Modal Content */}
             <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-              <div className="bg-white shadow-lg rounded-lg p-8 max-w-3xl mx-auto min-h-[600px]">
+              <div className="bg-white shadow-lg rounded-lg p-4 sm:p-8 max-w-3xl mx-auto min-h-[600px]">
                 {originalResume ? (
                   <div className="text-sm text-gray-800 font-sans leading-relaxed">
                     <div className="mb-4 p-3 bg-blue-50 border-l-4 border-blue-500 text-sm text-blue-800">

@@ -686,11 +686,11 @@ const JobBoards: React.FC<JobBoardsProps> = ({ isOpen, onClose }) => {
         <div className="space-y-6">
           <div className="bg-white rounded-xl shadow-lg">
             {/* Header */}
-            <div className="p-8 pb-0">
+            <div className="p-4 sm:p-8 pb-0">
               <div className="flex items-center gap-3 mb-6">
                 <Briefcase className="w-8 h-8 text-indigo-600" />
                 <div>
-                  <h2 className="text-3xl font-bold text-gray-800">Job Boards & Career Sites</h2>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Job Boards & Career Sites</h2>
                   <p className="text-gray-600 mt-1">Find open positions across all industries</p>
                 </div>
               </div>
@@ -702,7 +702,7 @@ const JobBoards: React.FC<JobBoardsProps> = ({ isOpen, onClose }) => {
 
             {/* Industry Category Tabs */}
             <div className="px-8">
-              <div className="flex flex-wrap gap-2 mb-6 border-b border-gray-200">
+              <div className="flex md:flex-wrap gap-2 mb-6 border-b border-gray-200 overflow-x-auto md:overflow-visible -mx-8 px-8 md:mx-0 md:px-0">
                 {categories.map((category) => {
                   const categoryJobs = jobBoards.filter((job) => job.category === category);
                   return (
@@ -726,7 +726,7 @@ const JobBoards: React.FC<JobBoardsProps> = ({ isOpen, onClose }) => {
             </div>
 
             {/* Active Category Content */}
-            <div className="p-8 pt-0">
+            <div className="p-4 sm:p-8 pt-0">
               {(() => {
                 const categoryJobs = jobBoards.filter((job) => job.category === activeCategory);
 

@@ -644,7 +644,7 @@ export default function InterviewerQuestions({
             {/* Interviewer Style / Persona */}
             <div className="bg-gray-50 rounded-xl p-4 space-y-3">
               <span className="text-sm font-bold text-gray-800 block text-left">Interviewer Style</span>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {PERSONA_OPTIONS.map((p) => {
                   const Icon = p.icon;
                   const isActive = persona === p.id;
@@ -1003,7 +1003,7 @@ export default function InterviewerQuestions({
                       <ListChecks className="w-4 h-4 text-indigo-500" />
                       STAR Structure Check
                     </h5>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {(['situation', 'task', 'action', 'result'] as const).map((key) => {
                         const val = fb.starAnalysis![key];
                         if (val === null) return null;

@@ -73,6 +73,30 @@ function detectRegion(job: JobListing): RegionFilter {
   return 'Remote';
 }
 
+// Lightweight German-vs-English heuristic. Returns 'de' if the posting looks
+// German, otherwise 'en' (the default for unknown / mixed content).
+const GERMAN_STOPWORDS = /\b(und|oder|der|die|das|den|dem|ein|eine|einen|mit|für|von|bei|zu|im|am|auf|sich|nicht|wir|sie|ist|sind|werden|wird|haben|hat|als|auch|wie|über|unsere|unser|deine|deinen|dein|sowie|sowohl|bzw|jedoch|bereits|sehr|aufgaben|kenntnisse|erfahrung|berufserfahrung|stellenbeschreibung|mitarbeiter|fähigkeiten)\b/g;
+const UMLAUTS = /[äöüÄÖÜß]/g;
+
+function detectLanguage(job: JobListing): 'de' | 'en' {
+  const text = `${job.title || ''} ${job.description || ''}`.toLowerCase();
+  if (!text.trim()) return 'en';
+
+  const umlautHits = (text.match(UMLAUTS) || []).length;
+  const stopwordHits = (text.match(GERMAN_STOPWORDS) || []).length;
+
+  // A handful of strong signals is enough; pure-English text scores 0.
+  if (umlautHits >= 2 || stopwordHits >= 3) return 'de';
+  return 'en';
+}
+
+// Languages the user can comfortably read, derived from browser locale.
+function getUserLanguages(): Set<string> {
+  const raw =
+    (typeof navigator !== 'undefined' && (navigator.languages || [navigator.language])) || ['en'];
+  return new Set(raw.map((l) => l.split('-')[0].toLowerCase()));
+}
+
 interface JobListingsProps {
   onUseDescription?: (job: JobListing) => void;
 }
@@ -85,6 +109,7 @@ const JobListings: React.FC<JobListingsProps> = ({ onUseDescription }) => {
   const [activeCategory, setActiveCategory] = useState('All');
   const [activeRegion, setActiveRegion] = useState<RegionFilter>('All Regions');
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
+  const userLanguages = useMemo(() => getUserLanguages(), []);
 
   const loadJobs = useCallback(async () => {
     setLoading(true);
@@ -115,9 +140,14 @@ const JobListings: React.FC<JobListingsProps> = ({ onUseDescription }) => {
   };
 
   const filteredJobs = useMemo(() => {
-    if (activeRegion === 'All Regions') return jobs;
+    // On "All Regions", drop postings whose detected language isn't one the
+    // user reads (per browser locale). When a specific region is selected,
+    // respect the user's intent and skip the language filter.
+    if (activeRegion === 'All Regions') {
+      return jobs.filter((job) => userLanguages.has(detectLanguage(job)));
+    }
     return jobs.filter((job) => detectRegion(job) === activeRegion);
-  }, [jobs, activeRegion]);
+  }, [jobs, activeRegion, userLanguages]);
 
   if (selectedJob) {
     return <JobDetail job={selectedJob} onBack={() => setSelectedJob(null)} onUseDescription={onUseDescription} />;
@@ -198,7 +228,7 @@ const JobListings: React.FC<JobListingsProps> = ({ onUseDescription }) => {
           <p className="text-gray-500 mt-4 font-medium">Loading job listings...</p>
         </div>
       ) : error ? (
-        <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 text-center">
           <p className="text-red-500 font-medium">{error}</p>
           <button
             onClick={loadJobs}
@@ -208,7 +238,7 @@ const JobListings: React.FC<JobListingsProps> = ({ onUseDescription }) => {
           </button>
         </div>
       ) : filteredJobs.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 text-center">
           <p className="text-gray-500 font-medium">No jobs found. Try adjusting your search, category, or region.</p>
         </div>
       ) : (

@@ -2,6 +2,7 @@
 Route configuration module for organizing API endpoints.
 """
 import smtplib
+import xml.etree.ElementTree as ET
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import httpx
@@ -132,6 +133,49 @@ async def extract_job_endpoint(
     This avoids exposing the API key in the browser and bypasses CORS restrictions.
     """
     return await controller.extract_job_data(body)
+
+
+@analyze_router.get("/jobs/weworkremotely")
+@limiter.limit("60/minute")
+async def weworkremotely_proxy(request: Request):
+    """
+    Proxy + parse the We Work Remotely RSS feed into a JSON list of jobs.
+    WWR only exposes RSS, so we transform it server-side to the shape the
+    client already understands. Declared before the /jobs/{source} catch-all
+    so FastAPI's declaration-order matching picks this route first.
+    """
+    feed_url = "https://weworkremotely.com/remote-jobs.rss"
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(feed_url, headers={"Accept": "application/rss+xml"})
+            resp.raise_for_status()
+            root = ET.fromstring(resp.text)
+    except httpx.HTTPStatusError as exc:
+        return JSONResponse(
+            status_code=502,
+            content={"error": f"Upstream error: {exc.response.status_code}"},
+        )
+    except (httpx.RequestError, ET.ParseError):
+        return JSONResponse(status_code=502, content={"error": "Failed to fetch WWR feed"})
+
+    jobs = []
+    for item in root.iterfind("./channel/item"):
+        raw_title = (item.findtext("title") or "").strip()
+        company, _, role = raw_title.partition(": ")
+        if not role:
+            company, role = "", raw_title
+
+        jobs.append({
+            "title": role,
+            "company_name": company,
+            "url": (item.findtext("link") or "").strip(),
+            "description": (item.findtext("description") or "").strip(),
+            "publication_date": (item.findtext("pubDate") or "").strip(),
+            "category": (item.findtext("category") or "").strip(),
+            "location": "Remote",
+        })
+
+    return {"jobs": jobs}
 
 
 @analyze_router.get("/jobs/{source}")
