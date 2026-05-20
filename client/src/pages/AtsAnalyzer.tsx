@@ -66,6 +66,21 @@ export default function ATSAnalyzer() {
   useEffect(() => {
     setActiveTab(getTabFromPath(location.pathname));
   }, [location.pathname]);
+
+  // Pick up pre-loaded resume text passed from the GetStarted page
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.fromGetStarted && state?.resumeText) {
+      setResumeText(state.resumeText);
+      // Create a synthetic File so the upload field shows as loaded
+      const blob = new Blob([state.resumeText], { type: 'text/plain' });
+      const fileName = state.resumeFileName || 'resume.txt';
+      const syntheticFile = new File([blob], fileName, { type: 'text/plain' });
+      setResumeFile(syntheticFile);
+      setBaseResume(syntheticFile);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState('');
   const [inputMode, setInputMode] = useState<'paste'>('paste');
@@ -192,17 +207,22 @@ export default function ATSAnalyzer() {
     // Step 2: Extract text from resume PDF
     try {
       setScrapingStatus('Extracting text from your resume...');
-      const aiResults = await extractTextFromResume(resumeFile!);
+      if (resumeText && resumeText.length >= 50) {
+        // Resume text already available from GetStarted — skip extraction
+        extractedResumeText = resumeText;
+      } else {
+        const aiResults = await extractTextFromResume(resumeFile!);
 
-      // Use fullText if available, otherwise fall back to text
-      extractedResumeText = aiResults.fullText || aiResults.text || '';
+        // Use fullText if available, otherwise fall back to text
+        extractedResumeText = aiResults.fullText || aiResults.text || '';
 
-      if (!extractedResumeText || extractedResumeText.length < 50) {
-        throw new Error('Could not extract meaningful text from the resume');
+        if (!extractedResumeText || extractedResumeText.length < 50) {
+          throw new Error('Could not extract meaningful text from the resume');
+        }
+
+        // Store FULL resume text for optimization
+        setResumeText(extractedResumeText);
       }
-      
-      // Store FULL resume text for optimization
-      setResumeText(extractedResumeText);
     } catch (error: any) {
       if (error.message && (error.message.includes('PDF') || error.message.includes('extract'))) {
         setScrapingStatus('');
@@ -388,6 +408,12 @@ export default function ATSAnalyzer() {
             <p className="text-gray-700 text-lg sm:text-2xl font-bold mb-4">
               Optimize Your Resume. Land More Interviews. Land Your Dream Job!
             </p>
+            {baseResume && (
+              <div className="inline-flex items-center gap-2 bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full">
+                <CheckCircle className="w-4 h-4" />
+                Base Resume: {baseResume.name}
+              </div>
+            )}
 
           </div>
         </div>

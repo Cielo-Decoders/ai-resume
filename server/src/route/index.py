@@ -10,7 +10,7 @@ from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from ..dependencies import AnalyzeControllerDep
-from ..controllers.AnalyzeController import KeywordAnalysisRequest, ResumeOptimizationRequest, ExtractJobRequest, CoverLetterRequest, RedFlagScanRequest, MockInterviewRequest, EvaluateAnswerRequest
+from ..controllers.AnalyzeController import KeywordAnalysisRequest, ResumeOptimizationRequest, ExtractJobRequest, CoverLetterRequest, RedFlagScanRequest, MockInterviewRequest, EvaluateAnswerRequest, ResumeRewriteRequest, BulletEnhanceRequest
 from ..config import settings
 from ..limiter import limiter
 
@@ -245,6 +245,28 @@ async def evaluate_answer_endpoint(
 ):
     """Evaluate a candidate's interview answer."""
     return await controller.evaluate_answer(body)
+
+
+@analyze_router.post("/rewrite-resume")
+@limiter.limit("5/minute")
+async def rewrite_resume_endpoint(
+    request: Request,
+    body: ResumeRewriteRequest,
+    controller: AnalyzeControllerDep = None
+):
+    """Rewrite and reorganize an edited resume — sort experiences by date, clean formatting."""
+    return await controller.rewrite_resume(body)
+
+
+@analyze_router.post("/enhance-bullet")
+@limiter.limit("30/minute")
+async def enhance_bullet_endpoint(
+    request: Request,
+    body: BulletEnhanceRequest,
+    controller: AnalyzeControllerDep = None
+):
+    """Enhance a single resume bullet point with AI to follow industry standards."""
+    return await controller.enhance_bullet(body)
 
 
 def register_routes(app):

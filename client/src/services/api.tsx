@@ -291,6 +291,77 @@ export const scanJobRedFlags = async (
 
 
 /**
+ * Rewrite and reorganize an edited resume — sort experiences/education by date, clean formatting
+ */
+export const rewriteResume = async (
+  resumeText: string
+): Promise<{ success: boolean; rewrittenResume: string; message?: string }> => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/api/rewrite-resume`,
+      { resume_text: resumeText },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 120000,
+      }
+    );
+
+    if (!response.data) {
+      throw new Error('No response from server');
+    }
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Resume rewrite failed');
+    }
+
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Resume rewrite timed out. Please try again.');
+    }
+
+    throw new Error(error.message || 'Failed to rewrite resume. Please try again.');
+  }
+};
+
+/**
+ * Enhance a single resume bullet point with AI to follow industry standards.
+ */
+export const enhanceBullet = async (
+  bullet: string,
+  jobTitle = '',
+  company = ''
+): Promise<{ success: boolean; enhanced: string; message?: string }> => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/api/enhance-bullet`,
+      { bullet, job_title: jobTitle, company },
+      { headers: { 'Content-Type': 'application/json' }, timeout: 30000 }
+    );
+
+    if (!response.data) {
+      throw new Error('No response from server');
+    }
+
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Bullet enhancement timed out. Please try again.');
+    }
+
+    throw new Error(error.message || 'Failed to enhance bullet. Please try again.');
+  }
+};
+
+/**
  * Generate mock interview questions based on resume and job description
  */
 export const generateInterviewQuestions = async (
@@ -380,6 +451,8 @@ const apiService = {
   sendContactMessage,
   generateCoverLetter,
   scanJobRedFlags,
+  rewriteResume,
+  enhanceBullet,
   generateInterviewQuestions,
   evaluateInterviewAnswer,
 };
