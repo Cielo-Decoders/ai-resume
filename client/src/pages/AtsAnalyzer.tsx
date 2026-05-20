@@ -283,11 +283,11 @@ export default function ATSAnalyzer() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen overflow-x-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Full-page Loading Overlay */}
       {(isAnalyzing || isOptimizing) && scrapingStatus && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-md w-full mx-4 transform animate-fadeIn">
             <div className="flex flex-col items-center text-center space-y-6">
               <div className="relative">
                 <div className="w-20 h-20 border-4 border-indigo-200 rounded-full"></div>
@@ -386,7 +386,7 @@ export default function ATSAnalyzer() {
           </div>
           <div className="text-center">
             <p className="text-gray-700 text-lg sm:text-2xl font-bold mb-4">
-              Optimize Your Resume. Land More Interviews.
+              Optimize Your Resume. Land More Interviews. Land Your Dream Job!
             </p>
 
           </div>
@@ -618,7 +618,7 @@ export default function ATSAnalyzer() {
                 company={company}
               />
             ) : (
-              <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+              <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 text-center">
                 <Mic className="w-12 h-12 mx-auto text-gray-300 mb-4" />
                 <h3 className="text-xl font-bold text-gray-700 mb-2">Upload & Analyze First</h3>
                 <p className="text-gray-500 text-sm max-w-md mx-auto mb-4">

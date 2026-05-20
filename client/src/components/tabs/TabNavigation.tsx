@@ -20,7 +20,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
   ];
 
   return (
-    <nav className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-8 sm:mb-10" role="tablist">
+    <nav className="flex flex-col lg:flex-row flex-wrap gap-3 lg:gap-4 mb-8 sm:mb-10" role="tablist">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
@@ -30,7 +30,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({
             role="tab"
             aria-selected={isActive}
             onClick={() => setActiveTab(tab.id)}
-            className="group relative flex-1 sm:flex-none"
+            className="group relative flex-1 min-w-0"
             style={{ outline: 'none' }}
           >
             <div

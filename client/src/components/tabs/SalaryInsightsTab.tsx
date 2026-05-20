@@ -9,7 +9,7 @@ interface SalaryInsightsTabProps {
 const SalaryInsightsTab: React.FC<SalaryInsightsTabProps> = ({ analysisResults }) => {
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-lg p-8">
+      <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8">
         <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
           <DollarSign className="w-6 h-6 text-green-600" />
           Salary Insights for {analysisResults.jobMatch.title}
