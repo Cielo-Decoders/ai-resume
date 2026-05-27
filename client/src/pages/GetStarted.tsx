@@ -7,50 +7,110 @@ import {
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { jsPDF } from 'jspdf';
-import { rewriteResume, enhanceBullet } from '../services/api';
+import { rewriteResume, enhanceBullet, extractTextFromResume } from '../services/api';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.mjs`;
 
-async function extractPdfText(file: File): Promise<string> {
+// Client-side pdfjs path. Used for two purposes:
+//  1. Extract clickable link annotations (e.g. GitHub/LinkedIn URLs hidden
+//     behind anchor text like "GitHub") — the server can't see these.
+//  2. Fallback text extraction if the server endpoint is unavailable.
+async function extractPdfWithPdfjs(file: File): Promise<{ text: string; links: string[] }> {
   const arrayBuffer = await file.arrayBuffer();
   const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
   const pdf = await loadingTask.promise;
   const pageTexts: string[] = [];
+  const allLinks = new Set<string>();
 
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
-    const textContent = await page.getTextContent();
+    const [textContent, annotations] = await Promise.all([
+      page.getTextContent(),
+      page.getAnnotations().catch(() => [] as any[]),
+    ]);
 
-    // Group text items by y-position (rounded to a 3px grid) to reconstruct real lines.
-    // PDF y-axis increases upward, so we sort descending to get top→bottom order.
-    const rows = new Map<number, Array<{ x: number; text: string }>>();
-    for (const item of textContent.items) {
-      if (!('str' in item)) continue;
-      const str = (item as any).str as string;
-      if (!str.trim()) continue;
-      const [, , , , x, y] = (item as any).transform as number[];
-      const rowKey = Math.round(y / 3) * 3;
-      if (!rows.has(rowKey)) rows.set(rowKey, []);
-      rows.get(rowKey)!.push({ x, text: str });
+    for (const annot of annotations) {
+      if (annot.subtype === 'Link' && typeof annot.url === 'string' && /^https?:\/\//i.test(annot.url)) {
+        allLinks.add(annot.url);
+      }
     }
 
-    const lines = Array.from(rows.entries())
-      .sort(([ya], [yb]) => yb - ya)                   // top of page first
-      .map(([, items]) =>
-        items
-          .sort((a, b) => a.x - b.x)                   // left-to-right within line
-          .map((i) => i.text)
-          .join(' ')
-          .replace(/\s{2,}/g, ' ')
-          .trim(),
-      )
-      .filter(Boolean);
+    type Item = { x: number; y: number; h: number; text: string };
+    const items: Item[] = [];
+    for (const it of textContent.items) {
+      if (!('str' in it)) continue;
+      const str = (it as any).str as string;
+      if (!str || !str.trim()) continue;
+      const [, , , , x, y] = (it as any).transform as number[];
+      const h = Math.abs((it as any).height) || Math.abs((it as any).transform?.[3]) || 10;
+      items.push({ x, y, h, text: str });
+    }
+    if (items.length === 0) continue;
+
+    items.sort((a, b) => b.y - a.y);
+    const heights = items.map((i) => i.h).sort((a, b) => a - b);
+    const medianH = heights[Math.floor(heights.length / 2)] || 10;
+    const tol = Math.max(2, medianH * 0.5);
+
+    const lineBuckets: Item[][] = [];
+    for (const item of items) {
+      const last = lineBuckets[lineBuckets.length - 1];
+      if (last && Math.abs(last[0].y - item.y) <= tol) last.push(item);
+      else lineBuckets.push([item]);
+    }
+
+    const lines = lineBuckets.map((bucket) => {
+      bucket.sort((a, b) => a.x - b.x);
+      let out = '';
+      for (let i = 0; i < bucket.length; i++) {
+        const cur = bucket[i];
+        if (i === 0) { out = cur.text; continue; }
+        const prev = bucket[i - 1];
+        const prevWidth = (prev as any).w ?? Math.max(prev.h * 0.5, prev.text.length * prev.h * 0.45);
+        const gap = cur.x - (prev.x + prevWidth);
+        const endsWithSpace = /\s$/.test(out);
+        const startsWithSpace = /^\s/.test(cur.text);
+        if (gap < prev.h * 0.25 || endsWithSpace || startsWithSpace) out += cur.text;
+        else out += ' ' + cur.text;
+      }
+      return out.replace(/\s{2,}/g, ' ').trim();
+    }).filter(Boolean);
 
     if (lines.length) pageTexts.push(lines.join('\n'));
   }
 
-  return pageTexts.join('\n\n');
+  return { text: pageTexts.join('\n\n'), links: Array.from(allLinks) };
+}
+
+// Resume PDF → text. Strategy:
+//   1. Call the server's /api/extract-text endpoint in parallel with the
+//      client-side pdfjs pass. The server uses PyPDF2 + a tesseract OCR
+//      fallback, so it handles scanned/image-only PDFs that pdfjs returns
+//      nothing for. The client pdfjs pass is still needed to recover clickable
+//      link annotations (GitHub/LinkedIn URLs hidden behind anchor text).
+//   2. Pick whichever text source has more substance. If the server returned
+//      meaningful text, use it; otherwise fall back to the pdfjs text. This
+//      keeps the page working even if the backend is down or rate-limited.
+async function extractPdfText(file: File): Promise<{ text: string; links: string[] }> {
+  // Fire both off in parallel — the pdfjs pass is needed regardless (for links).
+  const pdfjsPromise = extractPdfWithPdfjs(file).catch(() => ({ text: '', links: [] as string[] }));
+  const serverPromise = extractTextFromResume(file)
+    .then((res: any) => (typeof res?.fullText === 'string' && res.fullText.trim())
+      ? res.fullText as string
+      : (typeof res?.text === 'string' ? res.text as string : ''))
+    .catch(() => '');
+
+  const [pdfjsResult, serverText] = await Promise.all([pdfjsPromise, serverPromise]);
+
+  // Prefer the server text when it has materially more content (it has OCR);
+  // otherwise stay with pdfjs (which preserves visual layout / line order
+  // better for well-formed text PDFs).
+  const serverLen = serverText.trim().length;
+  const clientLen = pdfjsResult.text.trim().length;
+  const chosen = serverLen > Math.max(50, clientLen * 0.8) ? serverText : pdfjsResult.text;
+
+  return { text: chosen, links: pdfjsResult.links };
 }
 
 interface WorkEntry {
@@ -69,12 +129,18 @@ interface EducationEntry {
   details: string;
 }
 
+interface CustomSection {
+  heading: string;
+  content: string[];
+}
+
 interface ResumeData {
   name: string;
   email: string;
   phone: string;
   location: string;
   linkedin: string;
+  github: string;
   summary: string;
   skills: string[];
   experience: WorkEntry[];
@@ -83,34 +149,163 @@ interface ResumeData {
   relevantCourses: string[];
   projects: string[];
   affiliations: string[];
-  leadership: string[];
+  // Leadership uses the same structured shape as Experience so each role
+  // can show its title, organization, period and bullet achievements.
+  leadership: WorkEntry[];
   clubs: string[];
   volunteer: string[];
   awards: string[];
   languages: string[];
+  // Catches any heading not in SECTION_MAP (Publications, Research, Patents, etc.)
+  // so content under unrecognized sections isn't silently discarded.
+  customSections: CustomSection[];
 }
 
-function parseResumeText(raw: string): ResumeData {
-  const allLines = raw.split(/\n/).map((l) => l.trim()).filter(Boolean);
+// Parses a section's lines (e.g. Experience or Leadership) into structured
+// WorkEntry[]. Handles bullets, pipe/at/comma-separated headers, dates, and
+// long combined-header lines that mix title + company + location + dates.
+function parseWorkEntries(lines: string[]): WorkEntry[] {
+  const entries: WorkEntry[] = [];
+  let current: WorkEntry | null = null;
+
+  const MONTHS = /jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?/i;
+  const containsDate = (l: string) => /\d{4}/.test(l) || MONTHS.test(l) || /present|current/i.test(l);
+  const isDateRange  = (l: string) =>
+    /(\d{4}|present).*?[–\-—].*?(\d{4}|present)/i.test(l) ||
+    new RegExp(`(${MONTHS.source}[,\\s]+\\d{4})\\s*[–\\-—]\\s*(${MONTHS.source}[,\\s]+\\d{4}|present)`, 'i').test(l);
+  const isBullet = (l: string) => /^[•\-*–▪▸→]/.test(l);
+
+  const DATE_SPAN = new RegExp(
+    `(?:${MONTHS.source}\\.?\\s+\\d{2,4}|\\d{4})` +
+    `(?:\\s*[–\\-—]\\s*(?:Present|Current|(?:${MONTHS.source}\\.?\\s+\\d{2,4}|\\d{4})))?` +
+    `|(?:${MONTHS.source}\\.?\\s*[–\\-—]\\s*${MONTHS.source}\\.?\\s+\\d{4})`,
+    'i'
+  );
+
+  const pushCurrent = () => { if (current) { entries.push(current); current = null; } };
+  const newId = () => Math.random().toString(36).slice(2);
+
+  for (const line of lines) {
+    if (isBullet(line)) {
+      if (current) current.bullets.push(line.replace(/^[•\-*–▪▸→]\s*/, ''));
+      continue;
+    }
+
+    const pipeMatch = line.match(/^(.+?)\s*[|·]\s*(.+?)\s*[|·]\s*(.+)$/);
+    const atMatch   = line.match(/^(.+?)\s+(?:at|@)\s+(.+?)\s*[,—–]\s*(\d.+|present.*)$/i);
+
+    if (pipeMatch && containsDate(pipeMatch[3])) {
+      pushCurrent();
+      current = { id: newId(), title: pipeMatch[1].trim(), company: pipeMatch[2].trim(), period: pipeMatch[3].trim(), bullets: [] };
+      continue;
+    }
+    if (atMatch && containsDate(atMatch[3])) {
+      pushCurrent();
+      current = { id: newId(), title: atMatch[1].trim(), company: atMatch[2].trim(), period: atMatch[3].trim(), bullets: [] };
+      continue;
+    }
+
+    // "Title, Company, [Location,] Date" — find the date span, split prefix by comma.
+    const dateMatch = line.match(DATE_SPAN);
+    if (dateMatch && dateMatch.index !== undefined && line.indexOf(',') >= 0 && line.indexOf(',') < dateMatch.index) {
+      const period = dateMatch[0].trim();
+      const headerPart = line.slice(0, dateMatch.index).trim().replace(/[,\s.]+$/, '');
+      const parts = headerPart.split(',').map((p) => p.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        pushCurrent();
+        current = { id: newId(), title: parts[0], company: parts[1], period, bullets: [] };
+        continue;
+      }
+    }
+
+    if (isDateRange(line) || (containsDate(line) && line.length < 70)) {
+      if (current && !current.period) { current.period = line; continue; }
+    }
+
+    // Wrapped-bullet continuation: pdfjs splits a single visual bullet into
+    // separate lines whenever the text wraps. The first line has the bullet
+    // marker, the rest don't. If we're already inside an entry that has at
+    // least one bullet and a plain line shows up (no bullet, no new-entry
+    // header), it's almost always the tail of the previous bullet — append
+    // it rather than spawning a phantom "title-only" entry.
+    if (current && current.bullets.length > 0) {
+      const lastIdx = current.bullets.length - 1;
+      current.bullets[lastIdx] = (current.bullets[lastIdx] + ' ' + line).trim();
+      continue;
+    }
+
+    if (line.length > 2 && line.length < 200) {
+      if (!current) {
+        current = { id: newId(), title: line, company: '', period: '', bullets: [] };
+      } else if (!current.company && !current.period && current.bullets.length === 0) {
+        current.company = line;
+      } else {
+        pushCurrent();
+        current = { id: newId(), title: line, company: '', period: '', bullets: [] };
+      }
+    }
+  }
+  pushCurrent();
+  return entries;
+}
+
+function parseResumeText(raw: string, links: string[] = []): ResumeData {
+  // Normalize various bullet/marker characters used by different PDFs to a
+  // single canonical "•". Without this, e.g. "●" (U+25CF, "BLACK CIRCLE" —
+  // common in Word/Google Docs exports) is treated as plain text and bullets
+  // get mis-parsed as titles.
+  const allLines = raw.split(/\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((l) => l.replace(/^[●◦▪▫■□★►▶▸→]\s*/, '• '));
 
   const data: ResumeData = {
-    name: '', email: '', phone: '', location: '', linkedin: '',
+    name: '', email: '', phone: '', location: '', linkedin: '', github: '',
     summary: '', skills: [], experience: [], education: [], certifications: [], relevantCourses: [],
-    projects: [], affiliations: [], leadership: [], clubs: [], volunteer: [], awards: [], languages: [],
+    projects: [], affiliations: [], leadership: [] as WorkEntry[], clubs: [], volunteer: [], awards: [], languages: [],
+    customSections: [],
   };
 
-  // ── Contact extraction (scan first 10 lines) ─────────────────────────────
-  const contactBlock = allLines.slice(0, 10).join(' ');
-  const emailMatch   = contactBlock.match(/[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}/);
-  const phoneMatch   = contactBlock.match(/(?:\+?1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}|\+\d[\d\s\-().]{6,18}/);
-  const linkedinMatch = contactBlock.match(/linkedin\.com\/in\/[\w%-]+/i);
-  if (emailMatch)   data.email   = emailMatch[0];
-  if (phoneMatch)   data.phone   = phoneMatch[0].trim();
-  if (linkedinMatch) data.linkedin = linkedinMatch[0];
+  // ── Contact extraction (scan first 12 lines) ─────────────────────────────
+  // pdfjs frequently inserts spurious spaces between adjacent text runs, so an
+  // email rendered as "jahatehs@berea.edu" may arrive as "jahatehs @berea.edu"
+  // or "jahatehs @ berea . edu". We match a tolerant pattern, then strip out
+  // the spaces to get the canonical form.
+  const contactBlock = allLines.slice(0, 12).join(' ');
+  const emailMatch   = contactBlock.match(/[\w.+\-]+\s*@\s*[\w\-]+(?:\s*\.\s*[\w\-]+)+/);
+  // Phone: allow multiple separator chars between groups so "(859) - 979 - 4551" matches.
+  const phoneMatch   = contactBlock.match(/(?:\+?1[\s.\-]?)?\(?\d{3}\)?[\s.\-]{0,3}\d{3}[\s.\-]{0,3}\d{4}|\+\d[\d\s\-().]{6,18}/);
+  const linkedinVisibleMatch = contactBlock.match(/linkedin\.com\/in\/[\w%-]+/i);
+  const githubVisibleMatch   = contactBlock.match(/github\.com\/[\w%-]+/i);
+
+  // Prefer URLs from PDF link annotations — covers the common case where the
+  // resume shows the bare word "GitHub" or "LinkedIn" with the URL hidden in
+  // a clickable anchor that getTextContent() can't see.
+  const linkedinFromAnnotation = links.find((u) => /linkedin\.com\/in\//i.test(u));
+  const githubFromAnnotation   = links.find((u) => /github\.com\//i.test(u) && !/github\.com\/?$/i.test(u));
+  const emailFromAnnotation    = links.find((u) => /^mailto:/i.test(u));
+
+  if (emailFromAnnotation) {
+    data.email = emailFromAnnotation.replace(/^mailto:/i, '').trim();
+  } else if (emailMatch) {
+    data.email = emailMatch[0].replace(/\s+/g, '');
+  }
+  // Normalize phone whitespace so "(859) 302 - 5792" displays as "(859) 302-5792".
+  if (phoneMatch) data.phone = phoneMatch[0].replace(/\s*-\s*/g, '-').replace(/\s+/g, ' ').trim();
+  if (linkedinFromAnnotation) {
+    data.linkedin = linkedinFromAnnotation.replace(/^https?:\/\/(www\.)?/i, '');
+  } else if (linkedinVisibleMatch) {
+    data.linkedin = linkedinVisibleMatch[0];
+  }
+  if (githubFromAnnotation) {
+    data.github = githubFromAnnotation.replace(/^https?:\/\/(www\.)?/i, '');
+  } else if (githubVisibleMatch) {
+    data.github = githubVisibleMatch[0];
+  }
 
   // Name: first line, stripped of any contact details it might contain
   let nameRaw = allLines[0] || '';
-  [emailMatch?.[0], phoneMatch?.[0], linkedinMatch?.[0]]
+  [emailMatch?.[0], phoneMatch?.[0], linkedinVisibleMatch?.[0], githubVisibleMatch?.[0]]
     .filter(Boolean)
     .forEach((v) => { nameRaw = nameRaw.replace(v!, ''); });
   nameRaw = nameRaw
@@ -124,33 +319,89 @@ function parseResumeText(raw: string): ResumeData {
 
   // ── Section heading map ───────────────────────────────────────────────────
   // Each entry: [regex tested against normalized line, section key]
+  // Patterns end with `(?:\s*[&/]\s*\w+)?` where appropriate so combinations
+  // like "Leadership & Affiliations", "Experience & Internships", "Education &
+  // Training" still resolve to the closest known section instead of getting
+  // dropped or routed to an orphan custom section.
   const SECTION_MAP: [RegExp, string][] = [
-    [/^(?:professional\s+)?summary$|^objective$|^professional\s+profile$|^career\s+(?:summary|objective|profile)$/i, 'summary'],
-    [/^(?:work\s+)?experience$|^work\s+history$|^employment(?:\s+history)?$|^professional\s+experience$/i, 'experience'],
-    [/^education(?:\s+background)?$|^academic\s+(?:background|history)$|^qualifications?$/i, 'education'],
-    [/^(?:technical\s+)?skills?(?:\s+[&\/]\s*expertise)?$|^(?:core\s+)?competencies$|^expertise$|^areas?\s+of\s+expertise$/i, 'skills'],
+    [/^(?:professional\s+)?summary$|^objective$|^professional\s+profile$|^career\s+(?:summary|objective|profile)$|^profile$|^about(?:\s+me)?$/i, 'summary'],
+    [/^(?:work\s+|professional\s+|relevant\s+)?experiences?(?:\s+[&\/]\s+\w[\w\s]{0,20})?$|^work\s+history$|^employment(?:\s+history)?$|^career\s+history$|^internships?(?:\s+[&\/]\s+\w[\w\s]{0,20})?$/i, 'experience'],
+    [/^education(?:\s+background|\s+[&\/]\s+\w[\w\s]{0,20})?$|^academic\s+(?:background|history)$|^qualifications?$/i, 'education'],
+    [/^(?:technical\s+)?skills?(?:\s+[&\/]\s*\w[\w\s]{0,20})?$|^(?:core\s+)?competencies$|^expertise$|^areas?\s+of\s+expertise$|^proficiencies$/i, 'skills'],
     [/^certifications?(?:\s+[&\/]\s*licen[sc]es?)?$|^licen[sc]es?(?:\s+[&\/]\s*certifications?)?$|^professional\s+certifications?$/i, 'certifications'],
-    [/^relevant\s+courses?$|^coursework$|^related\s+courses?$/i, 'relevantCourses'],
-    [/^projects?(?:\s+[&\/]\s*portfolio)?$|^portfolio$|^personal\s+projects?$/i, 'projects'],
+    [/^relevant\s+courses?$|^coursework$|^related\s+courses?$|^selected\s+coursework$/i, 'relevantCourses'],
+    [/^projects?(?:\s+[&\/]\s*\w[\w\s]{0,20})?$|^portfolio$|^personal\s+projects?$|^selected\s+projects?$|^technical\s+projects?$|^key\s+projects?$|^[\w\s]{0,40}\s+projects?$/i, 'projects'],
     [/^professional\s+affiliations?$|^memberships?$|^associations?$/i, 'affiliations'],
-    [/^leadership(?:\s+[&\/]\s*(?:management|experience))?$|^management\s+experience$/i, 'leadership'],
-    [/^clubs?(?:\s*[\/&]\s*affiliations?)?$|^extracurricular(?:\s+activities)?$/i, 'clubs'],
-    [/^volunteer(?:ing|s?\s+work|\s+experience)?$|^community\s+service$/i, 'volunteer'],
-    [/^awards?(?:\s+[&\/]\s*honors?)?$|^honors?(?:\s+[&\/]\s*awards?)?$|^recognitions?$|^achievements?$/i, 'awards'],
+    // Match "Leadership", "Leadership & Management", "Leadership & Affiliations",
+    // "Leadership & Activities", "Leadership Experience", etc.
+    [/^leadership(?:\s+[&\/]\s*\w[\w\s]{0,20}|\s+experience|\s+roles?)?$|^management\s+experience$/i, 'leadership'],
+    [/^clubs?(?:\s*[\/&]\s*\w[\w\s]{0,20})?$|^extracurricular(?:\s+activities)?$|^activities$/i, 'clubs'],
+    [/^volunteer(?:ing|s?\s+work|\s+experience)?$|^community\s+service$|^community\s+(?:involvement|engagement)$/i, 'volunteer'],
+    [/^awards?(?:\s+[&\/]\s*honors?)?$|^honors?(?:\s+[&\/]\s*awards?)?$|^recognitions?$|^achievements?$|^accolades$/i, 'awards'],
     [/^languages?(?:\s+(?:skills?|proficiency))?$/i, 'languages'],
   ];
 
+  // Heuristic for a line that LOOKS like a section heading but isn't in the known map.
+  // We use this to capture "PUBLICATIONS", "RESEARCH", "PATENTS", "PRESENTATIONS",
+  // "INTERESTS", "REFERENCES", "TRAINING", etc. as custom sections instead of dropping
+  // their content. Title-Case detection is gated by `allowTitleCase` because Title-Case
+  // lines also appear as names ("Isaac Kwame Narteh") and company/institution names
+  // ("Berea College", "Goldman Sachs Inc") which must not be misread as headings.
+  const isLikelyHeading = (line: string, allowTitleCase: boolean): boolean => {
+    const trimmed = line.trim().replace(/:$/, '');
+    if (trimmed.length < 3 || trimmed.length > 50) return false;
+    // ALL-CAPS short line — always treated as a heading candidate.
+    if (/^[A-Z][A-Z\s&\/.]{2,40}$/.test(trimmed)) return true;
+    // Title-Case — only when we're explicitly between sections.
+    if (allowTitleCase && /^[A-Z][A-Za-z]+(?:\s+[A-Z&\/][A-Za-z]*){0,5}$/.test(trimmed) && !/[.!?]$/.test(trimmed)) return true;
+    return false;
+  };
+
   const detectSection = (line: string): string | null => {
     if (line.length > 65) return null;
-    const trimmed = line.trim().replace(/:$/, ''); // strip trailing colon
+    // Strip trailing colon AND any trailing punctuation so "Education:" /
+    // "Experience ." / "Skills —" still match. Some PDFs render an underline
+    // glyph or em-dash right after the heading text.
+    const trimmed = line.trim().replace(/[\s:.\-–—_]+$/, '');
     for (const [pat, key] of SECTION_MAP) {
       if (pat.test(trimmed)) return key;
     }
-    // Also match ALL-CAPS headings (e.g. "WORK EXPERIENCE", "EDUCATION")
-    if (/^[A-Z][A-Z\s&\/]{1,40}$/.test(trimmed)) {
-      const lower = trimmed.toLowerCase().replace(/[^a-z\s]/g, '').trim();
+    // Also try matching after lower-casing — handles ALL-CAPS headings like
+    // "WORK EXPERIENCE", "EDUCATION", and mixed-case oddities. Strip everything
+    // that isn't a letter, ampersand or space so "Experience |" / "Skills •"
+    // still resolves cleanly.
+    const lower = trimmed.toLowerCase().replace(/[^a-z\s&\/]/g, '').replace(/\s+/g, ' ').trim();
+    if (lower) {
       for (const [pat, key] of SECTION_MAP) {
         if (pat.test(lower)) return key;
+      }
+    }
+    // Letter-spaced ALL-CAPS headings (e.g. "S U M M A R Y", "E D U C A T I O N",
+    // "S O F T W A R E   E N G I N E E R I N G   P R O J E C T S"). Designers
+    // use CSS letter-spacing to make headings airy; PDF exporters bake those
+    // spaces into the text stream. Detect this pattern (mostly single-letter
+    // tokens) and try matching the collapsed form against SECTION_MAP.
+    const tokens = trimmed.split(/\s+/);
+    const singleCharTokens = tokens.filter((t) => t.length === 1 && /[A-Za-z&\/]/.test(t)).length;
+    if (tokens.length >= 4 && singleCharTokens / tokens.length >= 0.6) {
+      // Collapse runs of single letters into words. Multi-letter tokens (rare
+      // in this case) become a single token; gaps between words are preserved
+      // by treating an existing multi-letter token as a word boundary.
+      const collapsed = trimmed
+        .replace(/\s+/g, ' ')
+        .split(/\s{2,}/)                              // double-space → word gap
+        .map((chunk) => chunk.replace(/\s+/g, ''))    // single spaces → join
+        .join(' ')
+        .toLowerCase();
+      for (const [pat, key] of SECTION_MAP) {
+        if (pat.test(collapsed)) return key;
+      }
+      // Fallback: collapse ALL whitespace and retry. Some PDFs use just single
+      // spaces between every letter, so the "double-space = word gap" trick
+      // above won't help — try the maximally-collapsed form as a last resort.
+      const fullyCollapsed = trimmed.replace(/\s+/g, '').toLowerCase();
+      for (const [pat, key] of SECTION_MAP) {
+        if (pat.test(fullyCollapsed)) return key;
       }
     }
     return null;
@@ -158,20 +409,56 @@ function parseResumeText(raw: string): ResumeData {
 
   let currentSection = '';
   const sectionContent: Record<string, string[]> = {};
+  // Collect content under headings we don't recognize (Publications, Research, Patents, etc.)
+  // Key = the raw heading as it appeared in the resume; value = the lines under it.
+  const customContent: Record<string, string[]> = {};
+  // Track which key is currently active so we can route lines correctly.
+  let currentCustomKey = '';
+  // Suppress heading detection until we've seen a real section heading. This
+  // prevents the name ("Isaac Kwame Narteh") and the contact line from being
+  // misread as a custom section header at the top of the resume.
+  let sawSection = false;
 
   for (const line of allLines) {
     const detected = detectSection(line);
     if (detected) {
+      sawSection = true;
       currentSection = detected;
+      currentCustomKey = '';
       if (!sectionContent[currentSection]) sectionContent[currentSection] = [];
-    } else if (currentSection) {
+      continue;
+    }
+    // Heading-shaped line that isn't in SECTION_MAP → start a custom section.
+    // Only consider Title-Case as a heading when we're between sections;
+    // inside a section, a Title-Case line is almost always a job title or
+    // company name and must stay with its parent section.
+    if (sawSection) {
+      const allowTitleCase = !currentSection;
+      if (isLikelyHeading(line, allowTitleCase)) {
+        currentSection = '';
+        currentCustomKey = line.trim().replace(/:$/, '');
+        if (!customContent[currentCustomKey]) customContent[currentCustomKey] = [];
+        continue;
+      }
+    }
+    if (currentSection) {
       sectionContent[currentSection].push(line);
+    } else if (currentCustomKey) {
+      customContent[currentCustomKey].push(line);
     }
   }
 
+  // Materialize custom sections, skipping any with no meaningful content.
+  data.customSections = Object.entries(customContent)
+    .map(([heading, lines]) => ({
+      heading,
+      content: lines.map((l) => l.replace(/^[•\-*–▪]\s*/, '').trim()).filter((l) => l.length > 1),
+    }))
+    .filter((s) => s.content.length > 0);
+
   // ── Summary ───────────────────────────────────────────────────────────────
   if (sectionContent['summary']) {
-    data.summary = sectionContent['summary'].slice(0, 8).join(' ').replace(/\s{2,}/g, ' ').trim();
+    data.summary = sectionContent['summary'].join(' ').replace(/\s{2,}/g, ' ').trim();
   }
 
   // ── Skills ────────────────────────────────────────────────────────────────
@@ -191,59 +478,15 @@ function parseResumeText(raw: string): ResumeData {
     }
     // Remove lines that are just category headings (end with colon)
     skills = skills.filter((s) => !/^\w[\w\s]*:$/.test(s) && s.length < 50);
-    data.skills = Array.from(new Set(skills)).slice(0, 30);
+    data.skills = Array.from(new Set(skills));
   }
 
-  // ── Experience ────────────────────────────────────────────────────────────
+  // ── Experience + Leadership (same structural shape) ──────────────────────
   if (sectionContent['experience']) {
-    const expLines = sectionContent['experience'];
-    let current: WorkEntry | null = null;
-
-    const MONTHS = /jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?/i;
-    const containsDate = (l: string) => /\d{4}/.test(l) || MONTHS.test(l) || /present|current/i.test(l);
-    const isDateRange   = (l: string) => /(\d{4}|present).*?[–\-—].*?(\d{4}|present)/i.test(l) || new RegExp(`(${MONTHS.source}[,\\s]+\\d{4})\\s*[–\\-—]\\s*(${MONTHS.source}[,\\s]+\\d{4}|present)`, 'i').test(l);
-    const isBullet      = (l: string) => /^[•\-*–▪▸→]/.test(l);
-
-    const pushCurrent = () => { if (current) { data.experience.push(current); current = null; } };
-
-    for (const line of expLines) {
-      // Pattern: "Title | Company | Jan 2022 – Present"  or  "Title at Company, Jan 2022"
-      const pipeMatch = line.match(/^(.+?)\s*[|·]\s*(.+?)\s*[|·]\s*(.+)$/);
-      const atMatch   = line.match(/^(.+?)\s+(?:at|@)\s+(.+?)\s*[,—–]\s*(\d.+|present.*)$/i);
-
-      if (pipeMatch && containsDate(pipeMatch[3])) {
-        pushCurrent();
-        current = { id: Math.random().toString(36).slice(2), title: pipeMatch[1].trim(), company: pipeMatch[2].trim(), period: pipeMatch[3].trim(), bullets: [] };
-        continue;
-      }
-      if (atMatch && containsDate(atMatch[3])) {
-        pushCurrent();
-        current = { id: Math.random().toString(36).slice(2), title: atMatch[1].trim(), company: atMatch[2].trim(), period: atMatch[3].trim(), bullets: [] };
-        continue;
-      }
-
-      if (isBullet(line)) {
-        if (current) current.bullets.push(line.replace(/^[•\-*–▪▸→]\s*/, ''));
-        continue;
-      }
-
-      if (isDateRange(line) || (containsDate(line) && line.length < 70)) {
-        if (current && !current.period) { current.period = line; continue; }
-      }
-
-      // Plain text line: title, then company, then new entry
-      if (line.length > 2 && line.length < 90) {
-        if (!current) {
-          current = { id: Math.random().toString(36).slice(2), title: line, company: '', period: '', bullets: [] };
-        } else if (!current.company && !current.period && current.bullets.length === 0) {
-          current.company = line;
-        } else {
-          pushCurrent();
-          current = { id: Math.random().toString(36).slice(2), title: line, company: '', period: '', bullets: [] };
-        }
-      }
-    }
-    pushCurrent();
+    data.experience = parseWorkEntries(sectionContent['experience']);
+  }
+  if (sectionContent['leadership']) {
+    data.leadership = parseWorkEntries(sectionContent['leadership']);
   }
 
   // ── Education ─────────────────────────────────────────────────────────────
@@ -293,19 +536,19 @@ function parseResumeText(raw: string): ResumeData {
   }
 
   // ── Simple list sections (strip leading bullet chars) ────────────────────
-  const simpleList = (key: string, limit = 15) =>
+  // No item-count caps — the user wants ALL content from the PDF to surface.
+  const simpleList = (key: string) =>
     (sectionContent[key] || [])
       .map((l) => l.replace(/^[•\-*–▪]\s*/, '').trim())
-      .filter((l) => l.length > 2)
-      .slice(0, limit);
+      .filter((l) => l.length > 2);
 
-  data.certifications  = simpleList('certifications', 15);
-  data.projects        = simpleList('projects', 20);
-  data.affiliations    = simpleList('affiliations', 10);
-  data.leadership      = simpleList('leadership', 10);
-  data.clubs           = simpleList('clubs', 10);
-  data.volunteer       = simpleList('volunteer', 10);
-  data.awards          = simpleList('awards', 10);
+  data.certifications  = simpleList('certifications');
+  data.projects        = simpleList('projects');
+  data.affiliations    = simpleList('affiliations');
+  // Note: leadership is parsed as structured WorkEntry[] earlier (same shape as Experience).
+  data.clubs           = simpleList('clubs');
+  data.volunteer       = simpleList('volunteer');
+  data.awards          = simpleList('awards');
 
   // ── Relevant Courses ──────────────────────────────────────────────────────
   if (sectionContent['relevantCourses']) {
@@ -325,7 +568,7 @@ function parseResumeText(raw: string): ResumeData {
 function resumeDataToText(d: ResumeData): string {
   const lines: string[] = [];
   if (d.name) lines.push(d.name);
-  const contact = [d.email, d.phone, d.location, d.linkedin].filter(Boolean).join(' | ');
+  const contact = [d.email, d.phone, d.location, d.linkedin, d.github].filter(Boolean).join(' | ');
   if (contact) lines.push(contact);
   lines.push('');
   if (d.summary) { lines.push('SUMMARY'); lines.push(d.summary); lines.push(''); }
@@ -371,8 +614,12 @@ function resumeDataToText(d: ResumeData): string {
   }
   if (d.leadership.length) {
     lines.push('LEADERSHIP & MANAGEMENT');
-    for (const l of d.leadership) lines.push(`• ${l}`);
-    lines.push('');
+    for (const e of d.leadership) {
+      lines.push(e.title + (e.company ? ` — ${e.company}` : ''));
+      if (e.period) lines.push(e.period);
+      for (const b of e.bullets) lines.push(`• ${b}`);
+      lines.push('');
+    }
   }
   if (d.clubs.length) {
     lines.push('CLUBS/AFFILIATIONS');
@@ -394,11 +641,175 @@ function resumeDataToText(d: ResumeData): string {
     lines.push(d.languages.join(' | '));
     lines.push('');
   }
+  for (const sec of d.customSections) {
+    lines.push(sec.heading.toUpperCase());
+    for (const c of sec.content) lines.push(`• ${c}`);
+    lines.push('');
+  }
   return lines.join('\n');
+}
+
+// Non-destructive merge: AI's structured fields win where it produced content,
+// raw fills any gaps the AI dropped. CustomSections are unioned by heading.
+function mergeResumeData(raw: ResumeData, ai: ResumeData): ResumeData {
+  const pickStr = (a: string, b: string) => (a && a.trim().length > 0 ? a : b);
+  const pickArr = <T,>(a: T[], b: T[]) => (a.length > 0 ? a : b);
+
+  const aiHeadings = new Set(ai.customSections.map((s) => s.heading.toLowerCase()));
+  const mergedCustom = [
+    ...ai.customSections,
+    ...raw.customSections.filter((s) => !aiHeadings.has(s.heading.toLowerCase())),
+  ];
+
+  return {
+    name:            pickStr(ai.name, raw.name),
+    email:           pickStr(ai.email, raw.email),
+    phone:           pickStr(ai.phone, raw.phone),
+    location:        pickStr(ai.location, raw.location),
+    linkedin:        pickStr(ai.linkedin, raw.linkedin),
+    github:          pickStr(ai.github, raw.github),
+    summary:         pickStr(ai.summary, raw.summary),
+    skills:          pickArr(ai.skills, raw.skills),
+    experience:      pickArr(ai.experience, raw.experience),
+    education:       pickArr(ai.education, raw.education),
+    certifications:  pickArr(ai.certifications, raw.certifications),
+    relevantCourses: pickArr(ai.relevantCourses, raw.relevantCourses),
+    projects:        pickArr(ai.projects, raw.projects),
+    affiliations:    pickArr(ai.affiliations, raw.affiliations),
+    leadership:      pickArr(ai.leadership, raw.leadership),
+    clubs:           pickArr(ai.clubs, raw.clubs),
+    volunteer:       pickArr(ai.volunteer, raw.volunteer),
+    awards:          pickArr(ai.awards, raw.awards),
+    languages:       pickArr(ai.languages, raw.languages),
+    customSections:  mergedCustom,
+  };
 }
 
 type Step = 'choice' | 'uploading' | 'organizing' | 'editing' | 'regenerating' | 'preview';
 type EditorTab = 'contact' | 'education' | 'skills' | 'relevantCourses' | 'experience' | 'projects' | 'certifications' | 'affiliations' | 'leadership' | 'clubs' | 'volunteer' | 'awards' | 'languages';
+
+// Polished, shared loading screen used by both the initial "organizing" step
+// and the "regenerating" step. Advances through a step list on a timer so the
+// user has a sense of progress while waiting on the AI call (which doesn't
+// stream progress events).
+interface ProcessingLoaderProps {
+  title: string;
+  subtitle: string;
+  steps: string[];
+  fileName?: string;
+}
+
+const ProcessingLoader: React.FC<ProcessingLoaderProps> = ({ title, subtitle, steps, fileName }) => {
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIdx((i) => Math.min(i + 1, steps.length - 1));
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [steps.length]);
+
+  return (
+    <div className="min-h-screen bg-[#09090d] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Soft radial glow backdrop */}
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          background: 'radial-gradient(ellipse at center, rgba(99,102,241,0.10) 0%, rgba(99,102,241,0) 60%)',
+        }}
+      />
+      {/* Faint grid texture for depth */}
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-[0.04]"
+        style={{
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+        }}
+      />
+
+      <div className="relative w-full max-w-md">
+        <div className="bg-zinc-900/70 backdrop-blur-xl border border-zinc-800/80 rounded-3xl p-8 sm:p-10 shadow-2xl shadow-indigo-950/40">
+          {/* Logo with calm pulse glow */}
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-indigo-500/30 rounded-2xl blur-xl animate-pulse" />
+              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-900/50">
+                <img src="/Logo3.png" alt="" className="w-9 h-9 object-contain" />
+              </div>
+            </div>
+          </div>
+
+          {/* Title + subtitle */}
+          <div className="text-center mb-7">
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 tracking-tight">{title}</h2>
+            <p className="text-sm text-zinc-400 leading-relaxed">{subtitle}</p>
+          </div>
+
+          {/* Animated step checklist */}
+          <ul className="space-y-3 mb-7">
+            {steps.map((step, idx) => {
+              const isDone = idx < activeIdx;
+              const isActive = idx === activeIdx;
+              return (
+                <li key={step} className="flex items-center gap-3">
+                  <span
+                    className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-all duration-300 ${
+                      isDone
+                        ? 'bg-indigo-500'
+                        : isActive
+                        ? 'bg-indigo-500/15 border border-indigo-500/60'
+                        : 'bg-zinc-800/80 border border-zinc-700/60'
+                    }`}
+                  >
+                    {isDone ? (
+                      <CheckCircle className="w-3 h-3 text-white" />
+                    ) : isActive ? (
+                      <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
+                    ) : null}
+                  </span>
+                  <span
+                    className={`text-sm transition-colors duration-300 ${
+                      isDone ? 'text-zinc-500' : isActive ? 'text-white font-medium' : 'text-zinc-600'
+                    }`}
+                  >
+                    {step}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* Shimmer progress bar */}
+          <div className="relative h-1 bg-zinc-800/80 rounded-full overflow-hidden">
+            <div
+              className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-indigo-400 to-transparent rounded-full"
+              style={{ animation: 'gs-shimmer 1.8s ease-in-out infinite' }}
+            />
+          </div>
+
+          {/* File chip */}
+          {fileName && (
+            <div className="mt-6 flex justify-center">
+              <div className="inline-flex items-center gap-2 text-[11px] text-zinc-500 bg-zinc-950/60 border border-zinc-800 rounded-full px-3 py-1 max-w-full">
+                <FileText className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">{fileName}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes gs-shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(400%); }
+        }
+      `}</style>
+    </div>
+  );
+};
 
 export default function GetStarted() {
   const navigate = useNavigate();
@@ -430,14 +841,29 @@ export default function GetStarted() {
     setIsExtracting(true);
     setStep('uploading');
     try {
-      const text = await extractPdfText(file);
-      if (!text || text.length < 50) throw new Error('Could not read text from this PDF. It may be a scanned image — try copying the text manually.');
-      // Use AI to organize raw extracted text into properly structured sections
+      const { text, links } = await extractPdfText(file);
+      if (!text || text.length < 50) throw new Error('Could not read text from this PDF. The file may be corrupted or empty — try re-exporting it or pasting your resume text manually.');
+
+      // Parse the raw extracted text first — this is the lossless baseline.
+      // If the AI rewrite step drops a section (e.g. "Publications"), the raw
+      // parse will still have it and we'll merge it back in.
+      // PDF link annotations are passed in so we can recover GitHub/LinkedIn
+      // URLs that only appear as clickable words (no visible URL in the text).
+      const rawParsed = parseResumeText(text, links);
+
       setStep('organizing');
-      const result = await rewriteResume(text);
-      const organized = result.rewrittenResume || text;
-      const parsed = parseResumeText(organized);
-      setResumeData(parsed);
+      let finalData: ResumeData = rawParsed;
+      try {
+        const result = await rewriteResume(text);
+        if (result.rewrittenResume && result.rewrittenResume.length >= 50) {
+          const aiParsed = parseResumeText(result.rewrittenResume, links);
+          finalData = mergeResumeData(rawParsed, aiParsed);
+        }
+      } catch {
+        // AI rewrite failed — keep the raw parse so the user still sees everything.
+      }
+
+      setResumeData(finalData);
       setStep('editing');
     } catch (err: any) {
       setExtractError(err.message || 'Failed to read the PDF. Please try again.');
@@ -691,24 +1117,17 @@ export default function GetStarted() {
   // ── STEP: organizing — AI formats extracted text ──────────────────────────
   if (step === 'organizing') {
     return (
-      <div className="min-h-screen bg-[#0f0f13] flex flex-col items-center justify-center gap-6 p-4">
-        <img
-          src="/Logo3.png"
-          alt="CareerDev AI"
-          className="w-20 h-20 object-contain rounded-full animate-spin"
-          style={{ animationDuration: '2s', animationTimingFunction: 'linear' }}
-        />
-        <div className="text-center space-y-2">
-          <h2 className="text-xl font-bold text-white">AI is organizing your resume…</h2>
-          <p className="text-sm text-zinc-400 max-w-sm">Extracting sections, formatting experience, and structuring your content. This takes about 15–30 seconds.</p>
-        </div>
-        <div className="flex gap-1.5">
-          {[0, 150, 300].map((delay) => (
-            <span key={delay} className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: `${delay}ms` }} />
-          ))}
-        </div>
-        <p className="text-xs text-zinc-600">Powered by AI · {resumeFile?.name}</p>
-      </div>
+      <ProcessingLoader
+        title="Organizing your resume"
+        subtitle="Hang tight — this usually takes 15 to 30 seconds."
+        steps={[
+          'Extracting text from your PDF',
+          'Detecting sections and structure',
+          'AI cleaning and reorganizing',
+          'Building your live preview',
+        ]}
+        fileName={resumeFile?.name}
+      />
     );
   }
 
@@ -794,6 +1213,7 @@ export default function GetStarted() {
                   {d.phone && <span className="flex items-center gap-1.5 text-xs text-zinc-400"><span className="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0" />{d.phone}</span>}
                   {d.location && <span className="flex items-center gap-1.5 text-xs text-zinc-400"><span className="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0" />{d.location}</span>}
                   {d.linkedin && <span className="flex items-center gap-1.5 text-xs text-indigo-400 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />{d.linkedin}</span>}
+                  {d.github && <span className="flex items-center gap-1.5 text-xs text-indigo-400 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />{d.github}</span>}
                 </div>
               </div>
 
@@ -903,7 +1323,7 @@ export default function GetStarted() {
                           <ul className="mt-2 space-y-1">
                             {exp.bullets.filter(b => b.trim()).map((b, bi) => (
                               <li key={bi} className="flex gap-2 text-[12px] text-zinc-400">
-                                <span className="text-indigo-500 flex-shrink-0 font-bold mt-0.5">›</span> {b}
+                                <span className="text-indigo-500 flex-shrink-0 font-bold mt-0.5">•</span> {b}
                               </li>
                             ))}
                           </ul>
@@ -914,7 +1334,7 @@ export default function GetStarted() {
                 </div>
               )}
 
-              {/* Projects */}
+              {/* Projects — same structured layout as Experience */}
               {d.projects.length > 0 && (
                 <div
                   ref={(el) => { previewRefs.current['projects'] = el; }}
@@ -925,7 +1345,7 @@ export default function GetStarted() {
                   <ul className="mt-2.5 space-y-1.5">
                     {d.projects.map((p, i) => (
                       <li key={i} className="flex gap-2 text-[12px] text-zinc-400">
-                        <span className="text-indigo-500 flex-shrink-0 font-bold">›</span> {p}
+                        <span className="text-indigo-500 flex-shrink-0 font-bold">•</span> {p}
                       </li>
                     ))}
                   </ul>
@@ -943,14 +1363,14 @@ export default function GetStarted() {
                   <ul className="mt-2.5 space-y-1.5">
                     {d.affiliations.map((a, i) => (
                       <li key={i} className="flex gap-2 text-[12px] text-zinc-400">
-                        <span className="text-indigo-500 flex-shrink-0 font-bold">›</span> {a}
+                        <span className="text-indigo-500 flex-shrink-0 font-bold">•</span> {a}
                       </li>
                     ))}
                   </ul>
                 </div>
               )}
 
-              {/* Leadership & Management */}
+              {/* Leadership & Management — same structured layout as Experience */}
               {d.leadership.length > 0 && (
                 <div
                   ref={(el) => { previewRefs.current['leadership'] = el; }}
@@ -958,13 +1378,31 @@ export default function GetStarted() {
                   style={{ borderColor: highlightSection === 'leadership' ? '#6366f1' : '#3f3f46' }}
                 >
                   <DarkSectionLabel>Leadership &amp; Management</DarkSectionLabel>
-                  <ul className="mt-2.5 space-y-1.5">
-                    {d.leadership.map((l, i) => (
-                      <li key={i} className="flex gap-2 text-[12px] text-zinc-400">
-                        <span className="text-indigo-500 flex-shrink-0 font-bold">›</span> {l}
-                      </li>
+                  <div className="mt-3 space-y-4">
+                    {d.leadership.map((exp) => (
+                      <div key={exp.id} className="pl-3 border-l-2 border-indigo-900">
+                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                          <p className="text-[13px] text-indigo-300 italic">
+                            {exp.title || <span className="text-zinc-600">Role / Organization</span>}
+                          </p>
+                          {(exp.company || exp.period) && (
+                            <p className="text-[12px] text-zinc-400 italic whitespace-nowrap">
+                              {[exp.company, exp.period].filter(Boolean).join(', ')}
+                            </p>
+                          )}
+                        </div>
+                        {exp.bullets.filter(b => b.trim()).length > 0 && (
+                          <ul className="mt-2 space-y-1">
+                            {exp.bullets.filter(b => b.trim()).map((b, bi) => (
+                              <li key={bi} className="flex gap-2 text-[12px] text-zinc-400">
+                                <span className="text-indigo-500 flex-shrink-0 font-bold mt-0.5">•</span> {b}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
 
@@ -979,7 +1417,7 @@ export default function GetStarted() {
                   <ul className="mt-2.5 space-y-1.5">
                     {d.clubs.map((c, i) => (
                       <li key={i} className="flex gap-2 text-[12px] text-zinc-400">
-                        <span className="text-indigo-500 flex-shrink-0 font-bold">›</span> {c}
+                        <span className="text-indigo-500 flex-shrink-0 font-bold">•</span> {c}
                       </li>
                     ))}
                   </ul>
@@ -997,7 +1435,7 @@ export default function GetStarted() {
                   <ul className="mt-2.5 space-y-1.5">
                     {d.certifications.map((c, i) => (
                       <li key={i} className="flex gap-2 text-[12px] text-zinc-400">
-                        <span className="text-indigo-500 flex-shrink-0 font-bold">›</span> {c}
+                        <span className="text-indigo-500 flex-shrink-0 font-bold">•</span> {c}
                       </li>
                     ))}
                   </ul>
@@ -1015,7 +1453,7 @@ export default function GetStarted() {
                   <ul className="mt-2.5 space-y-1.5">
                     {d.volunteer.map((v, i) => (
                       <li key={i} className="flex gap-2 text-[12px] text-zinc-400">
-                        <span className="text-indigo-500 flex-shrink-0 font-bold">›</span> {v}
+                        <span className="text-indigo-500 flex-shrink-0 font-bold">•</span> {v}
                       </li>
                     ))}
                   </ul>
@@ -1033,7 +1471,7 @@ export default function GetStarted() {
                   <ul className="mt-2.5 space-y-1.5">
                     {d.awards.map((a, i) => (
                       <li key={i} className="flex gap-2 text-[12px] text-zinc-400">
-                        <span className="text-indigo-500 flex-shrink-0 font-bold">›</span> {a}
+                        <span className="text-indigo-500 flex-shrink-0 font-bold">•</span> {a}
                       </li>
                     ))}
                   </ul>
@@ -1055,6 +1493,29 @@ export default function GetStarted() {
                   </div>
                 </div>
               )}
+
+              {/* Custom sections — any heading not in SECTION_MAP (Publications, Research, etc.) */}
+              {d.customSections.map((sec, idx) => {
+                const refKey = `custom-${idx}`;
+                return (
+                  <div
+                    key={refKey}
+                    ref={(el) => { previewRefs.current[refKey] = el; }}
+                    className="bg-zinc-900/80 border rounded-xl p-4 transition-all duration-500"
+                    style={{ borderColor: highlightSection === refKey ? '#6366f1' : '#3f3f46' }}
+                  >
+                    <DarkSectionLabel>{sec.heading}</DarkSectionLabel>
+                    <ul className="mt-2.5 space-y-1.5">
+                      {sec.content.map((line, i) => (
+                        <li key={i} className="text-xs text-zinc-300 leading-relaxed flex gap-2">
+                          <span className="text-zinc-500 flex-shrink-0">•</span>
+                          <span>{line}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
 
             </div>
 
@@ -1286,6 +1747,8 @@ export default function GetStarted() {
                     onChange={(v) => { setResumeData({ ...d, location: v }); highlight('contact'); }} />
                   <InputField label="LinkedIn URL" value={d.linkedin} placeholder="linkedin.com/in/janesmith"
                     onChange={(v) => { setResumeData({ ...d, linkedin: v }); highlight('contact'); }} />
+                  <InputField label="GitHub URL" value={d.github} placeholder="github.com/janesmith"
+                    onChange={(v) => { setResumeData({ ...d, github: v }); highlight('contact'); }} />
                 </div>
               )}
 
@@ -1301,15 +1764,115 @@ export default function GetStarted() {
                 </div>
               )}
 
-              {/* Projects Tab */}
+              {/* Projects Tab — same structured editor as Experience */}
               {activeTab === 'projects' && (
-                <div className="space-y-3">
-                  <p className="text-xs text-zinc-500">Add projects, personal work, or portfolio highlights.</p>
-                  <BulletListEditor
-                    items={d.projects.length > 0 ? d.projects : ['']}
-                    placeholder="e.g. Built an AI-powered resume analyzer using React and FastAPI"
-                    onChange={(items) => { setResumeData({ ...d, projects: items }); highlight('projects'); }}
-                  />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-zinc-500 leading-relaxed">Add or edit projects. Each project can have a name, tech stack / context, period and bullet highlights.</p>
+                    <button
+                      onClick={() => {
+                        const newEntry: WorkEntry = { id: Math.random().toString(36).slice(2), title: '', company: '', period: '', bullets: [''] };
+                        setResumeData({ ...d, projects: [newEntry, ...d.projects] });
+                        scrollAndHighlight('projects');
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 rounded-lg text-xs font-semibold transition-colors flex-shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add
+                    </button>
+                  </div>
+
+                  {d.projects.length === 0 && (
+                    <div className="text-center py-8 border border-dashed border-zinc-800 rounded-xl">
+                      <p className="text-zinc-600 text-sm">No project entries yet.</p>
+                      <p className="text-zinc-700 text-xs mt-1">Click "Add" to create one.</p>
+                    </div>
+                  )}
+
+                  {d.projects.map((exp, idx) => (
+                    <div key={exp.id} className="bg-zinc-900/70 border border-zinc-800/80 rounded-xl p-4 space-y-3 group">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-zinc-600">
+                          <GripVertical className="w-3.5 h-3.5" />
+                          <span className="text-xs font-bold text-zinc-500">PROJECT {idx + 1}</span>
+                        </div>
+                        <button
+                          onClick={() => { setResumeData({ ...d, projects: d.projects.filter((e) => e.id !== exp.id) }); scrollAndHighlight('projects'); }}
+                          className="opacity-0 group-hover:opacity-100 text-red-500/70 hover:text-red-400 transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <InputField label="Project Name" value={exp.title} placeholder="e.g. AI Resume Analyzer"
+                        onChange={(v) => { updateProject(d, setResumeData, exp.id, 'title', v); highlight('projects'); }} />
+                      <InputField label="Tech Stack / Context" value={exp.company} placeholder="e.g. React, TypeScript, FastAPI"
+                        onChange={(v) => { updateProject(d, setResumeData, exp.id, 'company', v); highlight('projects'); }} />
+                      <InputField label="Period" value={exp.period} placeholder="e.g. Jan 2024 – Present"
+                        onChange={(v) => { updateProject(d, setResumeData, exp.id, 'period', v); highlight('projects'); }} />
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Bullet Points</label>
+                          <button
+                            onClick={() => { updateProject(d, setResumeData, exp.id, 'bullets', [...exp.bullets, '']); highlight('projects'); }}
+                            className="text-xs text-indigo-500 hover:text-indigo-400 flex items-center gap-1"
+                          >
+                            <Plus className="w-3 h-3" /> Add bullet
+                          </button>
+                        </div>
+                        {exp.bullets.map((b, bi) => (
+                          <div key={bi} className="flex gap-2 items-start">
+                            <span className="text-zinc-600 mt-2.5 flex-shrink-0 text-xs">•</span>
+                            <textarea
+                              value={b}
+                              rows={2}
+                              onChange={(e) => {
+                                const updated = [...exp.bullets];
+                                updated[bi] = e.target.value;
+                                updateProject(d, setResumeData, exp.id, 'bullets', updated);
+                                highlight('projects');
+                              }}
+                              placeholder="Describe an achievement, technical decision, or outcome..."
+                              className="flex-1 bg-zinc-800/60 border border-zinc-700/60 rounded-lg px-3 py-2 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-indigo-500/70 resize-none leading-relaxed"
+                            />
+                            <div className="flex flex-col gap-1 flex-shrink-0 mt-1">
+                              <button
+                                title="AI enhance this bullet"
+                                disabled={enhancingBullet === `proj:${exp.id}:${bi}`}
+                                onClick={async () => {
+                                  if (!b.trim()) return;
+                                  const key = `proj:${exp.id}:${bi}`;
+                                  setEnhancingBullet(key);
+                                  try {
+                                    const res = await enhanceBullet(b, exp.title, exp.company);
+                                    if (res.success && res.enhanced) {
+                                      const updated = [...exp.bullets];
+                                      updated[bi] = res.enhanced;
+                                      updateProject(d, setResumeData, exp.id, 'bullets', updated);
+                                      highlight('projects');
+                                    }
+                                  } finally {
+                                    setEnhancingBullet(null);
+                                  }
+                                }}
+                                className="text-indigo-500/70 hover:text-indigo-400 disabled:opacity-40 disabled:cursor-wait transition-colors"
+                              >
+                                {enhancingBullet === `proj:${exp.id}:${bi}`
+                                  ? <span className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin block" />
+                                  : <Wand2 className="w-3.5 h-3.5" />}
+                              </button>
+                              {exp.bullets.length > 1 && (
+                                <button
+                                  onClick={() => { updateProject(d, setResumeData, exp.id, 'bullets', exp.bullets.filter((_, i) => i !== bi)); }}
+                                  className="text-zinc-700 hover:text-red-500 transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -1325,15 +1888,115 @@ export default function GetStarted() {
                 </div>
               )}
 
-              {/* Leadership & Management Tab */}
+              {/* Leadership & Management Tab — same structured editor as Experience */}
               {activeTab === 'leadership' && (
-                <div className="space-y-3">
-                  <p className="text-xs text-zinc-500">Highlight leadership roles, team management, and initiatives.</p>
-                  <BulletListEditor
-                    items={d.leadership.length > 0 ? d.leadership : ['']}
-                    placeholder="e.g. Led a team of 5 engineers to deliver a product on time"
-                    onChange={(items) => { setResumeData({ ...d, leadership: items }); highlight('leadership'); }}
-                  />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-zinc-500 leading-relaxed">Add or edit leadership roles. Each role can have a title, organization, period and bullet achievements.</p>
+                    <button
+                      onClick={() => {
+                        const newEntry: WorkEntry = { id: Math.random().toString(36).slice(2), title: '', company: '', period: '', bullets: [''] };
+                        setResumeData({ ...d, leadership: [newEntry, ...d.leadership] });
+                        scrollAndHighlight('leadership');
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 rounded-lg text-xs font-semibold transition-colors flex-shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add
+                    </button>
+                  </div>
+
+                  {d.leadership.length === 0 && (
+                    <div className="text-center py-8 border border-dashed border-zinc-800 rounded-xl">
+                      <p className="text-zinc-600 text-sm">No leadership entries yet.</p>
+                      <p className="text-zinc-700 text-xs mt-1">Click "Add" to create one.</p>
+                    </div>
+                  )}
+
+                  {d.leadership.map((exp, idx) => (
+                    <div key={exp.id} className="bg-zinc-900/70 border border-zinc-800/80 rounded-xl p-4 space-y-3 group">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-zinc-600">
+                          <GripVertical className="w-3.5 h-3.5" />
+                          <span className="text-xs font-bold text-zinc-500">ROLE {idx + 1}</span>
+                        </div>
+                        <button
+                          onClick={() => { setResumeData({ ...d, leadership: d.leadership.filter((e) => e.id !== exp.id) }); scrollAndHighlight('leadership'); }}
+                          className="opacity-0 group-hover:opacity-100 text-red-500/70 hover:text-red-400 transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <InputField label="Role / Title" value={exp.title} placeholder="e.g. Vice President"
+                        onChange={(v) => { updateLeadership(d, setResumeData, exp.id, 'title', v); highlight('leadership'); }} />
+                      <InputField label="Organization" value={exp.company} placeholder="e.g. African Students Association"
+                        onChange={(v) => { updateLeadership(d, setResumeData, exp.id, 'company', v); highlight('leadership'); }} />
+                      <InputField label="Period" value={exp.period} placeholder="e.g. May 2023 – Present"
+                        onChange={(v) => { updateLeadership(d, setResumeData, exp.id, 'period', v); highlight('leadership'); }} />
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Bullet Points</label>
+                          <button
+                            onClick={() => { updateLeadership(d, setResumeData, exp.id, 'bullets', [...exp.bullets, '']); highlight('leadership'); }}
+                            className="text-xs text-indigo-500 hover:text-indigo-400 flex items-center gap-1"
+                          >
+                            <Plus className="w-3 h-3" /> Add bullet
+                          </button>
+                        </div>
+                        {exp.bullets.map((b, bi) => (
+                          <div key={bi} className="flex gap-2 items-start">
+                            <span className="text-zinc-600 mt-2.5 flex-shrink-0 text-xs">•</span>
+                            <textarea
+                              value={b}
+                              rows={2}
+                              onChange={(e) => {
+                                const updated = [...exp.bullets];
+                                updated[bi] = e.target.value;
+                                updateLeadership(d, setResumeData, exp.id, 'bullets', updated);
+                                highlight('leadership');
+                              }}
+                              placeholder="Describe an achievement or responsibility..."
+                              className="flex-1 bg-zinc-800/60 border border-zinc-700/60 rounded-lg px-3 py-2 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-indigo-500/70 resize-none leading-relaxed"
+                            />
+                            <div className="flex flex-col gap-1 flex-shrink-0 mt-1">
+                              <button
+                                title="AI enhance this bullet"
+                                disabled={enhancingBullet === `lead:${exp.id}:${bi}`}
+                                onClick={async () => {
+                                  if (!b.trim()) return;
+                                  const key = `lead:${exp.id}:${bi}`;
+                                  setEnhancingBullet(key);
+                                  try {
+                                    const res = await enhanceBullet(b, exp.title, exp.company);
+                                    if (res.success && res.enhanced) {
+                                      const updated = [...exp.bullets];
+                                      updated[bi] = res.enhanced;
+                                      updateLeadership(d, setResumeData, exp.id, 'bullets', updated);
+                                      highlight('leadership');
+                                    }
+                                  } finally {
+                                    setEnhancingBullet(null);
+                                  }
+                                }}
+                                className="text-indigo-500/70 hover:text-indigo-400 disabled:opacity-40 disabled:cursor-wait transition-colors"
+                              >
+                                {enhancingBullet === `lead:${exp.id}:${bi}`
+                                  ? <span className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin block" />
+                                  : <Wand2 className="w-3.5 h-3.5" />}
+                              </button>
+                              {exp.bullets.length > 1 && (
+                                <button
+                                  onClick={() => { updateLeadership(d, setResumeData, exp.id, 'bullets', exp.bullets.filter((_, i) => i !== bi)); }}
+                                  className="text-zinc-700 hover:text-red-500 transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -1424,23 +2087,17 @@ export default function GetStarted() {
   // ── STEP: regenerating ──────────────────────────────────────────────────────
   if (step === 'regenerating') {
     return (
-      <div className="min-h-screen bg-[#0f0f13] flex flex-col items-center justify-center gap-6 p-4">
-        <img
-          src="/Logo3.png"
-          alt="CareerDev AI"
-          className="w-20 h-20 object-contain animate-spin"
-          style={{ animationDuration: '2s', animationTimingFunction: 'linear' }}
-        />
-        <div className="text-center space-y-2">
-          <h2 className="text-xl font-bold text-white">Reorganizing your resume…</h2>
-          <p className="text-sm text-zinc-400 max-w-sm">AI is sorting experiences chronologically and cleaning formatting. Takes ~15–30 seconds.</p>
-        </div>
-        <div className="flex gap-1.5">
-          {[0, 150, 300].map((delay) => (
-            <span key={delay} className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: `${delay}ms` }} />
-          ))}
-        </div>
-      </div>
+      <ProcessingLoader
+        title="Reorganizing your resume"
+        subtitle="Sorting experiences chronologically and polishing formatting. Takes around 15 to 30 seconds."
+        steps={[
+          'Reading your edits',
+          'Sorting experiences chronologically',
+          'AI refining content and wording',
+          'Updating your preview',
+        ]}
+        fileName={resumeFile?.name}
+      />
     );
   }
 
@@ -1521,7 +2178,7 @@ function BulletListEditor({ items, onChange, placeholder }: { items: string[]; o
     <div className="space-y-2">
       {items.map((item, i) => (
         <div key={i} className="flex gap-2 items-start">
-          <span className="text-indigo-500 text-xs mt-2.5 flex-shrink-0 font-bold">›</span>
+          <span className="text-indigo-500 text-xs mt-2.5 flex-shrink-0 font-bold">•</span>
           <textarea
             value={item}
             rows={2}
@@ -1608,6 +2265,26 @@ function updateExp(
   value: any,
 ) {
   set({ ...d, experience: d.experience.map((e) => (e.id === id ? { ...e, [field]: value } : e)) });
+}
+
+function updateLeadership(
+  d: ResumeData,
+  set: React.Dispatch<React.SetStateAction<ResumeData | null>>,
+  id: string,
+  field: keyof WorkEntry,
+  value: any,
+) {
+  set({ ...d, leadership: d.leadership.map((e) => (e.id === id ? { ...e, [field]: value } : e)) });
+}
+
+function updateProject(
+  d: ResumeData,
+  set: React.Dispatch<React.SetStateAction<ResumeData | null>>,
+  id: string,
+  field: keyof WorkEntry,
+  value: any,
+) {
+  set({ ...d, projects: d.projects.map((e) => (e.id === id ? { ...e, [field]: value } : e)) });
 }
 
 function updateEdu(
