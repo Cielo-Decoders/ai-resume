@@ -88,17 +88,18 @@ const TermsOfService: React.FC = () => {
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Service Description</h2>
             <div className="text-gray-700 space-y-3">
               <p>
-                CareerDev AI provides AI-powered resume optimization services, including:
+                CareerDev AI provides an AI-powered career platform that includes:
               </p>
               <ul className="list-disc list-inside ml-4 space-y-1">
-                <li>ATS (Applicant Tracking System) score analysis</li>
-                <li>Resume and job description matching</li>
+                <li>A live resume updater with AI-assisted bullet rewrites</li>
+                <li>Curated job listings with match scoring against your resume</li>
+                <li>ATS (Applicant Tracking System) score analysis and job-tailored resume optimization</li>
                 <li>Keyword identification and integration</li>
-                <li>Resume optimization suggestions</li>
-                <li>Automated resume generation based on job requirements</li>
+                <li>AI-generated cover letters tailored to specific roles</li>
+                <li>AI mock interviews with question generation and answer feedback</li>
               </ul>
               <p className="mt-3">
-                Our service is provided "as is" and we make no guarantees about job placement, interview invitations, or employment outcomes. CareerDev AI is a tool to assist in resume preparation, not a guarantee of employment success.
+                Our service is provided "as is" and we make no guarantees about job placement, interview invitations, or employment outcomes. CareerDev AI is a tool to assist in your job search and preparation, not a guarantee of employment success.
               </p>
             </div>
           </div>
@@ -132,7 +133,7 @@ const TermsOfService: React.FC = () => {
             <div className="text-gray-700 space-y-3">
               <p><strong>Your Content:</strong></p>
               <p>
-                You retain all rights to the content you upload (your resume). By using our service, you grant CareerDev AI a limited license to process, analyze, and optimize your content solely for the purpose of providing our services to you.
+                You retain all rights to the content you submit (your resume, pasted job descriptions, cover letter inputs, and interview answers). By using our service, you grant CareerDev AI a limited license to process, analyze, and generate outputs from your content solely for the purpose of providing our services to you.
               </p>
               <p className="mt-3"><strong>Our Platform:</strong></p>
               <p>

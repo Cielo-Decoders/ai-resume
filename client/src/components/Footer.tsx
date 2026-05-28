@@ -25,7 +25,7 @@ const Footer: React.FC = () => {
                 </h3>
               </div>
               <p className="text-gray-300 mb-4 text-sm max-w-md">
-                Your AI-powered career assistant. Optimize your resume, analyze job matches, and land your dream job with intelligent insights.
+                Your AI-powered career assistant. Update your resume, browse job listings, optimize for ATS, and prep with cover letters and mock interviews.
               </p>
             </div>
 

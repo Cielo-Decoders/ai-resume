@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, CheckCircle, Star, FileText, Target, Sparkles, TrendingUp, Cloud, Copy, MousePointer, Download } from 'lucide-react';
+import { ArrowRight, CheckCircle, Star, PenLine, Briefcase, Sparkles, Mail, MessageSquare, Target } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function LandingPage() {
@@ -11,45 +11,45 @@ export default function LandingPage() {
 
   const iconFeatures = [
     {
-      icon: FileText,
-      title: 'Resume Analysis',
-      description: 'AI-powered scanning and ATS optimization',
+      icon: PenLine,
+      title: 'Update Your Resume',
+      description: 'Live editor with AI-assisted bullet rewrites',
       color: 'from-blue-500 to-cyan-500',
     },
     {
-      icon: Target,
-      title: 'ATS Compatibility',
-      description: 'Detailed scoring and recommendations',
+      icon: Briefcase,
+      title: 'Job Listings',
+      description: 'Browse roles matched to your profile',
       color: 'from-purple-500 to-pink-500',
     },
     {
       icon: Sparkles,
-      title: 'Smart Optimization',
-      description: 'Tailored resume for each job',
+      title: 'Analyze & Optimize',
+      description: 'ATS scoring with tailored rewrites per job',
       color: 'from-indigo-500 to-purple-500',
     },
     {
-      icon: TrendingUp,
-      title: 'Keyword Insights',
-      description: 'Match job requirements instantly',
+      icon: MessageSquare,
+      title: 'Cover Letters & Mock Interviews',
+      description: 'Draft cover letters and rehearse interviews',
       color: 'from-green-500 to-emerald-500',
     },
   ];
 
   const checkFeatures = [
-    'AI-powered resume analysis',
+    'Live resume editor',
+    'Curated job listings',
     'ATS compatibility scoring',
-    'Smart resume optimization',
-    'Keyword matching & insights',
-    'Job description analysis',
-    'Instant feedback & suggestions',
+    'Resume optimization',
+    'AI cover letter drafts',
+    'AI mock interviews',
   ];
 
   const steps = [
-    { number: 1, icon: Cloud,        title: 'Upload Resume',         description: 'Upload or Drag & drop your resume to start' },
-    { number: 2, icon: Copy,         title: 'Paste Job Description', description: 'Copy the job posting you want to target' },
-    { number: 3, icon: MousePointer, title: 'Select Skills',         description: 'Choose the skills you actually have' },
-    { number: 4, icon: Download,     title: 'Download Resume',       description: 'Get your ATS-ready resume instantly' },
+    { number: 1, icon: PenLine,        title: 'Update Your Resume',     description: 'Upload your PDF and refine it in the live editor' },
+    { number: 2, icon: Briefcase,      title: 'Find a Job',             description: 'Browse listings or paste a job description' },
+    { number: 3, icon: Target,         title: 'Analyze & Optimize',     description: 'Get an ATS score and a tailored rewrite' },
+    { number: 4, icon: Mail,           title: 'Cover Letter & Mock Interview', description: 'Generate a cover letter and rehearse interviews' },
   ];
 
   return (
