@@ -110,10 +110,12 @@ const JobCard: React.FC<JobCardProps> = ({ job, regionLabel, onClick }) => {
 
         {/* ── Bottom info row: salary, work mode, category, job type ── */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-700 pt-1">
-          <span className="inline-flex items-center gap-1.5">
-            <DollarSign className="w-4 h-4 text-gray-400" />
-            <span className="truncate">{job.salary || 'Salary not specified'}</span>
-          </span>
+          {job.salary && (
+            <span className="inline-flex items-center gap-1.5">
+              <DollarSign className="w-4 h-4 text-gray-400" />
+              <span className="truncate">{job.salary}</span>
+            </span>
+          )}
           {workMode && (
             <span className="inline-flex items-center gap-1.5">
               <MapPin className="w-4 h-4 text-gray-400" />

@@ -164,8 +164,12 @@ const ContactUs: React.FC = () => {
                 >
                   <option value="">Select a subject</option>
                   <option value="General Inquiry">General Inquiry</option>
+                  <option value="Resume Updater">Resume Updater</option>
+                  <option value="Job Listings">Job Listings</option>
+                  <option value="Analyze & Optimize">Analyze & Optimize</option>
+                  <option value="Cover Letter">Cover Letter</option>
+                  <option value="Mock Interview">Mock Interview</option>
                   <option value="Technical Support">Technical Support</option>
-                  <option value="Billing Question">Billing Question</option>
                   <option value="Feature Request">Feature Request</option>
                   <option value="Bug Report">Bug Report</option>
                   <option value="Partnership Opportunity">Partnership Opportunity</option>
@@ -273,7 +277,7 @@ const ContactUs: React.FC = () => {
                 </li>
               </ul>
               <p className="mt-4 text-sm text-indigo-100">
-                We're committed to helping job seekers succeed with AI-powered tools.
+                We're committed to helping job seekers succeed at every step — from resume updates to landing interviews.
               </p>
             </div>
 

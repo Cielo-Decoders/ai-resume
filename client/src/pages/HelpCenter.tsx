@@ -30,6 +30,14 @@ const HelpCenter: React.FC = () => {
 
   const guides = [
     {
+      title: "Using the Resume Updater",
+      content: "The resume updater is the best starting point for new users.\n\n• Upload your existing PDF — text extraction (with OCR fallback for scanned resumes) parses every section into editable fields.\n• Edit any field on the right and watch the live preview update on the left.\n• Click the wand icon next to any bullet to have AI rewrite it for impact.\n• Use 'Reorganize & Reformat' when you're done to let AI sort experiences chronologically and polish the final layout.\n• Download the result as a clean PDF or send it directly into the analyzer."
+    },
+    {
+      title: "Finding the Right Jobs",
+      content: "The Job Listings tab pulls roles from major job boards and ranks them against your resume.\n\n• Each role shows a match score so you can prioritize the strongest fits.\n• Filter by role title, location, or company to narrow the list.\n• Click 'Analyze' on any listing to jump straight into ATS scoring and optimization for that role.\n• If you already have a role in mind, paste the job description directly in the Analyze tab instead."
+    },
+    {
       title: "Understanding Your ATS Score",
       content: "Your ATS score is calculated based on four key metrics:\n\n• Keyword Integration (40/100): How well your resume includes relevant keywords from the job description\n• Job Requirements Match (30/100): How closely your experience aligns with the job requirements\n• Resume Completeness (20/100): Whether your resume includes all essential sections\n• Formatting Quality (10/100): How well-formatted and ATS-friendly your resume is\n\nA score above 75 is excellent, 60-75 is good, and below 60 suggests significant improvements are needed."
     },
@@ -38,12 +46,16 @@ const HelpCenter: React.FC = () => {
       content: "When you see the 'Job-Relevant Skills & Terms' section:\n\n1. Review all suggested keywords carefully\n2. Only select skills you actually possess\n3. Prioritize technical skills and industry-specific terms\n4. Include soft skills that genuinely reflect your abilities\n5. Don't add keywords you can't discuss in an interview\n\nOur AI will naturally integrate selected keywords into your resume context."
     },
     {
-      title: "Prepare Your Resume for Optimization",
-      content: "Upload your unoptimized resume so CareerDev AI can analyze and improve it. Quick tips:\n\n• Use a clean PDF for best parsing\n• Keep layout simple — avoid images, tables, and text boxes\n• Use clear section headings (Summary, Experience, Education, Skills)\n• Write concise, achievement-focused bullet points\n• Add job-relevant keywords only if they genuinely apply\n• Remove highly sensitive personal data (SSN, bank details)\n• Keep separate versions for different role types"
+      title: "Generating Cover Letters",
+      content: "Use the Cover Letter tab after running an analysis for a role.\n\n• The AI uses your resume + the job description to draft a personalized letter.\n• Pick a tone (professional, enthusiastic, etc.) before generating.\n• Edit the draft inline — every paragraph stays editable.\n• Download as PDF when you're happy with the result.\n• Tip: run the analysis first so the letter draws on the same keywords and themes as your optimized resume."
+    },
+    {
+      title: "Practicing with Mock Interviews",
+      content: "The Mock Interview tab helps you rehearse before the real thing.\n\n• Generate a question set tailored to the role and your resume.\n• Type or paste your answers for each question.\n• Submit to receive structured feedback on clarity, depth, and relevance.\n• Iterate on weaker answers until you're confident.\n• Use it for behavioral and technical questions alike."
     },
     {
       title: "Troubleshooting Common Issues",
-      content: "Upload Issues:\n• Preferred format: PDF for best parsing; if uploads fail try pasting plain text into the editor.\n• Remove password protection and large embedded images; keep files under 10MB.\n• If you have DOC/DOCX, convert to PDF before uploading when possible.\n\nTimeouts & Rate Limits:\n• Very large job descriptions or concurrent requests may time out or hit provider limits.\n• Shorten or split long job descriptions and retry after a short wait.\n\nFormatting & Parsing Tips:\n• Use standard fonts (Arial, Calibri, Times New Roman).\n• Avoid tables, text boxes, images, and complex layouts.\n• Use clear section headings and simple bullet points for best results.\n\nIf the issue persists, email support at mycareerlabai@gmail.com with your browser/version, file type and size, and any console/network errors (do not include sensitive personal data)."
+      content: "Upload Issues:\n• Preferred format: PDF. Scanned PDFs are handled via OCR fallback, but a clean text-based PDF parses most accurately.\n• Remove password protection and large embedded images; keep files under 10MB.\n• If you have DOC/DOCX, convert to PDF before uploading.\n\nTimeouts & Rate Limits:\n• Very large job descriptions or concurrent requests may time out or hit provider limits.\n• Shorten or split long job descriptions and retry after a short wait.\n\nFormatting & Parsing Tips:\n• Use standard fonts (Arial, Calibri, Times New Roman).\n• Avoid tables, text boxes, images, and complex layouts.\n• Use clear section headings and simple bullet points for best results.\n\nIf the issue persists, email support at mycareerlabai@gmail.com with your browser/version, file type and size, and any console/network errors (do not include sensitive personal data)."
     }
   ];
 
@@ -69,7 +81,7 @@ const HelpCenter: React.FC = () => {
             Help Center
           </h1>
           <p className="text-base sm:text-xl text-gray-600 max-w-3xl mx-auto mt-4">
-            Everything you need to master CareerDev AI and land your dream job
+            Guides for every CareerDev AI feature — resume updates, job listings, optimization, cover letters, and mock interviews
           </p>
         </div>
 
@@ -106,23 +118,24 @@ const HelpCenter: React.FC = () => {
         {/* Quick Tips */}
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 sm:p-8 mb-12 sm:mb-16 text-white">
           <h2 className="text-2xl sm:text-3xl font-bold mb-6">
-            Optimization Quick Tips
+            Workflow Quick Tips
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <h4 className="font-semibold mb-2">📤 Upload an unoptimized resume</h4>
-              <p className="text-indigo-100">Start by uploading your current resume — CareerDev AI will analyze and optimize it for you.</p>
+              <h4 className="font-semibold mb-2">📝 Update your resume first</h4>
+              <p className="text-indigo-100">Use the live editor to refresh every section before analyzing — a clean baseline produces better optimizations.</p>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">🧾 Use a clean PDF</h4>
-              <p className="text-indigo-100">PDF gives the most accurate parsing. Remove passwords and large images before uploading.</p>
+              <h4 className="font-semibold mb-2">💼 Use job listings for ideas</h4>
+              <p className="text-indigo-100">Browse the match-scored job listings to find strong fits, then jump straight into analysis with one click.</p>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">🎯 Tailor after optimization</h4>
-              <p className="text-indigo-100">Review AI suggestions, keep relevant keywords that match your experience.</p>
+              <h4 className="font-semibold mb-2">🎯 Tailor per role</h4>
+              <p className="text-indigo-100">Run a separate analysis and optimization for each job description — keep only the suggestions that genuinely fit you.</p>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">🧹 Keep formatting simple</h4>
+              <h4 className="font-semibold mb-2">✉️ Cover letter + 🎤 mock interview</h4>
+              <p className="text-indigo-100">After optimizing, generate a tailored cover letter and rehearse with the mock interview so you walk in prepared.</p>
             </div>
           </div>
         </div>

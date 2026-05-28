@@ -38,7 +38,7 @@ const PrivacyPolicy: React.FC = () => {
         <div className="bg-white rounded-2xl p-5 sm:p-8 md:p-12 shadow-xl space-y-8">
           <div>
             <p className="text-gray-700 mb-4">
-              At CareerDev AI, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our resume optimization platform.
+              At CareerDev AI, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI career platform — including the resume updater, job listings, ATS analysis and optimization, cover letter generator, and mock interview features.
             </p>
           </div>
 
@@ -50,13 +50,13 @@ const PrivacyPolicy: React.FC = () => {
             <div className="space-y-4 text-gray-700">
               <div>
                 <h3 className="font-semibold text-gray-800 mb-2">What we process</h3>
-                <p>The platform does not require users to create accounts — most functionality is session-based. During an analysis session we only process the inputs you provide for that session:</p>
+                <p>The platform does not require users to create accounts — most functionality is session-based. During a session we only process the inputs you provide for that session:</p>
                 <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
-                  <li>Resume content you upload (used solely for immediate analysis and optimization)</li>
-                  <li>Job descriptions or role text you paste for matching and scoring</li>
-                  <li>User selections such as chosen job-relevant keywords or terms</li>
+                  <li>Resume content you upload (used for the resume updater, ATS analysis, optimization, cover letters, and mock interviews)</li>
+                  <li>Job descriptions or role text you paste for matching, scoring, cover letter generation, and interview question generation</li>
+                  <li>User selections such as chosen job-relevant keywords, cover letter tone, or interview answers</li>
                 </ul>
-                <p className="mt-2">These inputs are used to generate the optimized resume and suggestions; they are not permanently stored by CareerDev AI in our database as part of normal operation (see "Data Storage and Retention").</p>
+                <p className="mt-2">These inputs are used to deliver the feature you triggered (optimized resume, cover letter draft, interview feedback, etc.) and are not permanently stored by CareerDev AI in our database as part of normal operation (see "Data Storage and Retention").</p>
               </div>
               <div>
                 <h3 className="font-semibold text-gray-800 mb-2">Automatically collected information</h3>
@@ -72,11 +72,13 @@ const PrivacyPolicy: React.FC = () => {
               How We Use Your Information
             </h2>
             <div className="text-gray-700 space-y-2">
-              <p>We use only the inputs you provide during an analysis session to deliver the service you request. Specifically:</p>
+              <p>We use only the inputs you provide during a session to deliver the feature you request. Specifically:</p>
               <ul className="list-disc list-inside ml-4 space-y-1">
-                <li>Perform resume analysis and scoring against the supplied job description.</li>
-                <li>Generate optimized resume text, keyword suggestions, and formatting recommendations returned to you.</li>
-                <li>Enable optional session features you explicitly trigger (for example, saving a generated version) only when you choose to do so.</li>
+                <li>Parse and structure your uploaded resume for the live editor.</li>
+                <li>Match your resume against job listings and return per-role match scores.</li>
+                <li>Perform ATS analysis and scoring against any job description you supply.</li>
+                <li>Generate optimized resume text, keyword suggestions, cover letter drafts, and interview questions / answer feedback that are returned to you.</li>
+                <li>Enable optional session features you explicitly trigger (for example, downloading a generated version) only when you choose to do so.</li>
                 <li>Take actions necessary to comply with legal requirements or respond to abuse or security incidents.</li>
               </ul>
               <p className="mt-2">We do not use uploaded content for marketing, profiling, or training internal models beyond the third-party processing described elsewhere; we do not sell or share your resume with employers. If you voluntarily provide contact information (for support or to enable optional account features), we will use it only to respond to your request and as described elsewhere in this policy.</p>

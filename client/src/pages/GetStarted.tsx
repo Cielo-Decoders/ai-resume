@@ -1048,6 +1048,31 @@ export default function GetStarted() {
           )}
 
           <div className="grid sm:grid-cols-2 gap-4">
+            <div className="group relative bg-zinc-900/80 backdrop-blur rounded-2xl border border-zinc-800 hover:border-emerald-500/70 shadow-xl transition-all duration-300 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/5 to-teal-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative p-7 flex flex-col gap-5 h-full">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-900/40">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">Start Job Matching</h2>
+                  <p className="text-sm text-zinc-400 mt-1.5 leading-relaxed">
+                    Jump straight to job matching. Upload your resume and paste a job description for instant analysis.
+                  </p>
+                </div>
+                <ul className="space-y-2 flex-1">
+                  {['Upload resume in the app', 'Paste job description', 'Get instant ATS score', 'Optimize for any role'].map((t) => (
+                    <li key={t} className="flex items-start gap-2 text-xs text-zinc-500">
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" /> {t}
+                    </li>
+                  ))}
+                </ul>
+                <button onClick={skipToApp} className="mt-auto flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold text-sm shadow-lg shadow-emerald-900/50 transition-colors">
+                  <ArrowRight className="w-4 h-4" /> Go to Job Matching
+                </button>
+              </div>
+            </div>
+
             <div className="group relative bg-zinc-900/80 backdrop-blur rounded-2xl border border-zinc-800 hover:border-indigo-500/70 shadow-xl transition-all duration-300 overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/5 to-violet-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="relative p-7 flex flex-col gap-5 h-full">
@@ -1055,7 +1080,7 @@ export default function GetStarted() {
                   <PenLine className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-white">Yes, update it first</h2>
+                  <h2 className="text-lg font-bold text-white">Update My Resume First</h2>
                   <p className="text-sm text-zinc-400 mt-1.5 leading-relaxed">
                     Upload your PDF, add new experience or skills in our two-panel editor, then let AI reorganize everything.
                   </p>
@@ -1079,31 +1104,6 @@ export default function GetStarted() {
                 >
                   {isExtracting ? <><span className="w-4 h-4 border-2 border-indigo-200 border-t-transparent rounded-full animate-spin" /> Reading…</> : <><Upload className="w-4 h-4" /> Upload Resume to Update</>}
                 </label>
-              </div>
-            </div>
-
-            <div className="group relative bg-zinc-900/80 backdrop-blur rounded-2xl border border-zinc-800 hover:border-emerald-500/70 shadow-xl transition-all duration-300 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/5 to-teal-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative p-7 flex flex-col gap-5 h-full">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-900/40">
-                  <Zap className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-white">No, it's ready</h2>
-                  <p className="text-sm text-zinc-400 mt-1.5 leading-relaxed">
-                    Jump straight to job matching. Upload your resume and paste a job description for instant analysis.
-                  </p>
-                </div>
-                <ul className="space-y-2 flex-1">
-                  {['Upload resume in the app', 'Paste job description', 'Get instant ATS score', 'Optimize for any role'].map((t) => (
-                    <li key={t} className="flex items-start gap-2 text-xs text-zinc-500">
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" /> {t}
-                    </li>
-                  ))}
-                </ul>
-                <button onClick={skipToApp} className="mt-auto flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold text-sm shadow-lg shadow-emerald-900/50 transition-colors">
-                  <ArrowRight className="w-4 h-4" /> Go to Job Matching
-                </button>
               </div>
             </div>
           </div>

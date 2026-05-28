@@ -15,11 +15,13 @@ const FAQ: React.FC = () => {
           q: "What is CareerDev AI?",
           a: (
             <div>
-              <div className="mb-1">CareerDev AI is an AI-powered resume optimization tool.</div>
+              <div className="mb-1">CareerDev AI is an AI-powered career assistant covering the full job-hunt workflow:</div>
               <ul className="list-disc list-inside ml-4 text-gray-700">
-                <li>Analyzes your resume vs. a job description and returns an ATS score with concise, actionable suggestions.</li>
-                <li>Offers automated rewrites, keyword recommendations, and formatting fixes to improve match.</li>
-                <li>Processing is done in real time via third-party AI providers; we do not permanently store full resumes.</li>
+                <li><strong>Update Resume:</strong> upload your PDF and refine it in a live two-panel editor with AI bullet rewrites.</li>
+                <li><strong>Job Listings:</strong> browse roles surfaced from major job boards with per-role match scores.</li>
+                <li><strong>Analyze & Optimize:</strong> score your resume against any job description and get a tailored, ATS-friendly rewrite.</li>
+                <li><strong>Cover Letter:</strong> generate a personalized cover letter for the role you're targeting.</li>
+                <li><strong>Mock Interview:</strong> practice role-specific questions and get AI feedback on your answers.</li>
               </ul>
             </div>
           )
@@ -37,7 +39,7 @@ const FAQ: React.FC = () => {
         },
         {
           q: "What file formats do you support?",
-          a: (<div>We currently support PDF uploads only — PDF is recommended for best parsing accuracy.</div>)
+          a: (<div>We currently support PDF uploads only — PDF gives the best parsing accuracy. Scanned/image-based PDFs are handled too via OCR fallback.</div>)
         }
       ]
     },
@@ -45,16 +47,28 @@ const FAQ: React.FC = () => {
       category: "Features & Functionality",
       questions: [
         {
+          q: "How does the resume updater work?",
+          a: (<div>Upload your PDF and the live editor extracts every section (contact, education, skills, experience, projects, leadership, etc.) into editable fields. The live preview updates as you type, and you can click the wand on any bullet to have AI rewrite it.</div>)
+        },
+        {
+          q: "Where do the job listings come from?",
+          a: (<div>The Job Listings tab surfaces roles aggregated from major job boards. Each role shows a match score calculated against your current resume so you can prioritize the best fits.</div>)
+        },
+        {
           q: "How does the AI optimization work?",
-          a: (<div>We analyze your resume and the job description to suggest keywords, rephrase bullets, and fix formatting for ATS compatibility.</div>)
+          a: (<div>We analyze your resume against the job description to suggest missing keywords, rephrase bullets to match the role's language, and fix formatting for ATS compatibility. You stay in control of which suggestions to keep.</div>)
         },
         {
           q: "Can I optimize my resume for multiple jobs?",
-          a: (<div>Yes — run a separate analysis per job description to tailor your resume to each role.</div>)
+          a: (<div>Yes — run a separate analysis per job description to tailor your resume to each role. Keep a master copy in the editor and generate role-specific optimized versions.</div>)
         },
         {
-          q: "What are Job-Relevant Skills & Terms?",
-          a: (<div>Keywords and phrases from the job description that the AI extracts and suggests adding to your resume.</div>)
+          q: "How are cover letters generated?",
+          a: (<div>The Cover Letter tab uses your resume and the pasted job description to draft a personalized letter. You can adjust the tone (e.g., professional, enthusiastic) and edit the output before downloading.</div>)
+        },
+        {
+          q: "How do AI mock interviews work?",
+          a: (<div>The Mock Interview tab generates role-specific questions based on the job description. You submit your answers and receive structured feedback so you can improve before the real interview.</div>)
         },
       ]
     },
@@ -158,13 +172,26 @@ const FAQ: React.FC = () => {
                 <li>Include relevant keywords from the job description.</li>
                 <li>Use clear headings and concise bullet points.</li>
                 <li>Keep formatting simple (no images or complex layouts).</li>
+                <li>Use the resume updater first so the AI works from a clean, well-structured baseline.</li>
               </ul>
             </div>
           )
         },
         {
           q: "Should I use all suggested keywords?",
-          a: (<div>Only add keywords that truthfully reflect your skills and experience.</div>)
+          a: (<div>Only add keywords that truthfully reflect your skills and experience. The AI suggests them, but you stay in control of what makes it into your resume.</div>)
+        },
+        {
+          q: "What's the recommended workflow?",
+          a: (
+            <ol className="list-decimal list-inside ml-4 text-gray-700 space-y-1">
+              <li>Update your resume in the live editor so every section is current.</li>
+              <li>Browse the job listings or paste a job description for a role you're targeting.</li>
+              <li>Run an analysis to get your ATS score and a tailored optimized resume.</li>
+              <li>Generate a matching cover letter for that role.</li>
+              <li>Rehearse with the mock interview before applying or interviewing.</li>
+            </ol>
+          )
         }
       ]
     }

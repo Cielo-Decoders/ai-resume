@@ -7,38 +7,35 @@ import PageNavBar from '../components/PageNavBar';
 const Features: React.FC = () => {
   const features = [
     {
-      title: "AI-Powered Analysis",
-      description: "Advanced AI algorithms analyze your resume against job descriptions to provide intelligent optimization suggestions.",
-      highlights: ["Deep learning models", "Natural language processing", "Contextual understanding"]
+      title: "Live Resume Editor",
+      description: "Upload your PDF and refine it in a two-panel editor. Edit sections in real time and use AI-assisted bullet rewrites to sharpen each line.",
+      highlights: ["PDF text + OCR extraction", "Live preview as you type", "AI bullet enhancement"]
     },
     {
-      title: "ATS Score Optimization",
-      description: "Get detailed ATS scores with breakdowns for keyword integration, job requirements match, completeness, and formatting.",
-      highlights: ["Real-time scoring", "Industry-standard metrics", "Actionable feedback"]
+      title: "Curated Job Listings",
+      description: "Browse roles surfaced from major job boards, see match scores against your resume, and jump straight into analysis with one click.",
+      highlights: ["Match score per role", "Filter by location and role", "One-click analyze"]
     },
     {
-      title: "Smart Resume Tailoring",
-      description: "Automatically tailor your resume for specific job descriptions while maintaining your authentic voice and experience.",
-      highlights: ["Job-specific customization", "Keyword integration", "Professional formatting"]
+      title: "ATS Analysis & Optimization",
+      description: "Score your resume against any job description and get a rewritten, ATS-friendly version tailored to the role — keyword matching, requirements fit, and formatting all checked.",
+      highlights: ["ATS compatibility score", "Job-tailored rewrites", "Missing keyword insights"]
     },
     {
-      title: "Instant Feedback",
-      description: "Receive immediate insights on how to improve your resume with specific, actionable recommendations.",
-      highlights: ["Real-time analysis", "Detailed suggestions", "Quick iterations"]
+      title: "AI Cover Letters",
+      description: "Generate a personalized cover letter for the job you're targeting using your resume and the job description, with adjustable tone.",
+      highlights: ["Tailored to each role", "Multiple tone options", "Editable draft output"]
+    },
+    {
+      title: "AI Mock Interviews",
+      description: "Practice with role-specific interview questions, submit answers, and get structured feedback so you walk into the real thing prepared.",
+      highlights: ["Role-specific question sets", "Answer evaluation", "Actionable feedback"]
     },
     {
       title: "Privacy & Security",
-      description: "Your resume data is processed securely and privately. We never share or store your personal information.",
-      highlights: ["Encrypted processing", "No data retention", "GDPR compliant"]
+      description: "Your resume is processed in real time over encrypted connections. We don't permanently store full resumes after your session ends.",
+      highlights: ["Encrypted in transit", "No long-term resume storage", "Session-based processing"]
     },
-    // Commented out Career Insights per request
-    /*
-    {
-      title: "Career Insights",
-      description: "Get strategic insights about job market trends and how your resume compares to industry standards.",
-      highlights: ["Market analysis", "Competitive benchmarking", "Trend identification"]
-    }
-    */
   ];
 
   return (
@@ -98,29 +95,29 @@ const Features: React.FC = () => {
               <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-indigo-600">1</span>
               </div>
-              <h4 className="font-semibold text-gray-800 mb-2">Upload Resume</h4>
-              <p className="text-sm text-gray-600">Upload your existing resume in any format</p>
+              <h4 className="font-semibold text-gray-800 mb-2">Update Your Resume</h4>
+              <p className="text-sm text-gray-600">Upload your PDF and refine it in the live editor</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-purple-600">2</span>
               </div>
-              <h4 className="font-semibold text-gray-800 mb-2">Paste Job Description</h4>
-              <p className="text-sm text-gray-600">Add the job posting you're targeting</p>
+              <h4 className="font-semibold text-gray-800 mb-2">Find a Job</h4>
+              <p className="text-sm text-gray-600">Browse listings or paste a job description</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-blue-600">3</span>
               </div>
-              <h4 className="font-semibold text-gray-800 mb-2">AI Analysis</h4>
-              <p className="text-sm text-gray-600">Get instant ATS score and recommendations</p>
+              <h4 className="font-semibold text-gray-800 mb-2">Analyze & Optimize</h4>
+              <p className="text-sm text-gray-600">Get an ATS score and a tailored rewrite</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl font-bold text-green-600">4</span>
               </div>
-              <h4 className="font-semibold text-gray-800 mb-2">Optimize & Download</h4>
-              <p className="text-sm text-gray-600">Get your optimized resume ready to apply</p>
+              <h4 className="font-semibold text-gray-800 mb-2">Cover Letter & Mock Interview</h4>
+              <p className="text-sm text-gray-600">Generate a cover letter and rehearse interviews</p>
             </div>
           </div>
         </div>
