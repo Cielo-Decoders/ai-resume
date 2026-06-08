@@ -1,50 +1,45 @@
-SEEDY JAHATEH
-(859)302 -5792 | jahatehs@berea.edu | linkedin.com/in/seedyjahateh | github.com/seedyjahateh
+Ali Ramazani
++1 (859) 979 6449 | maliramazani2@gmail.com | linkedin.com/in/aliramazani | https://www.ali-ramazani.com/
 EDUCATION
-Berea College, Berea, KY
-Bachelor of Arts in Computer & Information Science and Physics, Expected: May 2026
-• Full Tuition Promise Scholarship, $240,000
-• Relevant Courses: Data Structures & Algorithms (in C++), Software Design & Implementation (in Python), Web Development (HTML/CSS/JavaScript, MongoDB), Scalable Algorithms & Objects (in Java), Database Systems (SQL, Postgres, Flask), Computer Security (Linux, Python), Calculus I & II, Differential Equations (& Data Analytics)
+Bachelor's in Computer and Information Science
+Berea College | Berea, KY | GPA: 3.65/4.00 Dec 2025
+• Berea College Full Scholarship Recipient
+• Relevant Courses: Data Structures, Algorithms, Web Development, Database Management, Machine Learning
 TECHNICAL SKILLS
-Languages: Python, C++, Java, SQL, JavaScript, HTML, CSS
-Technologies: Docker, Linux, Git, GitHub, WSL, AI tools
-Tools: NumPy, Matplotlib, Bootstrap, Postgres, Flask, JQuery, Jinja, APIs
+Languages: Python, JavaScript, TypeScript, C++, Java, SQL, NoSQL
+Technologies: AWS Services (EC2, S3, AutoScaling, Load Balancer, IAM), Docker, Flask, React, Express, Node, jQuery
+Tools: Git, Jenkins, Shell Scripts, Redis, ElasticSearch, Memcached
 EXPERIENCE
-Software Engineering Intern, Jun 2024 - Aug 2024
-Berea College Software Development Team, Berea, KY
-• Designed and deployed a full-stack web application to streamline the racking of student community service hours, enhancing user experience through effective solution design.
-• Collaborated with CELTS leadership to prioritize and implement user-requested features, ensuring alignment with departmental goals and stakeholder engagement.
-• Reduced reporting time by 30%, improved user response time by 40%, and increased user satisfaction by 25% through efficient system architecture and feature enhancements, demonstrating proven experience with automation frameworks.
-Software Engineering Intern, May 2024 - Jun 2024
-Runestone Academy, Berea, KY
-• Refactored database queries and optimized algorithms to enhance backend efficiency and frontend interactivity, focusing on process analysis and automation.
-• Streamlined data retrieval processes and refined code logic for better performance, achieving a 20% reduction in response times, significantly improving user experience and server performance.
-Teaching Associate, Software Design & Implementation (CSC226), Aug 2023 - May 2024
-Berea College Computer Science Department, Berea, KY
-• Provided 80+ hours of lab assistance, guiding students in understanding software design principles and debugging techniques, contributing to effective change management in learning.
-• Supported 30+ students with project development, troubleshooting, and code optimization during the semester, enhancing their technical documentation skills.
-• Helped improve student performance and project completion rates through personalized support and mentorship, fostering a collaborative learning environment.
-Software Engineering Intern, May 2023 - Jul 2023
-Berea College Computer Science Department, Berea, KY
-• Developed an object detection algorithm to identify and count celestial objects in astrophotographs, utilizing AI tools to enhance accuracy.
-• Improved image segmentation by creating a custom edge detection algorithm, enhancing the precision of object boundaries and demonstrating strong solution design capabilities.
-• Achieved 95% detection accuracy across 1,000 test images and increased pipeline efficiency by 30%, showcasing effective program management skills.
+Software Engineering Intern
+Berea College | Berea, KY | Jan 2023 - Present
+• Developed a reporting page to consolidate multi-year student data, automating Excel report generation and reducing administrative workload by 10+ hours weekly for 1,000+ users, showcasing a data-driven mindset.
+• Engineered a scalable dashboard with Chart.js and Google Chart API that enables faculty to convert Excel data into interactive visualizations, facilitating seamless data interpretation and enhancing presentation capabilities across departments.
+• Managed and reviewed 20 pull requests within 5 sprints alongside a team of 10 engineers, achieving project objectives by maintaining high coding standards and facilitating efficient development workflows, demonstrating strong focus on partner or ecosystem marketing.
+Teaching Assistant (Data Structures)
+Berea College | Berea, KY | Jan 2023 - Present
+• Delivered lectures and in-class debugging support for Data Structures and Algorithms in C/C++, improving student grades by 18% and reducing assignment completion time by 30%, enhancing executive communication skills.
+• Revamped course materials in collaboration with the instructor, improving student satisfaction by 40% within 6 months based on end-of-class surveys, reflecting strong stakeholder management.
+• Mentored a team of 4 students to design and build the Teaching Assistant website from the ground up, equipping them with hands-on expertise in HTML, CSS, and JavaScript and frameworks such as jQuery.
+Software Developer
+TRIWIC (Tri-State Women in Computing Conference) | Dec 2023 - Jan 2024
+• Transformed a static website into a scalable, data-driven platform by integrating CSV-based processing, enhancing performance and maintainability, showcasing deep experience working with partners.
+• Optimized data structures, reducing query execution time and improving page load speeds for a smoother user experience, contributing to proven track record of driving pipeline through partners.
+Machine Learning Robotics Undergraduate Research Intern
+Purdue University | West Lafayette, IN | Jun 2023 - Aug 2023
+• Developed Generative Adversarial Network (GAN) models using TensorFlow to synthesize high-fidelity ultrasound images, achieving 90% similarity to real datasets and enhancing diagnostic accuracy in training pipelines, demonstrating strong understanding of enterprise go-to-market motions.
+• Implemented optimization techniques from comprehensive literature reviews, reducing training durations by 15% and increasing image generation throughput by 20%.
+• Expanded dataset diversity by 35%, improving model generalization and reducing false negatives in critical diagnostic scenarios.
 PROJECTS
-Tracking Database for Kentuckians for the Commonwealth (KFTC) | Python, Flask, MySQL, HTML/CSS
-• Developed a scalable CRUD database application from scratch, enabling efficient tracking and management of 10,000+ supporter records, showcasing strong API integration skills.
-• Designed and implemented a robust MySQL schema integrated with a Flask backend, achieving query response times under 100ms, demonstrating effective process analysis.
-• Built an intuitive HTML/CSS/JavaScript UI, improving staff efficiency by 30% and enhancing user engagement.
-• Delivered the project 2 weeks early with a 95% client satisfaction rate, collaborating in a 4-member Agile team, emphasizing strong stakeholder engagement.
-Website for NSBE Chapter | HTML, CSS, and JavaScript
-• Designed and developed a multi-page website for the National Society of Black Engineers, attracting 50+ potential members and highlighting chapter goals through effective solution design.
-• Implemented responsive layouts and interactive features, achieving a 20% increase in member inquiries within the first month, showcasing successful program management.
-LEADERSHIP & AFFILIATIONS
-Vice President, Jan 2024 - Present
-National Society of Black Engineers (NSBE), Berea College Chapter, Berea, KY
-• Led initiatives that increased member engagement by 40% and improved retention by 25%, demonstrating strong leadership and change management skills.
-• Organized 10+ events focused on academic success and career readiness, benefiting 50+ members, showcasing effective program management.
-• Strengthened chapter operations by fostering collaboration and aligning activities with member goals, enhancing overall engagement.
-Treasurer, Jan 2024 - Present
-Muslim Students Association (MSA), Berea, KY
-• Managed the organization's budget and streamlined financial processes for timely reimbursements, demonstrating strong process analysis skills.
-• Organized fundraising initiatives to support community and religious events, showcasing effective stakeholder engagement.
+Spotify REX | React.js, Flask, PostgreSQL, Neo4j, Fast APIs, Tailwind CSS
+• Built a full-stack web app that boosts Spotify engagement via personalized news feeds, music sharing, and social interactions. Won "Best Design Hack" at MLH Hackathon, showcasing global marketing experience.
+Kentuckians for the Commonwealth (KFTC) | Python, Flask, PostgreSQL, HTML, CSS, JavaScript
+• Designed and implemented a full-stack database management system, enabling features such as data search, member scoring, and role assignments, reducing data processing time by 40% and improving organizational efficiency.
+Berea Atlas | React.js, PostgreSQL, HTML, CSS, JavaScript, Mapbox API
+• Built a real-time campus navigation platform for 2,000+ students and faculty, enabling easy discovery of professor offices, schedules, and administrative locations. Designed a secure faculty interface for instant updates.
+PROFESSIONAL AFFILIATIONS
+• Epsilon Pi Tau (EPT) Honorary Society Inductee
+• NSBE Project Manager & Leadership Award Recipient
+CERTIFICATIONS
+• Palantir Foundry Foundations
+• Palantir AIP Bootcamp
+• Uber Career Prep
