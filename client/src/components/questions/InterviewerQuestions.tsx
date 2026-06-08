@@ -602,7 +602,7 @@ export default function InterviewerQuestions({
                           <p className="text-xs text-gray-400">{s.date} · {s.questionCount} questions · {s.persona.replace('_', ' ')}</p>
                           <div className="flex gap-1 mt-1">
                             {s.scores.map((sc, i) => (
-                              <div key={i} className={`w-4 h-1.5 rounded-full ${getScoreColor(sc).gradient.replace('from-', 'bg-').split(' ')[0]}`} style={{ background: sc >= 80 ? '#10b981' : sc >= 60 ? '#3b82f6' : sc >= 40 ? '#f59e0b' : '#ef4444' }} />
+                              <div key={i} className={`w-4 h-1.5 rounded-full ${getScoreColor(sc).gradient.replace('from-', 'bg-').split(' ')[0]}`} style={{ background: sc >= 80 ? '#059669' : sc >= 60 ? '#2FA084' : sc >= 40 ? '#F59E0B' : '#DC2626' }} />
                             ))}
                           </div>
                         </div>

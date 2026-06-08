@@ -5,7 +5,6 @@ const ARBEITNOW_API_URL = 'https://www.arbeitnow.com/api/job-board-api';
 const MUSE_API_URL = 'https://www.themuse.com/api/public/jobs';
 const JOBICY_API_URL = 'https://jobicy.com/api/v2/remote-jobs';
 const REMOTEOK_API_URL = 'https://remoteok.com/api';
-const HN_ALGOLIA_API_URL = 'https://hn.algolia.com/api/v1';
 
 // Backend proxy base URL (avoids CORS for sources that don't set Access-Control-Allow-Origin)
 const BACKEND_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
@@ -16,7 +15,6 @@ const TRUSTED_API_HOSTS = new Set([
   'www.themuse.com',
   'jobicy.com',
   'remoteok.com',
-  'hn.algolia.com',
   // Backend proxy (localhost or deployed domain) — routes to trusted job boards server-side
   'localhost',
 ]);
@@ -413,77 +411,6 @@ async function fetchWeWorkRemotelyJobs(
   return jobs.slice(0, limit);
 }
 
-// Strip simple HTML so the rendered description doesn't include raw tags.
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-// Hacker News "Ask HN: Who is hiring?" — one fresh thread per month, each
-// top-level comment is a job posting. We pull the most recent thread by the
-// `whoishiring` author, then fetch its comments via Algolia.
-async function fetchHackerNewsJobs(
-  search?: string,
-  _category?: string,
-  limit: number = 20
-): Promise<JobListing[]> {
-  const storyData = await fetchTrustedJson(
-    `${HN_ALGOLIA_API_URL}/search_by_date?tags=story,author_whoishiring&hitsPerPage=5`
-  );
-  const stories: any[] = storyData.hits || [];
-  const hiringStory = stories.find((s) =>
-    String(s.title || '').toLowerCase().includes('who is hiring')
-  );
-  if (!hiringStory) return [];
-
-  const commentsData = await fetchTrustedJson(
-    `${HN_ALGOLIA_API_URL}/search?tags=comment,story_${hiringStory.objectID}&hitsPerPage=${limit * 2}`
-  );
-  const comments: any[] = commentsData.hits || [];
-
-  let jobs: JobListing[] = comments
-    .map((c: any) => {
-      const text = stripHtml(c.comment_text || '');
-      if (!text) return null;
-
-      // First line is usually the headline. HN convention is often
-      // "Company | Role | Location | (REMOTE | ONSITE) | URL".
-      const firstLine = text.split(/(?<=[.!?])\s|\n|\s\|\s/)[0] || text.slice(0, 120);
-      const segments = firstLine.split('|').map((s: string) => s.trim()).filter(Boolean);
-      const company = segments[0] || 'Hacker News';
-      const title = segments[1] || firstLine.slice(0, 120);
-      const locationGuess = segments.find((s: string) => /remote|onsite|hybrid|usa|eu|uk/i.test(s)) || 'See description';
-
-      return {
-        id: hashString(String(c.objectID)),
-        url: `https://news.ycombinator.com/item?id=${c.objectID}`,
-        title,
-        company_name: company,
-        company_logo: '',
-        category: 'Hacker News',
-        tags: ['hacker news', 'who is hiring'],
-        job_type: /remote/i.test(text) ? 'remote' : 'external',
-        publication_date: c.created_at || '',
-        candidate_required_location: locationGuess,
-        salary: '',
-        description: text,
-        source: 'Hacker News',
-      } as JobListing;
-    })
-    .filter((j): j is JobListing => j !== null);
-
-  if (search) {
-    const term = search.toLowerCase();
-    jobs = jobs.filter(
-      (j) =>
-        j.title.toLowerCase().includes(term) ||
-        j.company_name.toLowerCase().includes(term) ||
-        j.description.toLowerCase().includes(term)
-    );
-  }
-
-  return jobs.slice(0, limit);
-}
-
 async function fetchHimalayasJobs(
   search?: string,
   _category?: string,
@@ -601,7 +528,6 @@ export async function fetchJobListings(
     fetchWorkingNomadsJobs(search, undefined, limit),
     fetchHimalayasJobs(search, undefined, limit),
     fetchWeWorkRemotelyJobs(search, undefined, limit),
-    fetchHackerNewsJobs(search, undefined, limit),
   ]);
 
   const allJobs: JobListing[] = [];

@@ -2,6 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─────────────────────────────────────────────────────────────────────────
+   CareerDev AI — Global design tokens
+   Palette: https://colorhunt.co/palette/1f6f5f2fa0846fcf97eeeeee
+   See tailwind.config.js for the full token system.
+   ─────────────────────────────────────────────────────────────────────── */
+:root {
+  --brand-primary:   #1F6F5F;   /* deep teal-green */
+  --brand-primary-2: #2FA084;   /* mid emerald (gradient mid-stop) */
+  --brand-secondary: #6FCF97;   /* light spring green */
+  --brand-accent:    #2FA084;   /* mid emerald (CTA fill) */
+  --brand-soft:      #EEEEEE;   /* light gray (soft surface) */
+
+  --surface-base:    #FAFAFA;   /* gray-50 — default page background */
+  --surface-raised:  #FFFFFF;
+  --surface-soft:    #EAF6F3;   /* teal-50 — soft cool surface */
+
+  --text-primary:    #1E1E1E;   /* gray-900 */
+  --text-secondary:  #555555;   /* gray-700 */
+  --text-muted:      #9E9E9E;   /* gray-500 */
+  --text-on-brand:   #FFFFFF;
+
+  --border-subtle:   #EEEEEE;   /* gray-200 */
+  --border-default:  #DCDCDC;   /* gray-300 */
+}
+
+/* Dark-mode surface tokens — used by GetStarted and the authenticated app.
+   Surfaces use the deep teal-green family for depth; borders use light spring
+   green so the surface/border edge shows the palette's bright accent. */
+.theme-dark {
+  --surface-base:    #0C2C27;   /* teal-900 — page background */
+  --surface-raised:  #13423A;   /* teal-800 — raised surface */
+  --surface-soft:    #175040;   /* emerald-800 — accented soft surface */
+  --text-primary:    #FAFAFA;
+  --text-secondary:  #DCDCDC;
+  --text-muted:      #BDBDBD;
+  --border-subtle:   #13423A;
+  --border-default:  #26856D;   /* emerald-600 — edges show mid emerald */
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -9,6 +48,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--surface-base);
+  color: var(--text-primary);
 }
 
 code {
@@ -16,30 +57,12 @@ code {
     monospace;
 }
 
-/* Placeholder text styling */
-::placeholder {
-  color: #9ca3af;
-  opacity: 1;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-::-webkit-input-placeholder {
-  color: #9ca3af;
-  opacity: 1;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-::-moz-placeholder {
-  color: #9ca3af;
-  opacity: 1;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
+/* Placeholder text — uses muted token, single source of truth. */
+::placeholder,
+::-webkit-input-placeholder,
+::-moz-placeholder,
 :-ms-input-placeholder {
-  color: #9ca3af;
+  color: var(--text-muted);
   opacity: 1;
   font-size: 0.95rem;
   line-height: 1.5;
@@ -50,34 +73,23 @@ textarea::placeholder {
   white-space: pre-line;
 }
 
+/* Selection uses the pale sage soft surface against deep violet text. */
+::selection {
+  background-color: var(--brand-soft);
+  color: var(--brand-primary);
+}
+
 /* Custom animations for loading overlay */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 @keyframes progress {
-  0% {
-    width: 0%;
-  }
-  50% {
-    width: 70%;
-  }
-  100% {
-    width: 100%;
-  }
+  0%   { width: 0%; }
+  50%  { width: 70%; }
+  100% { width: 100%; }
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out;
-}
-
-.animate-progress {
-  animation: progress 2s ease-in-out infinite;
-}
+.animate-fadeIn  { animation: fadeIn 0.3s ease-out; }
+.animate-progress { animation: progress 2s ease-in-out infinite; }

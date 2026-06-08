@@ -147,7 +147,9 @@ interface ResumeData {
   education: EducationEntry[];
   certifications: string[];
   relevantCourses: string[];
-  projects: string[];
+  // Projects use the same structured shape as Experience so each project can
+  // show its name, tech stack / context, period and bullet highlights.
+  projects: WorkEntry[];
   affiliations: string[];
   // Leadership uses the same structured shape as Experience so each role
   // can show its title, organization, period and bullet achievements.
@@ -481,12 +483,15 @@ function parseResumeText(raw: string, links: string[] = []): ResumeData {
     data.skills = Array.from(new Set(skills));
   }
 
-  // ── Experience + Leadership (same structural shape) ──────────────────────
+  // ── Experience + Leadership + Projects (same structural shape) ───────────
   if (sectionContent['experience']) {
     data.experience = parseWorkEntries(sectionContent['experience']);
   }
   if (sectionContent['leadership']) {
     data.leadership = parseWorkEntries(sectionContent['leadership']);
+  }
+  if (sectionContent['projects']) {
+    data.projects = parseWorkEntries(sectionContent['projects']);
   }
 
   // ── Education ─────────────────────────────────────────────────────────────
@@ -543,9 +548,8 @@ function parseResumeText(raw: string, links: string[] = []): ResumeData {
       .filter((l) => l.length > 2);
 
   data.certifications  = simpleList('certifications');
-  data.projects        = simpleList('projects');
   data.affiliations    = simpleList('affiliations');
-  // Note: leadership is parsed as structured WorkEntry[] earlier (same shape as Experience).
+  // Note: leadership and projects are parsed as structured WorkEntry[] earlier (same shape as Experience).
   data.clubs           = simpleList('clubs');
   data.volunteer       = simpleList('volunteer');
   data.awards          = simpleList('awards');
@@ -604,8 +608,12 @@ function resumeDataToText(d: ResumeData): string {
   }
   if (d.projects.length) {
     lines.push('PROJECTS');
-    for (const p of d.projects) lines.push(`• ${p}`);
-    lines.push('');
+    for (const e of d.projects) {
+      lines.push(e.title + (e.company ? ` — ${e.company}` : ''));
+      if (e.period) lines.push(e.period);
+      for (const b of e.bullets) lines.push(`• ${b}`);
+      lines.push('');
+    }
   }
   if (d.affiliations.length) {
     lines.push('PROFESSIONAL AFFILIATIONS');
@@ -688,6 +696,23 @@ function mergeResumeData(raw: ResumeData, ai: ResumeData): ResumeData {
 type Step = 'choice' | 'uploading' | 'organizing' | 'editing' | 'regenerating' | 'preview';
 type EditorTab = 'contact' | 'education' | 'skills' | 'relevantCourses' | 'experience' | 'projects' | 'certifications' | 'affiliations' | 'leadership' | 'clubs' | 'volunteer' | 'awards' | 'languages';
 
+// ── Dark-theme palette for the onboarding flow ─────────────────────────────
+// Derived from the project palette (https://colorhunt.co/palette/1f6f5f2fa0846fcf97eeeeee).
+// Default cards step from an emerald tint INTO deep teal so each card sweeps
+// the green palette dark-to-light. Active cards push deeper toward the teal
+// primary for emphasis. The bright spring green is reserved for the highlight
+// border so the only bright-on-dark contrast in the UI marks the active state.
+const DARK = {
+  bgBase:        '#0C2C27',  // teal-900 — page background (deep teal-green)
+  bgRaised:      '#13423A',  // teal-800 — preview pane background
+  cardFrom:      '#175040',  // emerald-800 — card gradient start
+  cardTo:        '#1F6A57',  // emerald-700 — card gradient end
+  cardActiveFrom:'#26856D',  // emerald-600 — active card start
+  cardActiveTo:  '#1F6F5F',  // brand-primary (deep teal) — active card end
+  borderDefault: '#26856D',  // emerald-600 — default border
+  borderActive:  '#6FCF97',  // brand-secondary (light spring green) — active border pops
+};
+
 // Polished, shared loading screen used by both the initial "organizing" step
 // and the "regenerating" step. Advances through a step list on a timer so the
 // user has a sense of progress while waiting on the AI call (which doesn't
@@ -710,7 +735,7 @@ const ProcessingLoader: React.FC<ProcessingLoaderProps> = ({ title, subtitle, st
   }, [steps.length]);
 
   return (
-    <div className="min-h-screen bg-[#09090d] flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-blue-950 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Soft radial glow backdrop */}
       <div
         aria-hidden
@@ -1018,7 +1043,7 @@ export default function GetStarted() {
   // ── STEP: choice / uploading ────────────────────────────────────────────────
   if (step === 'choice' || step === 'uploading') {
     return (
-      <div className="min-h-screen bg-[#0f0f13] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      <div className="min-h-screen bg-blue-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px]" />
           <div className="absolute bottom-[-10%] right-[5%] w-[500px] h-[500px] bg-violet-600/8 rounded-full blur-[100px]" />
@@ -1155,7 +1180,7 @@ export default function GetStarted() {
     };
 
     return (
-      <div className="h-screen bg-[#0f0f13] flex flex-col overflow-hidden">
+      <div className="h-screen bg-blue-950 flex flex-col overflow-hidden">
         {/* top bar */}
         <div className="sticky top-0 z-20 bg-zinc-950/95 backdrop-blur border-b border-zinc-800/80 px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
@@ -1180,7 +1205,7 @@ export default function GetStarted() {
         <div className="flex-1 flex overflow-hidden min-h-0">
 
           {/* LEFT: Resume Preview */}
-          <div className="flex-1 overflow-y-auto flex flex-col items-center py-8 px-4 border-r border-zinc-800" style={{ background: '#1c1c24' }}>
+          <div className="flex-1 overflow-y-auto flex flex-col items-center py-8 px-4 border-r border-zinc-800" style={{ background: DARK.bgRaised }}>
             <div className="w-full max-w-[660px] flex items-center justify-between mb-5">
               <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500 uppercase tracking-widest">
                 <Eye className="w-3.5 h-3.5" /> Live Preview
@@ -1200,9 +1225,9 @@ export default function GetStarted() {
                 className="rounded-2xl p-5 transition-all duration-500 border"
                 style={{
                   background: highlightSection === 'contact'
-                    ? 'linear-gradient(135deg, #1e1b4b 0%, #2e1065 100%)'
-                    : 'linear-gradient(135deg, #18181b 0%, #27272a 100%)',
-                  borderColor: highlightSection === 'contact' ? '#6366f1' : '#3f3f46',
+                    ? `linear-gradient(135deg, ${DARK.cardActiveFrom} 0%, ${DARK.cardActiveTo} 100%)`
+                    : `linear-gradient(135deg, ${DARK.cardFrom} 0%, ${DARK.cardTo} 100%)`,
+                  borderColor: highlightSection === 'contact' ? DARK.borderActive : DARK.borderDefault,
                 }}
               >
                 <h1 className="text-[22px] font-bold text-white leading-tight tracking-wide">
@@ -1222,7 +1247,7 @@ export default function GetStarted() {
                 <div
                   ref={(el) => { previewRefs.current['summary'] = el; }}
                   className="bg-zinc-900/80 border rounded-xl p-4 transition-all duration-500"
-                  style={{ borderColor: highlightSection === 'summary' ? '#6366f1' : '#3f3f46' }}
+                  style={{ borderColor: highlightSection === 'summary' ? DARK.borderActive : DARK.borderDefault }}
                 >
                   <DarkSectionLabel>Summary</DarkSectionLabel>
                   <p className="text-sm text-zinc-300 leading-relaxed mt-2">{d.summary}</p>
@@ -1234,7 +1259,7 @@ export default function GetStarted() {
                 <div
                   ref={(el) => { previewRefs.current['education'] = el; }}
                   className="bg-zinc-900/80 border rounded-xl p-4 transition-all duration-500"
-                  style={{ borderColor: highlightSection === 'education' ? '#6366f1' : '#3f3f46' }}
+                  style={{ borderColor: highlightSection === 'education' ? DARK.borderActive : DARK.borderDefault }}
                 >
                   <DarkSectionLabel>Education</DarkSectionLabel>
                   <div className="mt-3 space-y-3">
@@ -1267,7 +1292,7 @@ export default function GetStarted() {
                 <div
                   ref={(el) => { previewRefs.current['skills'] = el; }}
                   className="bg-zinc-900/80 border rounded-xl p-4 transition-all duration-500"
-                  style={{ borderColor: highlightSection === 'skills' ? '#6366f1' : '#3f3f46' }}
+                  style={{ borderColor: highlightSection === 'skills' ? DARK.borderActive : DARK.borderDefault }}
                 >
                   <DarkSectionLabel>Skills</DarkSectionLabel>
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -1287,7 +1312,7 @@ export default function GetStarted() {
                 <div
                   ref={(el) => { previewRefs.current['relevantCourses'] = el; }}
                   className="bg-zinc-900/80 border rounded-xl p-4 transition-all duration-500"
-                  style={{ borderColor: highlightSection === 'relevantCourses' ? '#6366f1' : '#3f3f46' }}
+                  style={{ borderColor: highlightSection === 'relevantCourses' ? DARK.borderActive : DARK.borderDefault }}
                 >
                   <DarkSectionLabel>Relevant Courses</DarkSectionLabel>
                   <div className="mt-2.5 flex flex-wrap gap-2">
@@ -1303,7 +1328,7 @@ export default function GetStarted() {
                 <div
                   ref={(el) => { previewRefs.current['experience'] = el; }}
                   className="bg-zinc-900/80 border rounded-xl p-4 transition-all duration-500"
-                  style={{ borderColor: highlightSection === 'experience' ? '#6366f1' : '#3f3f46' }}
+                  style={{ borderColor: highlightSection === 'experience' ? DARK.borderActive : DARK.borderDefault }}
                 >
                   <DarkSectionLabel>Experience</DarkSectionLabel>
                   <div className="mt-3 space-y-4">
@@ -1339,16 +1364,34 @@ export default function GetStarted() {
                 <div
                   ref={(el) => { previewRefs.current['projects'] = el; }}
                   className="bg-zinc-900/80 border rounded-xl p-4 transition-all duration-500"
-                  style={{ borderColor: highlightSection === 'projects' ? '#6366f1' : '#3f3f46' }}
+                  style={{ borderColor: highlightSection === 'projects' ? DARK.borderActive : DARK.borderDefault }}
                 >
                   <DarkSectionLabel>Projects</DarkSectionLabel>
-                  <ul className="mt-2.5 space-y-1.5">
-                    {d.projects.map((p, i) => (
-                      <li key={i} className="flex gap-2 text-[12px] text-zinc-400">
-                        <span className="text-indigo-500 flex-shrink-0 font-bold">•</span> {p}
-                      </li>
+                  <div className="mt-3 space-y-4">
+                    {d.projects.map((exp) => (
+                      <div key={exp.id} className="pl-3 border-l-2 border-indigo-900">
+                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                          <p className="text-[13px] text-indigo-300 italic">
+                            {exp.title || <span className="text-zinc-600">Project Name</span>}
+                          </p>
+                          {(exp.company || exp.period) && (
+                            <p className="text-[12px] text-zinc-400 italic whitespace-nowrap">
+                              {[exp.company, exp.period].filter(Boolean).join(', ')}
+                            </p>
+                          )}
+                        </div>
+                        {exp.bullets.filter(b => b.trim()).length > 0 && (
+                          <ul className="mt-2 space-y-1">
+                            {exp.bullets.filter(b => b.trim()).map((b, bi) => (
+                              <li key={bi} className="flex gap-2 text-[12px] text-zinc-400">
+                                <span className="text-indigo-500 flex-shrink-0 font-bold mt-0.5">•</span> {b}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
 
@@ -1357,7 +1400,7 @@ export default function GetStarted() {
                 <div
                   ref={(el) => { previewRefs.current['affiliations'] = el; }}
                   className="bg-zinc-900/80 border rounded-xl p-4 transition-all duration-500"
-                  style={{ borderColor: highlightSection === 'affiliations' ? '#6366f1' : '#3f3f46' }}
+                  style={{ borderColor: highlightSection === 'affiliations' ? DARK.borderActive : DARK.borderDefault }}
                 >
                   <DarkSectionLabel>Professional Affiliations</DarkSectionLabel>
                   <ul className="mt-2.5 space-y-1.5">
@@ -1375,7 +1418,7 @@ export default function GetStarted() {
                 <div
                   ref={(el) => { previewRefs.current['leadership'] = el; }}
                   className="bg-zinc-900/80 border rounded-xl p-4 transition-all duration-500"
-                  style={{ borderColor: highlightSection === 'leadership' ? '#6366f1' : '#3f3f46' }}
+                  style={{ borderColor: highlightSection === 'leadership' ? DARK.borderActive : DARK.borderDefault }}
                 >
                   <DarkSectionLabel>Leadership &amp; Management</DarkSectionLabel>
                   <div className="mt-3 space-y-4">
@@ -1411,7 +1454,7 @@ export default function GetStarted() {
                 <div
                   ref={(el) => { previewRefs.current['clubs'] = el; }}
                   className="bg-zinc-900/80 border rounded-xl p-4 transition-all duration-500"
-                  style={{ borderColor: highlightSection === 'clubs' ? '#6366f1' : '#3f3f46' }}
+                  style={{ borderColor: highlightSection === 'clubs' ? DARK.borderActive : DARK.borderDefault }}
                 >
                   <DarkSectionLabel>Clubs / Affiliations</DarkSectionLabel>
                   <ul className="mt-2.5 space-y-1.5">
@@ -1429,7 +1472,7 @@ export default function GetStarted() {
                 <div
                   ref={(el) => { previewRefs.current['certifications'] = el; }}
                   className="bg-zinc-900/80 border rounded-xl p-4 transition-all duration-500"
-                  style={{ borderColor: highlightSection === 'certifications' ? '#6366f1' : '#3f3f46' }}
+                  style={{ borderColor: highlightSection === 'certifications' ? DARK.borderActive : DARK.borderDefault }}
                 >
                   <DarkSectionLabel>Certifications</DarkSectionLabel>
                   <ul className="mt-2.5 space-y-1.5">
@@ -1447,7 +1490,7 @@ export default function GetStarted() {
                 <div
                   ref={(el) => { previewRefs.current['volunteer'] = el; }}
                   className="bg-zinc-900/80 border rounded-xl p-4 transition-all duration-500"
-                  style={{ borderColor: highlightSection === 'volunteer' ? '#6366f1' : '#3f3f46' }}
+                  style={{ borderColor: highlightSection === 'volunteer' ? DARK.borderActive : DARK.borderDefault }}
                 >
                   <DarkSectionLabel>Volunteer Work</DarkSectionLabel>
                   <ul className="mt-2.5 space-y-1.5">
@@ -1465,7 +1508,7 @@ export default function GetStarted() {
                 <div
                   ref={(el) => { previewRefs.current['awards'] = el; }}
                   className="bg-zinc-900/80 border rounded-xl p-4 transition-all duration-500"
-                  style={{ borderColor: highlightSection === 'awards' ? '#6366f1' : '#3f3f46' }}
+                  style={{ borderColor: highlightSection === 'awards' ? DARK.borderActive : DARK.borderDefault }}
                 >
                   <DarkSectionLabel>Awards &amp; Honors</DarkSectionLabel>
                   <ul className="mt-2.5 space-y-1.5">
@@ -1483,7 +1526,7 @@ export default function GetStarted() {
                 <div
                   ref={(el) => { previewRefs.current['languages'] = el; }}
                   className="bg-zinc-900/80 border rounded-xl p-4 transition-all duration-500"
-                  style={{ borderColor: highlightSection === 'languages' ? '#6366f1' : '#3f3f46' }}
+                  style={{ borderColor: highlightSection === 'languages' ? DARK.borderActive : DARK.borderDefault }}
                 >
                   <DarkSectionLabel>Languages</DarkSectionLabel>
                   <div className="mt-2.5 flex flex-wrap gap-2">
@@ -1502,7 +1545,7 @@ export default function GetStarted() {
                     key={refKey}
                     ref={(el) => { previewRefs.current[refKey] = el; }}
                     className="bg-zinc-900/80 border rounded-xl p-4 transition-all duration-500"
-                    style={{ borderColor: highlightSection === refKey ? '#6366f1' : '#3f3f46' }}
+                    style={{ borderColor: highlightSection === refKey ? DARK.borderActive : DARK.borderDefault }}
                   >
                     <DarkSectionLabel>{sec.heading}</DarkSectionLabel>
                     <ul className="mt-2.5 space-y-1.5">
@@ -2103,7 +2146,7 @@ export default function GetStarted() {
 
   // ── STEP: preview ───────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0f0f13] flex flex-col">
+    <div className="min-h-screen bg-blue-950 flex flex-col">
       <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur border-b border-zinc-800/80 px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 text-sm text-emerald-400 font-medium">
