@@ -4,7 +4,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoadingScreen from './components/auth/LoadingScreen';
 import LandingPage from './pages/LandingPage';
 import ATSAnalyzerPro from './pages/AtsAnalyzer';
-import GetStarted from './pages/GetStarted';
 import Features from './pages/Features';
 import Pricing from './pages/Pricing';
 import FAQ from './pages/FAQ';
@@ -45,9 +44,6 @@ function AppContent() {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/contact" element={<ContactUs />} />
-
-        {/* Get Started flow */}
-        <Route path="/get-started" element={<GetStarted />} />
 
         {/* App route - publicly accessible (no auth required yet) */}
         <Route path="/app" element={<ATSAnalyzerPro />} />

@@ -10,7 +10,7 @@ from pydantic import BaseModel, field_validator
 import PyPDF2
 
 from ..config import settings
-from ..services.analysis_service import extract_text_from_pdf, analyze_resume_against_job, generate_optimized_resume, generate_cover_letter, scan_job_red_flags, generate_interview_questions, evaluate_interview_answer, _condense_job_description, rewrite_and_reorganize_resume, enhance_resume_bullet
+from ..services.analysis_service import extract_text_from_pdf, analyze_resume_against_job, generate_optimized_resume, generate_cover_letter, scan_job_red_flags, generate_interview_questions, evaluate_interview_answer, _condense_job_description
 
 # Maximum character limits for text inputs to prevent abuse and unbounded OpenAI costs
 _MAX_RESUME_TEXT = 50_000   # ~25 pages of dense text
@@ -186,32 +186,6 @@ class EvaluateAnswerRequest(BaseModel):
     def job_desc_max_length(cls, v: str) -> str:
         if len(v) > _MAX_JOB_DESC:
             raise ValueError(f"job_description exceeds maximum length of {_MAX_JOB_DESC} characters")
-        return v
-
-
-class ResumeRewriteRequest(BaseModel):
-    """Request model for rewriting and reorganizing an edited resume."""
-    resume_text: str
-
-    @field_validator("resume_text")
-    @classmethod
-    def resume_text_max_length(cls, v: str) -> str:
-        if len(v) > _MAX_RESUME_TEXT:
-            raise ValueError(f"resume_text exceeds maximum length of {_MAX_RESUME_TEXT} characters")
-        return v
-
-
-class BulletEnhanceRequest(BaseModel):
-    """Request model for AI-enhancing a single resume bullet point."""
-    bullet: str
-    job_title: str = ""
-    company: str = ""
-
-    @field_validator("bullet")
-    @classmethod
-    def bullet_max_length(cls, v: str) -> str:
-        if len(v) > 1000:
-            raise ValueError("bullet exceeds maximum length of 1000 characters")
         return v
 
 
@@ -563,46 +537,3 @@ class AnalyzeController:
         except Exception as e:
             self.logger.error(f"Answer evaluation error: {str(e)}")
             raise HTTPException(status_code=500, detail="Answer evaluation failed. Please try again.")
-
-    async def rewrite_resume(self, request: ResumeRewriteRequest) -> Dict[str, Any]:
-        """Rewrite and reorganize an edited resume — sort experiences by date, clean formatting."""
-        try:
-            if not request.resume_text or len(request.resume_text.strip()) < 50:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Resume text is required and must contain meaningful content"
-                )
-
-            self.logger.info("Starting resume rewrite and reorganization...")
-
-            result = await rewrite_and_reorganize_resume(request.resume_text)
-
-            if result.get("success"):
-                self.logger.info("Resume rewrite complete.")
-            else:
-                self.logger.warning(f"Resume rewrite returned failure: {result.get('message', 'Unknown error')}")
-
-            return result
-
-        except HTTPException:
-            raise
-        except Exception as e:
-            self.logger.error(f"Resume rewrite error: {str(e)}")
-            raise HTTPException(status_code=500, detail="Resume rewrite failed. Please try again.")
-
-    async def enhance_bullet(self, request: BulletEnhanceRequest) -> Dict[str, Any]:
-        """Enhance a single resume bullet point to follow industry standards."""
-        try:
-            if not request.bullet or len(request.bullet.strip()) < 3:
-                raise HTTPException(status_code=400, detail="Bullet text is required")
-
-            self.logger.info("Enhancing resume bullet point...")
-            result = await enhance_resume_bullet(request.bullet, request.job_title, request.company)
-            return result
-
-        except HTTPException:
-            raise
-        except Exception as e:
-            self.logger.error(f"Bullet enhancement error: {str(e)}")
-            raise HTTPException(status_code=500, detail="Bullet enhancement failed. Please try again.")
-
