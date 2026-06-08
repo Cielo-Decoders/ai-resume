@@ -6,7 +6,7 @@ export default function LandingPage() {
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    navigate('/get-started');
+    navigate('/app');
   };
 
   const iconFeatures = [
